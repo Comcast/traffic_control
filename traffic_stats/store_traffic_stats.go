@@ -75,17 +75,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	runningConfig, nil := getToData(config, true)
-	// go houseKeeping(runningConfig, *testSummary)
 
-	// con, err := influxConnect(config)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// dur, ver, err := con.Ping()
-	// log.Infof("Happy as a Hippo! %v, %s \n", dur, ver)
-
-	// freeList := NewPool(16, config.RedisString)
 	<-time.NewTimer(time.Now().Truncate(time.Duration(config.PollingInterval) * time.Second).Add(time.Duration(config.PollingInterval) * time.Second).Sub(time.Now())).C
 	tickerChan := time.Tick(time.Duration(config.PollingInterval) * time.Second)
 	for now := range tickerChan {
@@ -137,7 +127,6 @@ func getToData(config *StartupConfig, init bool) (RunningConfig, error) {
 		runningConfig.CacheGroupMap[server.HostName] = server.Location
 	}
 
-	// log.Info("Searching for " + config.StatusToMon + " RASCAL servers in " + myLocation + "...")
 	cacheStatPath := "/publish/CacheStats?hc=1&stats="
 	dsStatPath := "/publish/DsStats?hc=1&wildcard=1&stats="
 	parameters, err := tm.Parameters("TRAFFIC_STATS")
@@ -187,140 +176,12 @@ func getToData(config *StartupConfig, init bool) (RunningConfig, error) {
 			if runningConfig.HealthUrls[cdnName] == nil {
 				runningConfig.HealthUrls[cdnName] = make(map[string]string)
 			}
-			// url := "http://" + server.IpAddress + dsStatPath
-			// runningConfig.HealthUrls[cdnName]["DsStats"] = url
-			// log.Info(cdnName, " -> ", url)
 			url := "http://" + server.IpAddress + cacheStatPath
 			runningConfig.HealthUrls[cdnName]["CacheStats"] = url
-			// log.Info(cdnName, " -> ", url)
 		}
 	}
 	return runningConfig, nil
 }
-
-// func summarizeYesterday(redisClient *redis.Client) {
-
-// 	t := time.Now().Add(-86400 * time.Second)
-// 	startTime := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()) // reset to start of yesterday 00:00::00
-// 	endTime := startTime.Add(86400 * time.Second)
-// 	endUTime := endTime.Unix()
-// 	startUTime := startTime.Unix()
-
-// 	log.Info("Summarizing from ", startTime, " (", startUTime, ") to ", endTime, " (", endUTime, ")")
-
-// 	uTimes := make(map[string][]int64)
-// 	keyList, err := redisClient.Cmd("keys", "*:*:all:all:kbps").List() // all cdns all deliveryservices
-// 	errHndlr(err, ERROR)
-// 	for _, keyName := range keyList {
-// 		log.Info("lrange ", keyName, " ", -9000, " ", -1)
-// 		bwVals, err := redisClient.Cmd("lrange", keyName, -9000, -1).List()
-// 		errHndlr(err, ERROR)
-// 		keyParts := strings.Split(keyName, ":")
-// 		if len(keyParts) != 5 {
-// 			log.Info("Error parsing key: ", keyName)
-// 			continue
-// 		}
-// 		cdnName := keyParts[0]
-// 		deliveryService := keyParts[1]
-// 		cacheGroup := keyParts[2]
-// 		hostName := keyParts[3]
-// 		// statName := keyParts[4]
-// 		if cacheGroup != "all" {
-// 			continue
-// 		}
-
-// 		// only need to get the times once per CDN
-// 		if uTimes[cdnName] == nil {
-// 			keyName = cdnName + ":tstamp"
-// 			log.Info("lrange ", keyName, " ", -9000, " ", -1)
-// 			uTlist, err := redisClient.Cmd("lrange", keyName, -9000, -1).List()
-// 			errHndlr(err, ERROR)
-// 			for _, tStamp := range uTlist {
-// 				intVal, err := strconv.ParseInt(tStamp, 10, 64)
-// 				if err != nil {
-// 					log.Error(cdnName, " - error converting ", tStamp, " to Int: ", err)
-// 					continue
-// 				}
-// 				uTimes[cdnName] = append(uTimes[cdnName], intVal)
-// 			}
-// 		}
-
-// 		errorForKey := false
-// 		bytesServed := float64(0)
-// 		maxBps := float64(0)
-// 		prevUtime := startUTime
-// 		for index, sampleTime := range uTimes[cdnName] {
-// 			errHndlr(err, ERROR)
-// 			if sampleTime < startUTime {
-// 				continue
-// 			}
-// 			sampleVal := float64(0)
-// 			if index < len(bwVals) {
-// 				sampleVal, err = strconv.ParseFloat(bwVals[index], 64)
-// 				if err != nil {
-// 					log.Error(keyName, " - error converting ", bwVals[index], " to Float: ", err, " skipping stat summary!")
-// 					errorForKey = true
-// 					break
-// 				}
-// 				if maxBps < sampleVal {
-// 					maxBps = sampleVal
-// 				}
-// 			}
-// 			duration := sampleTime - prevUtime
-// 			bytesServed += float64(duration) * sampleVal / 8
-// 			prevUtime = sampleTime
-// 		}
-// 		if !errorForKey {
-// 			dailyKey := cdnName + ":" + deliveryService + ":" + cacheGroup + ":" + hostName
-// 			log.Info(dailyKey, " bw:", maxBps, " bs:", bytesServed)
-// 			r := redisClient.Cmd("rpush", dailyKey+":daily_maxkbps", strconv.FormatInt(startUTime, 10)+":"+strconv.FormatInt(int64(maxBps), 10))
-// 			errHndlr(r.Err, ERROR)
-// 			r = redisClient.Cmd("rpush", dailyKey+":daily_bytesserved", strconv.FormatInt(startUTime, 10)+":"+strconv.FormatInt(int64(bytesServed), 10))
-// 			errHndlr(r.Err, ERROR)
-// 		}
-// 	}
-// }
-
-// func houseKeeping(runningConfig RunningConfig, testSummary bool) {
-// 	redisClient, err := redis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
-
-// 	if err != nil {
-// 		errHndlr(err, ERROR)
-// 		return
-// 	}
-
-// 	defer redisClient.Close()
-
-// 	minuteChan := time.Tick(time.Minute)
-// 	dayOfWeek := time.Now().Day()
-// 	hourOfDay := time.Now().Hour()
-
-// 	for now := range minuteChan {
-// 		log.Info("Housekeeping! (", dayOfWeek, ", ", hourOfDay, ")")
-// 		if testSummary || now.Day() != dayOfWeek {
-// 			summarizeYesterday(redisClient)
-// 			dayOfWeek = time.Now().Day()
-// 		}
-// 		/*
-// 			if hourOfDay != time.Now().Hour() {
-// 				log.Info("Saving DB..")
-// 				r := redisClient.Cmd("bgsave")
-// 				errHndlr(r.Err, ERROR)
-// 				hourOfDay = time.Now().Hour()
-// 			}
-// 		*/
-// 		keyList, err := redisClient.Cmd("keys", "*").List()
-// 		errHndlr(err, ERROR)
-// 		for _, keyName := range keyList {
-// 			if !strings.HasSuffix(keyName, "maxKbps") {
-// 				r := redisClient.Cmd("ltrim", keyName, -1*runningConfig.RetentionPeriod, -1) // 1 day
-// 				if r.Err != nil {
-// 					panic(fmt.Sprintf("%v for %v", r.Err.Error(), keyName))
-// 				}
-// 			}
-// 		}
-// 	}
-// }
 
 func storeMetrics(cdnName string, url string, cacheGroupMap map[string]string, config *StartupConfig) {
 	sampleTime := int64(time.Now().Unix())
@@ -333,11 +194,8 @@ func storeMetrics(cdnName string, url string, cacheGroupMap map[string]string, c
 	//influx connection
 	con, err := influxConnect(config)
 	if err != nil {
-		panic(err)
+		errHndlr(err, FATAL)
 	}
-	// get a connection to redis
-	// redisClient, _ := freeList.NewClient()
-	// store the data to redis
 	if strings.Contains(url, "CacheStats") {
 		err = storeCacheValues(rascalData, cdnName, sampleTime, cacheGroupMap, con)
 		// } else if strings.Contains(url, "DsStats") {
@@ -345,16 +203,15 @@ func storeMetrics(cdnName string, url string, cacheGroupMap map[string]string, c
 	} else {
 		log.Info("Don't know what to do with ", url)
 	}
-	// return the redis connection to the pool
-	// freeList.FreeClient(redisClient)
 }
 
 func errHndlr(err error, severity int) {
 	if err != nil {
 		switch {
 		case severity == ERROR:
-			log.Info(err)
+			log.Error(err)
 		case severity == FATAL:
+			log.Error(err)
 			panic(err)
 		}
 	}
@@ -379,7 +236,7 @@ func errHndlr(err error, severity int) {
     }
  }
 */
-// func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, redisClient *redis.Client, dsAggregate map[string]AggregationConfig) error {
+// func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxClient *influx.Client, dsAggregate map[string]AggregationConfig) error {
 // 	type DsStatsJson struct {
 // 		Pp              string `json:"pp"`
 // 		Date            string `json:"date"`
@@ -395,18 +252,18 @@ func errHndlr(err error, severity int) {
 // 	err := json.Unmarshal(rascalData, &jData)
 // 	errHndlr(err, ERROR)
 // 	statCount := 0
-// 	statTotals := make(map[string]float64)
+// 	// statTotals := make(map[string]float64)
+// 	pts := make([]influx.Point, 0)
 // 	for dsName, dsData := range jData.DeliveryService {
 // 		for dsMetric, dsMetricData := range dsData {
 // 			keyPart := strings.Replace(dsMetric, "location.", "", -1)
-// 			keyPart = strings.Replace(keyPart, ".kbps", ":all:kbps", -1)
-// 			keyPart = strings.Replace(keyPart, ".tps", ":all:tps", -1)
-// 			keyPart = strings.Replace(keyPart, ".status", ":all:status", -1)
-// 			keyPart = strings.Replace(keyPart, "total:all:", "all:all:", -1) // for consistency all everywhere
-// 			redisKey := cdnName + ":" + dsName + ":" + keyPart
+// 			keyPart = strings.Replace(keyPart, ".kbps", ":kbps", -1)
+// 			keyPart = strings.Replace(keyPart, ".tps", ":tps", -1)
+// 			keyPart = strings.Replace(keyPart, ".status", ":status", -1)
+// 			// keyPart = strings.Replace(keyPart, "total:all:", "all:all:", -1) // for consistency all everywhere
+// 			dataKey := cdnName + ":" + dsName + ":" + keyPart
 // 			statValue := dsMetricData[0].Value
 // 			//fmt.Printf("%s  ->%s\n", redisKey, statValue)
-// 			statCount++
 
 // 			aggConfig, exists := dsAggregate[dsMetric]
 
@@ -422,13 +279,14 @@ func errHndlr(err error, severity int) {
 
 // 			r := redisClient.Cmd("rpush", redisKey, statValue)
 // 			errHndlr(r.Err, ERROR)
+// 			statCount++
 // 		}
 // 	}
-// 	for totalKey, totalVal := range statTotals {
-// 		r := redisClient.Cmd("rpush", totalKey, strconv.FormatFloat(totalVal, 'f', 2, 64))
-// 		errHndlr(r.Err, ERROR)
-// 		statCount++
-// 	}
+// 	// for totalKey, totalVal := range statTotals {
+// 	// 	r := redisClient.Cmd("rpush", totalKey, strconv.FormatFloat(totalVal, 'f', 2, 64))
+// 	// 	errHndlr(r.Err, ERROR)
+// 	// 	statCount++
+// 	// }
 // 	log.Info("Saved ", statCount, " ds values for ", cdnName, " @ ", sampleTime)
 // 	return nil
 // }
@@ -460,7 +318,7 @@ func errHndlr(err error, severity int) {
 */
 
 func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cacheGroupMap map[string]string, influxClient *influx.Client) error {
-	/* note about the redis data:
+	/* note about the data:
 	keys are cdnName:deliveryService:cacheGroup:cacheName:statName
 	*/
 
@@ -478,42 +336,33 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 	err := json.Unmarshal(trafmonData, &jData)
 	errHndlr(err, ERROR)
 	statCount := 0
-	totalStats := len(jData.Caches) //3 stats per cache
-	log.Infof("length of jData.Caches = %d\n", totalStats)
-	pts := make([]influx.Point, 606)
+	pts := make([]influx.Point, 0)
 	for cacheName, cacheData := range jData.Caches {
 		for statName, statData := range cacheData {
-			dataKey := cdnName + "." + cacheGroupMap[cacheName] + "." + cacheName + "." + statName
+			dataKey := cdnName + ":" + cacheGroupMap[cacheName] + ":" + cacheName + ":" + statName
 			dataKey = strings.Replace(dataKey, ".bandwidth", ".kbps", 1)
 			statTime := strconv.Itoa(statData[0].Time)
 			msInt, err := strconv.ParseInt(statTime, 10, 64)
 			if err != nil {
-				panic(err)
+				errHndlr(err, FATAL)
 			}
 			newTime := time.Unix(0, msInt*int64(time.Millisecond))
 			statValue := statData[0].Value
-			pts[statCount] = influx.Point{
-				Name: dataKey,
-				Fields: map[string]interface{}{
-					"value": statValue,
-					"time":  statTime,
-				},
-				Timestamp: newTime,
-				Precision: "ms",
+			statFloatValue, err := strconv.ParseFloat(statValue, 64)
+			if err != nil {
+				statFloatValue = 0.00
 			}
+			pts = append(pts,
+				influx.Point{
+					Name: dataKey,
+					Fields: map[string]interface{}{
+						"value": statFloatValue,
+					},
+					Timestamp: newTime,
+					Precision: "ms",
+				},
+			)
 			statCount++
-			// statFloatValue, err := strconv.ParseFloat(statValue, 64)
-			// if err != nil {
-			// 	// statFloatValue = 0.0
-			// }
-			// }
-			// if statName == "maxKbps" {
-			// 	r := redisClient.Cmd("zadd", dataKey, sampleTime, statValue) // only care for the last val here.
-			// 	errHndlr(r.Err, ERROR)
-			// } else {
-			// r := redisClient.Cmd("rpush", dataKey, statValue)
-			// errHndlr(r.Err, ERROR)
-			// }
 		}
 	}
 	bps := influx.BatchPoints{
@@ -523,29 +372,14 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 	}
 	_, err = influxClient.Write(bps)
 	if err != nil {
-		log.Critical(err)
+		errHndlr(err, ERROR)
 	}
-
-	// for totalKey, totalVal := range statTotals {
-	// 	totalKey = strings.Replace(totalKey, ":bandwidth", ":kbps", 1)
-	// 	if strings.Contains(totalKey, "maxKbps") {
-	// 		r := redisClient.Cmd("zadd", totalKey, sampleTime, strconv.FormatFloat(totalVal, 'f', 2, 64))
-	// 		errHndlr(r.Err, ERROR)
-	// 	} else {
-	// 		r := redisClient.Cmd("rpush", totalKey, strconv.FormatFloat(totalVal, 'f', 2, 64))
-	// 		errHndlr(r.Err, ERROR)
-	// 	}
-	// 	statCount++
-	// }
-	// r := redisClient.Cmd("rpush", cdnName+":tstamp", sampleTime)
-	// errHndlr(r.Err, ERROR)
 	log.Info("Saved ", statCount, " values for ", cdnName, " @ ", sampleTime)
 	return nil
 }
 
 func getUrl(url string) ([]byte, error) {
 
-	// log.Info(url, "  >>>>>")
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
