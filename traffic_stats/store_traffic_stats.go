@@ -38,9 +38,14 @@ type StartupConfig struct {
 }
 
 type RunningConfig struct {
-	HealthUrls      map[string]map[string]string // they 1st map key is CDN_name, the second is DsStats or CacheStats
-	CacheGroupMap   map[string]string            // map hostName to cacheGroup
-	RetentionPeriod int64                        // how long in seconds to keep the data in the Redis database
+	HealthUrls    map[string]map[string]string // they 1st map key is CDN_name, the second is DsStats or CacheStats
+	CacheGroupMap map[string]string            // map hostName to cacheGroup
+	InfluxDbProps []InfluxDbProps
+}
+
+type InfluxDbProps struct {
+	Fqdn string
+	Port int
 }
 
 func main() {
@@ -139,18 +144,12 @@ func getToData(config *StartupConfig, init bool) (RunningConfig, error) {
 			return runningConfig, err
 		}
 	}
-	runningConfig.RetentionPeriod = 259200 //30 days hardcoded default, if the param doesn't exist, it'll use this.  **was 8640 for redis**
 	for _, param := range parameters {
 		if param.Name == "DsStats" {
 			statName := param.Value
 			dsStatPath += "," + statName
 		} else if param.Name == "CacheStats" {
 			cacheStatPath += "," + param.Value
-		} else if param.Name == "RetentionPeriod" {
-			runningConfig.RetentionPeriod, err = strconv.ParseInt(param.Value, 10, 64)
-			if err != nil {
-				log.Error(param.Name, " - error converting ", param.Value, " to Int: ", err)
-			}
 		}
 	}
 	cacheStatPath = strings.Replace(cacheStatPath, "=,", "=", 1)
@@ -178,6 +177,8 @@ func getToData(config *StartupConfig, init bool) (RunningConfig, error) {
 			}
 			url := "http://" + server.IpAddress + cacheStatPath
 			runningConfig.HealthUrls[cdnName]["CacheStats"] = url
+			url = "http://" + server.IpAddress + dsStatPath
+			runningConfig.HealthUrls[cdnName]["DsStats"] = url
 		}
 	}
 	return runningConfig, nil
@@ -192,14 +193,14 @@ func storeMetrics(cdnName string, url string, cacheGroupMap map[string]string, c
 		return
 	}
 	//influx connection
-	con, err := influxConnect(config)
+	influxClient, err := influxConnect(config)
 	if err != nil {
 		errHndlr(err, FATAL)
 	}
 	if strings.Contains(url, "CacheStats") {
-		err = storeCacheValues(rascalData, cdnName, sampleTime, cacheGroupMap, con)
-		// } else if strings.Contains(url, "DsStats") {
-		// 	err = storeDsValues(rascalData, cdnName, sampleTime, redisClient, config.DsAggregate)
+		err = storeCacheValues(rascalData, cdnName, sampleTime, cacheGroupMap, influxClient)
+	} else if strings.Contains(url, "DsStats") {
+		err = storeDsValues(rascalData, cdnName, sampleTime, influxClient)
 	} else {
 		log.Info("Don't know what to do with ", url)
 	}
@@ -236,60 +237,83 @@ func errHndlr(err error, severity int) {
     }
  }
 */
-// func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxClient *influx.Client, dsAggregate map[string]AggregationConfig) error {
-// 	type DsStatsJson struct {
-// 		Pp              string `json:"pp"`
-// 		Date            string `json:"date"`
-// 		DeliveryService map[string]map[string][]struct {
-// 			Index uint64 `json:"index"`
-// 			Time  uint64 `json:"time"`
-// 			Value string `json:"value"`
-// 			Span  uint64 `json:"span"`
-// 		} `json:"deliveryService"`
-// 	}
+func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxClient *influx.Client) error {
+	type DsStatsJson struct {
+		Pp              string `json:"pp"`
+		Date            string `json:"date"`
+		DeliveryService map[string]map[string][]struct {
+			Index uint64 `json:"index"`
+			Time  int    `json:"time"`
+			Value string `json:"value"`
+			Span  uint64 `json:"span"`
+		} `json:"deliveryService"`
+	}
 
-// 	var jData DsStatsJson
-// 	err := json.Unmarshal(rascalData, &jData)
-// 	errHndlr(err, ERROR)
-// 	statCount := 0
-// 	// statTotals := make(map[string]float64)
-// 	pts := make([]influx.Point, 0)
-// 	for dsName, dsData := range jData.DeliveryService {
-// 		for dsMetric, dsMetricData := range dsData {
-// 			keyPart := strings.Replace(dsMetric, "location.", "", -1)
-// 			keyPart = strings.Replace(keyPart, ".kbps", ":kbps", -1)
-// 			keyPart = strings.Replace(keyPart, ".tps", ":tps", -1)
-// 			keyPart = strings.Replace(keyPart, ".status", ":status", -1)
-// 			// keyPart = strings.Replace(keyPart, "total:all:", "all:all:", -1) // for consistency all everywhere
-// 			dataKey := cdnName + ":" + dsName + ":" + keyPart
-// 			statValue := dsMetricData[0].Value
-// 			//fmt.Printf("%s  ->%s\n", redisKey, statValue)
-
-// 			aggConfig, exists := dsAggregate[dsMetric]
-
-// 			if exists {
-// 				statFloatValue, err := strconv.ParseFloat(statValue, 64)
-
-// 				if err != nil {
-// 					statFloatValue = 0.0
-// 				}
-
-// 				statTotals[cdnName+":all:all:all:"+aggConfig.RedisKey] += statFloatValue
-// 			}
-
-// 			r := redisClient.Cmd("rpush", redisKey, statValue)
-// 			errHndlr(r.Err, ERROR)
-// 			statCount++
-// 		}
-// 	}
-// 	// for totalKey, totalVal := range statTotals {
-// 	// 	r := redisClient.Cmd("rpush", totalKey, strconv.FormatFloat(totalVal, 'f', 2, 64))
-// 	// 	errHndlr(r.Err, ERROR)
-// 	// 	statCount++
-// 	// }
-// 	log.Info("Saved ", statCount, " ds values for ", cdnName, " @ ", sampleTime)
-// 	return nil
-// }
+	var jData DsStatsJson
+	err := json.Unmarshal(rascalData, &jData)
+	errHndlr(err, ERROR)
+	statCount := 0
+	// statTotals := make(map[string]float64)
+	pts := make([]influx.Point, 0)
+	//get params for database
+	parameters, err := config.Parameters("TRAFFIC_STATS")
+	if err != nil {
+		msg := fmt.Sprintf("Error getting parameter list from %v: %v", config.ToUrl, err)
+		if init {
+			panic(msg)
+		} else {
+			log.Error(msg)
+			return runningConfig, err
+		}
+	}
+	for dsName, dsData := range jData.DeliveryService {
+		for dsMetric, dsMetricData := range dsData {
+			//create dataKey (influxDb series)
+			keyPart := strings.Replace(dsMetric, "location.", "", -1)
+			keyPart = strings.Replace(keyPart, ".kbps", ":kbps", -1)
+			keyPart = strings.Replace(keyPart, ".tps", ":tps", -1)
+			keyPart = strings.Replace(keyPart, ".status", ":status", -1)
+			// keyPart = strings.Replace(keyPart, "total:all:", "all:all:", -1) // for consistency all everywhere
+			dataKey := cdnName + ":" + dsName + ":" + keyPart
+			//convert stat time to epoch
+			statTime := strconv.Itoa(dsMetricData[0].Time)
+			msInt, err := strconv.ParseInt(statTime, 10, 64)
+			if err != nil {
+				errHndlr(err, FATAL)
+			}
+			newTime := time.Unix(0, msInt*int64(time.Millisecond))
+			//convert stat value to float
+			statValue := dsMetricData[0].Value
+			//fmt.Printf("%s  ->%s\n", redisKey, statValue)
+			statFloatValue, err := strconv.ParseFloat(statValue, 64)
+			if err != nil {
+				statFloatValue = 0.0
+			}
+			pts = append(pts,
+				influx.Point{
+					Name: dataKey,
+					Fields: map[string]interface{}{
+						"value": statFloatValue,
+					},
+					Timestamp: newTime,
+					Precision: "ms",
+				},
+			)
+			statCount++
+		}
+	}
+	bps := influx.BatchPoints{
+		Points:          pts,
+		Database:        "deliveryservice_stats",
+		RetentionPolicy: "deliveryservice_stats",
+	}
+	_, err = influxClient.Write(bps)
+	if err != nil {
+		errHndlr(err, ERROR)
+	}
+	log.Info("Saved ", statCount, " ds values for ", cdnName, " @ ", sampleTime)
+	return nil
+}
 
 /* The caches json looks like:
 {
@@ -341,17 +365,20 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 		for statName, statData := range cacheData {
 			dataKey := cdnName + ":" + cacheGroupMap[cacheName] + ":" + cacheName + ":" + statName
 			dataKey = strings.Replace(dataKey, ".bandwidth", ".kbps", 1)
+			//Get the stat time and convert to epoch
 			statTime := strconv.Itoa(statData[0].Time)
 			msInt, err := strconv.ParseInt(statTime, 10, 64)
 			if err != nil {
 				errHndlr(err, FATAL)
 			}
 			newTime := time.Unix(0, msInt*int64(time.Millisecond))
+			//Get the stat value and convert to float
 			statValue := statData[0].Value
 			statFloatValue, err := strconv.ParseFloat(statValue, 64)
 			if err != nil {
 				statFloatValue = 0.00
 			}
+			//add stat data to pts array
 			pts = append(pts,
 				influx.Point{
 					Name: dataKey,
@@ -365,11 +392,13 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 			statCount++
 		}
 	}
+	//create influxdb batch of points
 	bps := influx.BatchPoints{
 		Points:          pts,
-		Database:        "cachestats",
-		RetentionPolicy: "thirtyDays",
+		Database:        "cache_stats",
+		RetentionPolicy: "cache_stats",
 	}
+	//write to influxdb
 	_, err = influxClient.Write(bps)
 	if err != nil {
 		errHndlr(err, ERROR)
@@ -413,7 +442,5 @@ func influxConnect(config *StartupConfig) (*influx.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Printf("Happy as a Hippo! %v, %s \n", dur, ver)
-
 	return con, nil
 }
