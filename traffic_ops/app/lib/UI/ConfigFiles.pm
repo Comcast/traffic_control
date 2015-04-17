@@ -554,23 +554,29 @@ sub logs_xml_dot_config {
 	my $filename = shift;
 
 	my $server = $self->server_data($id);
-	my $data = $self->param_data( $server, $filename );
+	my $data   = $self->param_data( $server, $filename );
+	my $text   = "<!-- Generated for " . $server->host_name . " by " . &name_version_string($self) . " - Do not edit!! -->\n";
 
-	my $text = "<!-- Generated for " . $server->host_name . " by " . &name_version_string($self) . " - Do not edit!! -->\n";
-
-	my $format = $data->{"LogFormat.Format"};
+	my $log_format_name                 = $data->{"LogFormat.Name"}               || "";
+	my $log_object_filename             = $data->{"LogObject.Filename"}           || "";
+	my $log_object_format               = $data->{"LogObject.Format"}             || "";
+	my $log_object_rolling_enabled      = $data->{"LogObject.RollingEnabled"}     || "";
+	my $log_object_rolling_interval_sec = $data->{"LogObject.RollingIntervalSec"} || "";
+	my $log_object_rolling_offset_hr    = $data->{"LogObject.RollingOffsetHr"}    || "";
+	my $log_object_rolling_size_mb      = $data->{"LogObject.RollingSizeMb"}      || "";
+	my $format                          = $data->{"LogFormat.Format"};
 	$format =~ s/"/\\\"/g;
 	$text .= "<LogFormat>\n";
-	$text .= "  <Name = \"" . $data->{"LogFormat.Name"} . "\"/>\n";
+	$text .= "  <Name = \"" . $log_format_name . "\"/>\n";
 	$text .= "  <Format = \"" . $format . "\"/>\n";
 	$text .= "</LogFormat>\n";
 	$text .= "<LogObject>\n";
-	$text .= "  <Format = \"" . $data->{"LogObject.Format"} . "\"/>\n";
-	$text .= "  <Filename = \"" . $data->{"LogObject.Filename"} . "\"/>\n";
-	$text .= "  <RollingEnabled = " . $data->{"LogObject.RollingEnabled"} . "/>\n";
-	$text .= "  <RollingIntervalSec = " . $data->{"LogObject.RollingIntervalSec"} . "/>\n";
-	$text .= "  <RollingOffsetHr = " . $data->{"LogObject.RollingOffsetHr"} . "/>\n";
-	$text .= "  <RollingSizeMb = " . $data->{"LogObject.RollingSizeMb"} . "/>\n";
+	$text .= "  <Format = \"" . $log_object_format . "\"/>\n";
+	$text .= "  <Filename = \"" . $log_object_filename . "\"/>\n";
+	$text .= "  <RollingEnabled = " . $log_object_rolling_enabled . "/>\n" unless defined();
+	$text .= "  <RollingIntervalSec = " . $log_object_rolling_interval_sec . "/>\n";
+	$text .= "  <RollingOffsetHr = " . $log_object_rolling_offset_hr . "/>\n";
+	$text .= "  <RollingSizeMb = " . $log_object_rolling_size_mb . "/>\n";
 	$text .= "</LogObject>\n";
 
 	return $text;
@@ -943,8 +949,6 @@ sub parent_dot_config {
 		$data = $self->ds_data($server);
 	}
 
-	# Origin Shield or Multi Site Origin
-	$self->app->log->debug("id = $id and server_type = $server_type");
 	if ( $server_type eq 'MID' ) {
 		foreach my $ds ( @{ $data->{dslist} } ) {
 			my $xml_id            = $ds->{ds_xml_id};
@@ -980,9 +984,13 @@ sub parent_dot_config {
 				$text .= "\" round_robin=consistent_hash go_direct=false parent_is_proxy=false";
 			}
 		}
+<<<<<<< HEAD
 
 		#$text .= "dest_domain=. go_direct=true\n"; # this is implicit.
 		$self->app->log->debug( "MID PARENT.CONFIG:\n" . $text . "\n" );
+=======
+		$text .= "dest_domain=. go_direct=true\n";
+>>>>>>> defaulted undefined values
 		return $text;
 	}
 	else {
@@ -1034,8 +1042,11 @@ sub parent_dot_config {
 		}
 
 		$text .= "\n";
+<<<<<<< HEAD
 
 		# $self->app->log->debug($text);
+=======
+>>>>>>> defaulted undefined values
 		return $text;
 	}
 }
