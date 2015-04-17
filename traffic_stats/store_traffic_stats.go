@@ -446,27 +446,32 @@ func influxConnect(config *StartupConfig, runningConfig *RunningConfig) (*influx
 		}
 		return con, nil
 	} else if activeServers > 1 {
-		//if more than 1 are active, randomly pick one to connect to
-		serverIndex := rand.Intn(activeServers)
-		// log.Infof("there are %d active servers. connect to server %d.  FQDN = %s\n", activeServers, serverIndex, runningConfig.InfluxDbProps[serverIndex].Fqdn)
-		u, err := url.Parse(fmt.Sprintf("http://%s:%d", runningConfig.InfluxDbProps[serverIndex].Fqdn, runningConfig.InfluxDbProps[serverIndex].Port))
-		if err != nil {
-			return nil, err
+		//try to connect to all ONLINE servers until we find one that works
+		for i := 0; i < activeServers; i++ {
+			u, err := url.Parse(fmt.Sprintf("http://%s:%d", runningConfig.InfluxDbProps[i].Fqdn, runningConfig.InfluxDbProps[i].Port))
+			if err != nil {
+				errHndlr(err, ERROR)
+			} else {
+				conf := influx.Config{
+					URL:      *u,
+					Username: config.InfluxUser,
+					Password: config.InfluxPassword,
+				}
+				con, err := influx.NewClient(conf)
+				if err != nil {
+					errHndlr(err, ERROR)
+				} else {
+					_, _, err = con.Ping()
+					if err != nil {
+						errHndlr(err, ERROR)
+					} else {
+						return con, nil
+					}
+				}
+			}
 		}
-		conf := influx.Config{
-			URL:      *u,
-			Username: config.InfluxUser,
-			Password: config.InfluxPassword,
-		}
-		con, err := influx.NewClient(conf)
-		if err != nil {
-			return nil, err
-		}
-		_, _, err = con.Ping()
-		if err != nil {
-			return nil, err
-		}
-		return con, nil
+		err := errors.New("Could not connect to any of the InfluxDb servers that are ONLINE in traffic ops.")
+		return nil, err
 	} else {
 		err := errors.New("No online InfluxDb servers could be found!")
 		return nil, err
