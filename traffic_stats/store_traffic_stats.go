@@ -263,7 +263,6 @@ func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxCl
 	err := json.Unmarshal(rascalData, &jData)
 	errHndlr(err, ERROR)
 	statCount := 0
-	// statTotals := make(map[string]float64)
 	pts := make([]influx.Point, 0)
 
 	for dsName, dsData := range jData.DeliveryService {
@@ -273,7 +272,6 @@ func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxCl
 			keyPart = strings.Replace(keyPart, ".kbps", ":kbps", -1)
 			keyPart = strings.Replace(keyPart, ".tps", ":tps", -1)
 			keyPart = strings.Replace(keyPart, ".status", ":status", -1)
-			// keyPart = strings.Replace(keyPart, "total:all:", "all:all:", -1) // for consistency all everywhere
 			dataKey := cdnName + ":" + dsName + ":" + keyPart
 			//convert stat time to epoch
 			statTime := strconv.Itoa(dsMetricData[0].Time)
@@ -284,7 +282,6 @@ func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxCl
 			newTime := time.Unix(0, msInt*int64(time.Millisecond))
 			//convert stat value to float
 			statValue := dsMetricData[0].Value
-			//fmt.Printf("%s  ->%s\n", redisKey, statValue)
 			statFloatValue, err := strconv.ParseFloat(statValue, 64)
 			if err != nil {
 				statFloatValue = 0.0
@@ -475,6 +472,5 @@ func influxConnect(config *StartupConfig, runningConfig *RunningConfig) (*influx
 	} else {
 		err := errors.New("No online InfluxDb servers could be found!")
 		return nil, err
-
 	}
 }
