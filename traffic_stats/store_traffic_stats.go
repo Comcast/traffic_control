@@ -6,8 +6,8 @@ import (
 	"flag"
 	"fmt"
 	log "github.com/cihub/seelog"
+	traffic_ops "github.com/comcast/traffic_control/traffic_ops/client"
 	influx "github.com/influxdb/influxdb/client"
-	traffic_ops "github.comcast.com/cdneng/traffic_control/traffic_ops/client"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -97,6 +97,7 @@ func main() {
 					fmt.Println("Skipping stat write - testSummary mode is ON!")
 					continue
 				}
+				log.Infof("the cachegroup map is %v", runningConfig.CacheGroupMap)
 				go storeMetrics(cdnName, url, runningConfig.CacheGroupMap, config, &runningConfig)
 			}
 		}
@@ -268,11 +269,14 @@ func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxCl
 	for dsName, dsData := range jData.DeliveryService {
 		for dsMetric, dsMetricData := range dsData {
 			//create dataKey (influxDb series)
-			keyPart := strings.Replace(dsMetric, "location.", "", -1)
-			keyPart = strings.Replace(keyPart, ".kbps", ":kbps", -1)
-			keyPart = strings.Replace(keyPart, ".tps", ":tps", -1)
-			keyPart = strings.Replace(keyPart, ".status", ":status", -1)
-			dataKey := cdnName + ":" + dsName + ":" + keyPart
+			var cachegroup, statName string
+			if strings.Contains(dsMetric, "total.") {
+				s := strings.Split(dsMetric, ".")
+				cachegroup, statName = s[0], s[1]
+			} else {
+				s := strings.Split(dsMetric, ".")
+				cachegroup, statName = s[1], s[2]
+			}
 			//convert stat time to epoch
 			statTime := strconv.Itoa(dsMetricData[0].Time)
 			msInt, err := strconv.ParseInt(statTime, 10, 64)
@@ -288,7 +292,12 @@ func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxCl
 			}
 			pts = append(pts,
 				influx.Point{
-					Name: dataKey,
+					Name: statName,
+					Tags: map[string]string{
+						"deliveryservice": dsName,
+						"cdn":             cdnName,
+						"cachegroup":      cachegroup,
+					},
 					Fields: map[string]interface{}{
 						"value": statFloatValue,
 					},
@@ -302,13 +311,13 @@ func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxCl
 	bps := influx.BatchPoints{
 		Points:          pts,
 		Database:        "deliveryservice_stats",
-		RetentionPolicy: "deliveryservice_stats",
+		RetentionPolicy: "weekly",
 	}
 	_, err = influxClient.Write(bps)
 	if err != nil {
 		errHndlr(err, ERROR)
 	}
-	log.Info("Saved ", statCount, " ds values for ", cdnName, " @ ", sampleTime)
+	log.Info("Saved ", statCount, " deliveryservice stats values for ", cdnName, " @ ", sampleTime)
 	return nil
 }
 
@@ -360,8 +369,9 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 	pts := make([]influx.Point, 0)
 	for cacheName, cacheData := range jData.Caches {
 		for statName, statData := range cacheData {
-			dataKey := cdnName + ":" + cacheGroupMap[cacheName] + ":" + cacheName + ":" + statName
+			dataKey := statName
 			dataKey = strings.Replace(dataKey, ".bandwidth", ".kbps", 1)
+			dataKey = strings.Replace(dataKey, "-", "_", -1)
 			//Get the stat time and convert to epoch
 			statTime := strconv.Itoa(statData[0].Time)
 			msInt, err := strconv.ParseInt(statTime, 10, 64)
@@ -379,6 +389,11 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 			pts = append(pts,
 				influx.Point{
 					Name: dataKey,
+					Tags: map[string]string{
+						"cachegroup": cacheGroupMap[cacheName],
+						"hostname":   cacheName,
+						"cdn":        cdnName,
+					},
 					Fields: map[string]interface{}{
 						"value": statFloatValue,
 					},
@@ -390,17 +405,18 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 		}
 	}
 	//create influxdb batch of points
+	// TODO: make retention policy configurable
 	bps := influx.BatchPoints{
 		Points:          pts,
 		Database:        "cache_stats",
-		RetentionPolicy: "cache_stats",
+		RetentionPolicy: "weekly",
 	}
 	//write to influxdb
 	_, err = influxClient.Write(bps)
 	if err != nil {
 		errHndlr(err, ERROR)
 	}
-	log.Info("Saved ", statCount, " values for ", cdnName, " @ ", sampleTime)
+	log.Info("Saved ", statCount, " cache stats values for ", cdnName, " @ ", sampleTime)
 	return nil
 }
 
