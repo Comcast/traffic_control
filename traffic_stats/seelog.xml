@@ -1,5 +1,0 @@
-<seelog>
-    <outputs>
-        <file path="/opt/traffic_stats/var/log/traffic_stats/store_traffic_stats.log" />
-    </outputs>
-</seelog>
