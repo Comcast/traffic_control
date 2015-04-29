@@ -30,8 +30,6 @@ type StartupConfig struct {
 	ToUser          string `json:"toUser"`
 	ToPasswd        string `json:"toPasswd"`
 	ToUrl           string `json:"toUrl"`
-	InfluxHost      string `json:"influxHost"`
-	InfluxPort      int64  `json:"influxPort"`
 	InfluxUser      string `json:"influxUser"`
 	InfluxPassword  string `json:"influxPassword"`
 	PollingInterval int    `json:"pollingInterval"`
