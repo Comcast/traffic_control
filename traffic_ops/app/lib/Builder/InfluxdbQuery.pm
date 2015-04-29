@@ -1,4 +1,4 @@
-package Helper::Stats;
+package Builder::InfluxdbQuery;
 #
 # Copyright 2015 Comcast Cable Communications Management, LLC
 #
@@ -22,59 +22,67 @@ use Data::Dumper;
 use JSON;
 use File::Slurp;
 use Math::Round;
+use Carp qw(cluck confess);
+
+my $args;
 
 sub new {
+	my $self  = {};
 	my $class = shift;
-	my $self = bless { c => $class, }, $class;
-	return $self;
+	$args = shift;
+
+	return ( bless( $self, $class ) );
 }
 
-sub series_name2 {
-	my $self            = shift;
-	my $cdn_name        = shift;
-	my $cachegroup_name = shift;
-	my $cache_name      = shift;
-	my $metric_type     = shift;
+sub now {
+	my $self      = shift;
+	my $now_param = shift;
+	if ( defined($now_param) ) {
+		return "now()";
+	}
 
-	# 'series' section
-	my $delim = ":";
-
-	# Example: <cdn_name>:<cachegroup_name>:<cache_name>:<metric_type>
-	return sprintf( "%s$delim%s$delim%s$delim%s", $cdn_name, $cachegroup_name, $cache_name, $metric_type );
 }
 
-sub build_summary_query {
-	my $self           = shift;
-	my $series_name    = shift;
-	my $cachgroup_name = shift;
-	my $start_date     = shift;
-	my $end_date       = shift;
-	my $interval       = shift;    # Valid interval examples 10m (minutes), 10s (seconds), 1h (hour)
-	my $limit          = shift;
+sub valid_keys {
+	my $self       = shift;
+	my $valid      = 1;
+	my $valid_keys = { db_name => 1, start_date => 1, end_date => 1, series_name => 1, limit => 1 };
+	foreach my $k ( keys $args ) {
+		unless ( defined( $valid_keys->{$k} ) ) {
+			confess("Key: '$k' is not valid");
+			$valid = 0;
+		}
+	}
+	return $valid;
+}
 
-	#'summary' section
-	#SELECT sum(value)*1000/6 FROM "bandwidth" WHERE $timeFilter AND cdn='over-the-top' GROUP BY time(60s), cdn ORDER BY asc
+sub summary_query {
+	my $self = shift;
+	if ( valid_keys() ) {
 
-	#'summary' section
-	return sprintf( '%s "%s" %s', "select count(value) from ", $series_name, "where time > '$start_date' and time < '$end_date'" );
+		#'summary' section
+		#SELECT sum(value) FROM "bandwidth" WHERE $timeFilter AND cdn='cdn1' GROUP BY time(60s), cdn ORDER BY asc
+
+		#'summary' section
+		return sprintf(
+			'%s "%s" %s LIMIT 10',
+			"SELECT COUNT(VALUE) FROM ",
+			$args->{series_name}, "WHERE TIME > '$args->{start_date}' AND TIME < '$args->{end_date}'"
+		);
+
+	}
 
 	#	return sprintf( '%s "%s" %s',
 	#		"select mean(value), percentile(value, 5), percentile(value, 95), percentile(value, 98), min(value), max(value), sum(value), count(value) from ",
 	#		$series_name, "where time > '$start_date' and time < '$end_date'" );
 }
 
-sub build_series_query {
-	my $self        = shift;
-	my $series_name = shift;
-	my $start_date  = shift;
-	my $end_date    = shift;
-	my $interval    = shift;    # Valid interval examples 10m (minutes), 10s (seconds), 1h (hour)
-	my $limit       = shift;
-
-	return sprintf( '%s "%s" %s', "select value from ", $series_name, "where time > '$start_date' and time < '$end_date'" );
+sub series_query {
+	my $self = shift;
+	return sprintf( '%s "%s" %s', "SELECT VALUE FROM", $args->{series_name}, "WHERE TIME > '$args->{start_date}' AND TIME < '$args->{end_date}'" );
 }
 
-sub build_summary {
+sub summary_response {
 	my $self            = shift;
 	my $summary_content = shift;    # in perl hash form
 
@@ -90,6 +98,7 @@ sub build_summary {
 
 	if ( defined($values_size) & ( $values_size > 0 ) ) {
 		my $avg = $summary_content->{results}[0]{series}[0]{values}[0][1];
+
 		my $average = nearest( .001, $avg );
 		$average =~ /([\d\.]+)/;
 		$summary->{average}                = $average;
@@ -113,7 +122,7 @@ sub build_summary {
 
 }
 
-sub build_series {
+sub series_response {
 	my $self           = shift;
 	my $series_content = shift;
 	my $results        = $series_content->{results}[0];

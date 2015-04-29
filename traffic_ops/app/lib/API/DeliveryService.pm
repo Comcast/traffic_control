@@ -41,16 +41,15 @@ sub delivery_services {
 	my $self = shift;
 	my $id   = $self->param('id');
 
-	my $helper = new Utils::Helper( { mojo => $self } );
-	if ( defined($id) && $helper->is_valid_delivery_service($id) ) {
-		if ( $helper->is_delivery_service_assigned($id) ) {
+	if ( defined($id) && $self->is_valid_delivery_service($id) ) {
+		if ( $self->is_delivery_service_assigned($id) ) {
 			return $self->get_data();
 		}
 		else {
 			return $self->forbidden();
 		}
 	}
-	if ( defined($id) && !$helper->is_valid_delivery_service($id) ) {
+	if ( defined($id) && !$self->is_valid_delivery_service($id) ) {
 		return $self->not_found();
 	}
 	else {
@@ -124,7 +123,7 @@ sub get_data {
 				"checkPath"          => $row->check_path,
 				"matchList"          => \@matchlist,
 				"active"             => \$row->active,
-				"protocol"         => \$row->protocol,
+				"protocol"           => \$row->protocol,
 				"ipv6RoutingEnabled" => \$row->ipv6_routing_enabled,
 			}
 		);
@@ -145,10 +144,8 @@ sub get_summary {
 
 	my $id = $self->param('id');
 
-	my $helper = new Utils::Helper( { mojo => $self } );
-
-	if ( $helper->is_valid_delivery_service($id) ) {
-		if ( $helper->is_delivery_service_assigned($id) ) {
+	if ( $self->is_valid_delivery_service($id) ) {
+		if ( $self->is_delivery_service_assigned($id) ) {
 			my $result = $self->db->resultset("Deliveryservice")->search( { id => $self->param('id') } )->single();
 			my $param =
 				$self->db->resultset('ProfileParameter')
@@ -190,10 +187,8 @@ sub routing {
 	# get and pass { cdn_name => $foo } into get_routing_stats
 	my $id = $self->param('id');
 
-	my $helper = new Utils::Helper( { mojo => $self } );
-
-	if ( $helper->is_valid_delivery_service($id) ) {
-		if ( $helper->is_delivery_service_assigned($id) ) {
+	if ( $self->is_valid_delivery_service($id) ) {
+		if ( $self->is_delivery_service_assigned($id) ) {
 			my $result = $self->db->resultset("Deliveryservice")->search( { id => $self->param('id') } )->single();
 			my $param =
 				$self->db->resultset('ProfileParameter')
@@ -232,12 +227,12 @@ sub metrics {
 	my $config = $self->get_config($metric);
 	my $helper = new Utils::Helper::Datasource( { mojo => $self } );
 
-	if ( $valid_server_types->{$type} && defined($config) && $helper->is_valid_delivery_service($id) ) {
-		if ( $helper->is_delivery_service_assigned($id) ) {
+	if ( $valid_server_types->{$type} && defined($config) && $self->is_valid_delivery_service($id) ) {
+		if ( $self->is_delivery_service_assigned($id) ) {
 			$start =~ s/\.\d+$//g;
 			$end =~ s/\.\d+$//g;
 
-			for my $kvp ( @{ $config->{get_kvp}->( $helper->get_delivery_service_name($id), $valid_server_types->{$type}, $start, $end ) } ) {
+			for my $kvp ( @{ $config->{get_kvp}->( $self->get_delivery_service_name($id), $valid_server_types->{$type}, $start, $end ) } ) {
 				$helper->kv( $kvp->{key}, $kvp->{value} );
 			}
 			return $self->build_etl_metrics_response( $helper, $config, $start, $end, $stats_only, $data_only );
@@ -279,10 +274,8 @@ sub capacity {
 	# get and pass { cdn_name => $foo } into get_cache_capacity
 	my $id = $self->param('id');
 
-	my $helper = new Utils::Helper( { mojo => $self } );
-
-	if ( $helper->is_valid_delivery_service($id) ) {
-		if ( $helper->is_delivery_service_assigned($id) ) {
+	if ( $self->is_valid_delivery_service($id) ) {
+		if ( $self->is_delivery_service_assigned($id) ) {
 			my $result = $self->db->resultset("Deliveryservice")->search( { id => $self->param('id') } )->single();
 			my $param =
 				$self->db->resultset('ProfileParameter')
@@ -305,10 +298,8 @@ sub health {
 	my $self = shift;
 	my $id   = $self->param('id');
 
-	my $helper = new Utils::Helper( { mojo => $self } );
-
-	if ( $helper->is_valid_delivery_service($id) ) {
-		if ( $helper->is_delivery_service_assigned($id) ) {
+	if ( $self->is_valid_delivery_service($id) ) {
+		if ( $self->is_delivery_service_assigned($id) ) {
 			my $result = $self->db->resultset("Deliveryservice")->search( { id => $self->param('id') } )->single();
 			my $param =
 				$self->db->resultset('ProfileParameter')
@@ -332,10 +323,8 @@ sub state {
 	my $self = shift;
 	my $id   = $self->param('id');
 
-	my $helper = new Utils::Helper( { mojo => $self } );
-
-	if ( $helper->is_valid_delivery_service($id) ) {
-		if ( $helper->is_delivery_service_assigned($id) || &is_oper($self) ) {
+	if ( $self->is_valid_delivery_service($id) ) {
+		if ( $self->is_delivery_service_assigned($id) || &is_oper($self) ) {
 			my $result = $self->db->resultset("Deliveryservice")->search( { id => $self->param('id') } )->single();
 			my $param =
 				$self->db->resultset('ProfileParameter')
@@ -428,10 +417,9 @@ sub peakusage {
 	my $start           = $self->param('start');
 	my $end             = $self->param('end');
 	my $interval        = $self->param('interval');
-	my $helper          = new Utils::Helper( { mojo => $self } );
-	if ( $helper->is_valid_delivery_service($dsid) ) {
+	if ( $self->is_valid_delivery_service($dsid) ) {
 
-		if ( $helper->is_delivery_service_assigned($dsid) ) {
+		if ( $self->is_delivery_service_assigned($dsid) ) {
 			return $self->get_ds_usage( $dsid, $cachegroup_name, $peak_usage_type, $start, $end, $interval );
 		}
 		else {

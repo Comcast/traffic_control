@@ -25,7 +25,7 @@ use Math::Round;
 
 our @ISA = ("Helper::Stats");
 
-sub series_name {
+sub series_name2 {
 	my $self            = shift;
 	my $cdn_name        = shift;
 	my $ds_name         = shift;

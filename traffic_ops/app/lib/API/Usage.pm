@@ -21,7 +21,6 @@ package API::Usage;
 use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
-use Utils::Helper;
 use JSON;
 
 sub deliveryservice {
@@ -32,10 +31,9 @@ sub deliveryservice {
 	my $start           = $self->param('start_date');
 	my $end             = $self->param('end_date');
 	my $interval        = $self->param('interval');
-	my $helper          = new Utils::Helper( { mojo => $self } );
-	if ( $helper->is_valid_delivery_service($dsid) ) {
+	if ( $self->is_valid_delivery_service($dsid) ) {
 
-		if ( $helper->is_delivery_service_assigned($dsid) ) {
+		if ( $self->is_delivery_service_assigned($dsid) ) {
 			return $self->get_ds_usage( $dsid, $cachegroup_name, $metric, $start, $end, $interval );
 		}
 		else {

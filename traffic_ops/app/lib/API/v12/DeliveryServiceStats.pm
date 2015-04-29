@@ -21,7 +21,6 @@ package API::v12::DeliveryServiceStats;
 use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
-use Utils::Helper;
 use Helper::Stats;
 use Helper::DeliveryServiceStats;
 use JSON;
@@ -37,17 +36,18 @@ sub index {
 	my $interval        = $self->param('interval') || "1m";    # Valid interval examples 10m (minutes), 10s (seconds), 1h (hour)
 	my $limit           = $self->param('limit');
 
-	my $helper = new Utils::Helper( { mojo => $self } );
-	if ( $helper->is_valid_delivery_service($dsid) ) {
+	if ( $self->is_valid_delivery_service($dsid) ) {
 
-		if ( $helper->is_delivery_service_assigned($dsid) ) {
+		if ( $self->is_delivery_service_assigned($dsid) ) {
 			my ( $cdn_name, $ds_name ) = $self->deliveryservice_lookup_cdn_name_and_ds_name($dsid);
 
 			$stats_helper = new Helper::DeliveryServiceStats();
-			my $series_name = $stats_helper->series_name( $cdn_name, $ds_name, $cachegroup_name, $metric_type );
+			my $series_name = $metric_type;
+
+			#my $series_name = $stats_helper->series_name( $cdn_name, $ds_name, $cachegroup_name, $metric_type );
 
 			# Build the summary section
-			my $summary_query = $stats_helper->build_summary_query( $series_name, $start_date, $end_date, $interval, $limit );
+			my $summary_query = $stats_helper->build_summary_query( $series_name, $cachegroup_name, $start_date, $end_date, $interval, $limit );
 			$self->app->log->debug( "summary_query #-> " . $summary_query );
 
 			my $db_name            = $self->get_db_name();

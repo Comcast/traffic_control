@@ -119,6 +119,68 @@ sub register {
 		}
 	);
 
+	$app->renderer->add_helper(
+		is_delivery_service_assigned => sub {
+			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $id   = shift || confess("Please supply a delivery service ID");
+
+			my $user_id =
+				$self->db->resultset('TmUser')->search( { username => $self->current_user()->{username} } )->get_column('id')->single();
+			my @ds_ids = ();
+
+			if ( defined($user_id) ) {
+				@ds_ids = $self->db->resultset('DeliveryserviceTmuser')->search( { tm_user_id => $user_id } )->get_column('deliveryservice')->all();
+			}
+
+			my %ds_hash = map { $_ => 1 } @ds_ids;
+
+			# no external user ID = internal; assume authenticated due to route configuration
+			if ( !defined($user_id) ) {
+				return (1);
+			}
+			elsif ($user_id) {
+				my $result = $self->db->resultset("Deliveryservice")->search( { id => $id } )->single();
+
+				if ( exists( $ds_hash{ $result->id } ) ) {
+					return (1);
+				}
+			}
+
+			return (0);
+		}
+	);
+
+	$app->renderer->add_helper(
+		is_valid_delivery_service => sub {
+			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $id   = shift || confess("Please supply a delivery service ID");
+
+			my $result = $self->db->resultset("Deliveryservice")->find( { id => $id } );
+
+			if ( defined($result) ) {
+				return (1);
+			}
+			else {
+				return (0);
+			}
+		}
+	);
+	$app->renderer->add_helper(
+		get_delivery_service_name => sub {
+			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $id   = shift || confess("Please supply a delivery service ID");
+
+			my $result = $self->db->resultset("Deliveryservice")->search( { id => $id } )->single();
+
+			if ( defined($result) ) {
+				return ( $result->xml_id );
+			}
+			else {
+				return (0);
+			}
+		}
+	);
+
 }
 
 1;

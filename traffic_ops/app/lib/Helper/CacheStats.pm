@@ -25,7 +25,7 @@ use Math::Round;
 
 our @ISA = ("Helper::Stats");
 
-sub series_name {
+sub series_name2 {
 	my $self            = shift;
 	my $cdn_name        = shift;
 	my $cachegroup_name = shift;
@@ -36,7 +36,9 @@ sub series_name {
 	my $delim = ":";
 
 	# Example: <cdn_name>:<cachegroup_name>:<cache_name>:<metric_type>
-	return sprintf( "%s$delim%s$delim%s$delim%s", $cdn_name, $cachegroup_name, $cache_name, $metric_type );
+	return $metric_type;
+
+	#return sprintf( "%s$delim%s$delim%s$delim%s", $cdn_name, $cachegroup_name, $cache_name, $metric_type );
 }
 
 1;

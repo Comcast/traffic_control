@@ -21,7 +21,6 @@ package API::DeliveryServiceServer;
 use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
-use Utils::Helper;
 
 sub index {
 	my $self = shift;

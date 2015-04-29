@@ -52,6 +52,8 @@ sub new {
 	}, $class;
 
 	$ua = LWP::UserAgent->new();
+
+	# timeout is in seconds
 	$ua->timeout(20);
 	$ua->ssl_opts( verify_hostname => 0, SSL_verify_mode => 0x00 );
 
@@ -121,7 +123,7 @@ sub get_url {
 	return $base_url . $influxdb_server . $uri;
 }
 
-sub get_url_orig {
+sub get_url_https {
 	my $self = shift;
 	my $uri = shift || "";
 
