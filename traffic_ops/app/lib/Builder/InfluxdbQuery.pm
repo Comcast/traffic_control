@@ -46,10 +46,19 @@ sub now {
 sub valid_keys {
 	my $self       = shift;
 	my $valid      = 1;
-	my $valid_keys = { db_name => 1, start_date => 1, end_date => 1, series_name => 1, limit => 1 };
+	my $valid_keys = {
+		cdn_name        => 1,
+		ds_name         => 1,
+		cachegroup_name => 1,
+		start_date      => 1,
+		end_date        => 1,
+		series_name     => 1,
+		interval        => 1,
+		limit           => 1
+	};
 	foreach my $k ( keys $args ) {
 		unless ( defined( $valid_keys->{$k} ) ) {
-			confess("Key: '$k' is not valid");
+			confess("'$k' is not a valid key constructor key.");
 			$valid = 0;
 		}
 	}
@@ -61,25 +70,27 @@ sub summary_query {
 	if ( valid_keys() ) {
 
 		#'summary' section
-		#SELECT sum(value) FROM "bandwidth" WHERE $timeFilter AND cdn='cdn1' GROUP BY time(60s), cdn ORDER BY asc
-
-		#'summary' section
 		return sprintf(
-			'%s "%s" %s LIMIT 10',
-			"SELECT COUNT(VALUE) FROM ",
-			$args->{series_name}, "WHERE TIME > '$args->{start_date}' AND TIME < '$args->{end_date}'"
+			'%s %s %s',
+			"SELECT mean(value), percentile(value, 5), percentile(value, 95), percentile(value, 98), min(value), max(value), sum(value), count(value) FROM",
+			$args->{series_name}, "WHERE time > '$args->{start_date}' AND 
+                                         time < '$args->{end_date}' AND 
+                                         cdn = '$args->{cdn_name}' AND
+                                         cachegroup = '$args->{cachegroup_name}' 
+                                         GROUP BY time($args->{interval}), cdn, cachegroup, deliveryservice"
 		);
 
 	}
-
-	#	return sprintf( '%s "%s" %s',
-	#		"select mean(value), percentile(value, 5), percentile(value, 95), percentile(value, 98), min(value), max(value), sum(value), count(value) from ",
-	#		$series_name, "where time > '$start_date' and time < '$end_date'" );
 }
 
 sub series_query {
 	my $self = shift;
-	return sprintf( '%s "%s" %s', "SELECT VALUE FROM", $args->{series_name}, "WHERE TIME > '$args->{start_date}' AND TIME < '$args->{end_date}'" );
+	return sprintf(
+		'%s %s %s',
+		"SELECT value FROM",
+		$args->{series_name}, "WHERE time > '$args->{start_date}' AND time < '$args->{end_date}' AND cdn = '$args->{cdn_name}' AND cachegroup =
+				'$args->{cachegroup_name}'"
+	);
 }
 
 sub summary_response {
