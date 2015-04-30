@@ -95,7 +95,6 @@ func main() {
 					fmt.Println("Skipping stat write - testSummary mode is ON!")
 					continue
 				}
-				log.Infof("the cachegroup map is %v", runningConfig.CacheGroupMap)
 				go storeMetrics(cdnName, url, runningConfig.CacheGroupMap, config, &runningConfig)
 			}
 		}
