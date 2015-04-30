@@ -118,7 +118,6 @@ sub register {
 			return ( $cdn_name, $ds_name );
 		}
 	);
-
 }
 
 1;
