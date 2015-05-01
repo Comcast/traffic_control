@@ -34,7 +34,7 @@ sub deliveryservice {
 	if ( $self->is_valid_delivery_service($dsid) ) {
 
 		if ( $self->is_delivery_service_assigned($dsid) ) {
-			return $self->get_ds_usage( $dsid, $cachegroup_name, $metric, $start, $end, $interval );
+			return $self->deliveryservice_usage( $dsid, $cachegroup_name, $metric, $start, $end, $interval );
 		}
 		else {
 			return $self->forbidden();
