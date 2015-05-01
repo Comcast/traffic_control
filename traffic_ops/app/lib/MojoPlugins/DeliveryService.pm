@@ -79,7 +79,7 @@ sub register {
 			my $dh = new Utils::Helper::DateHelper();
 			( $start, $end ) = $dh->translate_dates( $start, $end );
 			my $match = $self->build_match( $cdn_name, $ds_name, $cachegroup_name, $metric_type );
-			my $j = $self->stats_data( $match, $start, $end, $interval );
+			my $j = $self->get_stats( $match, $start, $end, $interval );
 			if ( %{$j} ) {
 				$j->{deliveryServiceId} = $dsid;    # add dsId to data structure
 			}
