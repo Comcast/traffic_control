@@ -8,7 +8,7 @@ Vendor:		Comcast Cable
 Group:		Applications/Communications
 License:	N/A
 URL:		https://github.com/comcast/traffic_control/
-Source:		$WORKSPACE/traffic_stats/SOURCES/store_traffic_stats-@VERSION@.tar.gz
+Source:		~/rpmbuild/SOURCES/store_traffic_stats-@VERSION@.tar.gz
 
 %description
 Installs store_traffic_stats.
