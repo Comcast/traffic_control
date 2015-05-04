@@ -56,15 +56,15 @@ fi
 /usr/bin/passwd -l traffic_stats >/dev/null
 /usr/bin/chage -E -1 -I -1 -m 0 -M 99999 -W 7 traffic_stats
 
-if [ -e /etc/init.d/traffic_stats ]; then
+if [ -e /etc/init.d/store_traffic_stats ]; then
 
-	/sbin/service traffic_stats stop
+	/sbin/service store_traffic_stats stop
 fi
 
 %post
 
-/sbin/chkconfig --add traffic_stats
-/sbin/chkconfig traffic_stats on
+/sbin/chkconfig --add store_traffic_stats
+/sbin/chkconfig store_traffic_stats on
 
 
 %files
@@ -84,12 +84,12 @@ fi
 
 %attr(600, traffic_stats, traffic_stats) /opt/traffic_stats/conf/*
 %attr(755, traffic_stats, traffic_stats) /opt/traffic_stats/bin/*
-%attr(755, traffic_stats, traffic_stats) /etc/init.d/traffic_stats
+%attr(755, traffic_stats, traffic_stats) /etc/init.d/store_traffic_stats
 
 %preun
 # args for hooks: http://www.ibm.com/developerworks/library/l-rpm2/
 # if $1 = 0, this is an uninstallation, if $1 = 1, this is an upgrade (don't do anything)
 if [ "$1" = "0" ]; then
-	/sbin/chkconfig --del traffic_stats
-	/etc/init.d/traffic_stats stop
+	/sbin/chkconfig --del store_traffic_stats
+	/etc/init.d/store_traffic_stats stop
 fi
