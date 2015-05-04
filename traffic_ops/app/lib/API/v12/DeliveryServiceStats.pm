@@ -95,8 +95,6 @@ sub index {
 				my $parameters_node = "parameters";
 				my $result          = ();
 
-				#$result->{$parameters_node} = $summary_content->{results}[0];
-
 				$result->{$parameters_node}{cdnName}              = $cdn_name;
 				$result->{$parameters_node}{deliveryServiceName}  = $ds_name;
 				$result->{$parameters_node}{cacheGroupName}       = $cachegroup_name;
@@ -108,6 +106,7 @@ sub index {
 				$result->{$parameters_node}{influxdbSeriesQuery}  = $series_query;
 				$result->{$parameters_node}{influxdbSummaryQuery} = $summary_query;
 
+<<<<<<< HEAD
 				my $series_node = "series";
 				$result->{$series_node}{data} = $series;
 				my @series_values = $series->{values};
@@ -160,58 +159,20 @@ sub index_query {
 
 			my $summary_query = $stats_helper->build_summary_query( $series_name, $start_date, $end_date, $interval, $limit );
 			$self->app->log->debug( "summary_query #-> " . $summary_query );
-
-			my $db_name            = $self->get_db_name();
-			my $response_container = $self->influxdb_query( $db_name, $query );
-			my $response           = $response_container->{'response'};
-			my $content            = $response->{_content};
-
-			my $response_content;
-			if ( $response->is_success() ) {
-				$response_content = decode_json($content);
-
-				#$self->app->log->debug( "response_content #-> " . Dumper($response_content) );
-				$response = $iq->response($response_content);
-			}
-			else {
-				return $self->alert( { error_message => $content } );
-			}
-
-			if ( defined($response) ) {
-
-				my $parameters_node = "parameters";
-				my $result          = ();
-
-				#$result->{$parameters_node}{series}               = $series;
-				$result->{$parameters_node}{cdnName}              = $cdn_name;
-				$result->{$parameters_node}{deliveryServiceName}  = $ds_name;
-				$result->{$parameters_node}{cacheGroupName}       = $cachegroup_name;
-				$result->{$parameters_node}{startDate}            = $start_date;
-				$result->{$parameters_node}{endDate}              = $end_date;
-				$result->{$parameters_node}{interval}             = $interval;
-				$result->{$parameters_node}{metricType}           = $metric_type;
-				$result->{$parameters_node}{influxdbDatabaseName} = $self->get_db_name();
-				$result->{$parameters_node}{influxdbQuery}        = $query;
-
-				$self->app->log->debug( "response_content #-> " . Dumper($response_content) );
-				my $series       = $response_content->{results}[0]{series};
-				my $series_count = @$series;
-				$result->{seriesCount} = $series_count;
-
-				#my $series = $response_content->{results}[0]{series}[0]->{name};
-
-=cut
-				foreach my $entry (@$series) {
-
-					if ( ref($entry) eq "HASH" ) {
-						#delete $_->{name};
-						delete $entry->{tags};
-					}
+=======
+				if ( $exclude !~ /series/ ) {
+					my $series_node = "series";
+					$result->{$series_node}{data} = $series;
+					my @series_values = $series->{values};
+					my $series_count  = $#{ $series_values[0] };
+					$result->{$series_node}{count} = $series_count;
 				}
-=cut
+>>>>>>> added exclude functionality
 
-				$result->{series}      = $series;
-				$result->{seriesCount} = $series_count;
+				if ( $exclude !~ /summary/ ) {
+					my $summary_node = "summary";
+					$result->{$summary_node} = $summary;
+				}
 
 				return $self->success($result);
 			}
