@@ -29,7 +29,7 @@ mkdir -p ${RPM_BUILD_ROOT}/etc/init.d
 mkdir -p ${RPM_BUILD_ROOT}/etc/logrotate.d
 
 
-cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/store_straffic_stats ${RPM_BUILD_ROOT}/opt/traffic_stats/bin/store_traffic_stats
+cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/store_traffic_stats ${RPM_BUILD_ROOT}/opt/traffic_stats/bin/store_traffic_stats
 cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/store_traffic_stats.cfg ${RPM_BUILD_ROOT}/opt/traffic_stats/conf/store_traffic_stats.cfg
 cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/store_traffic_stats_seelog.xml ${RPM_BUILD_ROOT}/opt/traffic_stats/conf/store_traffic_stats_seelog.xml
 cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/store_traffic_stats.init ${RPM_BUILD_ROOT}/etc/init.d/store_traffic_stats
