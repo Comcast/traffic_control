@@ -25,7 +25,9 @@ use Utils::Helper;
 use Helper::Stats;
 use Helper::DeliveryServiceStats;
 use JSON;
-my $iq;
+my $dsq;
+use constant SUCCESS => 0;
+use constant ERROR   => 1;
 
 sub index {
 	my $self            = shift;
@@ -45,7 +47,7 @@ sub index {
 		if ( $self->is_delivery_service_name_assigned($ds_name) ) {
 
 			# Build the summary section
-			$iq = new Builder::InfluxdbQuery(
+			$dsq = new Builder::DeliveryServiceStatsQuery(
 				{
 					cdn_name        => $cdn_name,
 					series_name     => $metric_type,
@@ -57,12 +59,13 @@ sub index {
 				}
 			);
 
+			my $rc     = 0;
 			my $result = ();
 			my $summary_query;
 
 			my $include_summary = ( defined($exclude) && $exclude =~ /summary/ ) ? 0 : 1;
 			if ($include_summary) {
-				( $result, $summary_query ) = $self->build_summary($result);
+				( $rc, $result, $summary_query ) = $self->build_summary($result);
 			}
 			if ( defined($summary) && defined($series) ) {
 
@@ -142,9 +145,6 @@ sub index_query {
 				return $self->alert("Could not retrieve the summary or the series");
 			}
 
-			$result = $self->build_parameters( $result, $summary_query, $series_query );
-
-			return $self->success($result);
 		}
 		else {
 			return $self->forbidden();
@@ -160,32 +160,33 @@ sub build_summary {
 	my $self   = shift;
 	my $result = shift;
 
-	my $summary_query = $iq->summary_query();
+	my $summary_query = $dsq->summary_query();
 
 	my $response_container = $self->influxdb_query( $self->get_db_name(), $summary_query );
 	my $response           = $response_container->{'response'};
 	my $content            = $response->{_content};
+	$self->app->log->debug( "content #-> " . Dumper($content) );
 
 	my $summary;
 	my $summary_content;
 	my $series_count = 0;
 	if ( $response->is_success() ) {
 		$summary_content = decode_json($content);
-		$summary         = $iq->summary_response($summary_content);
-		$self->app->log->debug( "summary #-> " . Dumper($summary) );
+		$summary         = $dsq->summary_response($summary_content);
+		$self->app->log->debug( "SUCCESS summary #-> " . Dumper($summary) );
 		$result->{summary} = $summary;
+		return ( SUCCESS, $result, $summary_query );
 	}
 	else {
-		return $self->alert( { error_message => $content } );
+		return ( ERROR, $content, undef );
 	}
-	return ( $result, $summary_query );
 }
 
 sub build_series {
 	my $self   = shift;
 	my $result = shift;
 
-	my $series_query       = $iq->series_query();
+	my $series_query       = $dsq->series_query();
 	my $response_container = $self->influxdb_query( $self->get_db_name(), $series_query );
 	my $response           = $response_container->{'response'};
 	my $content            = $response->{_content};
@@ -193,19 +194,20 @@ sub build_series {
 	my $series;
 	if ( $response->is_success() ) {
 		my $series_content = decode_json($content);
-		$series = $iq->series_response($series_content);
+		$series = $dsq->series_response($series_content);
+		my $series_node = "series";
+		if ( defined($series) && ( keys $series ) ) {
+			$result->{$series_node} = $series;
+			my @series_values = $series->{values};
+			my $series_count  = $#{ $series_values[0] };
+			$result->{$series_node}{count} = $series_count;
+		}
+		return ( SUCCESS, $result, $series_query );
 	}
+
 	else {
-		return $self->alert( { error_message => $content } );
+		return ( ERROR, $content, undef );
 	}
-	my $series_node = "series";
-	if ( defined($series) && ( keys $series ) ) {
-		$result->{$series_node} = $series;
-		my @series_values = $series->{values};
-		my $series_count  = $#{ $series_values[0] };
-		$result->{$series_node}{count} = $series_count;
-	}
-	return ( $result, $series_query );
 }
 
 sub build_parameters {
@@ -226,8 +228,7 @@ sub build_parameters {
 	my $limit           = $self->param('limit');
 	my $offset          = $self->param('offset');
 
-	my $parent_node = "query";
-
+	my $parent_node     = "query";
 	my $parameters_node = "parameters";
 	$result->{$parent_node}{$parameters_node}{cdnName}             = $cdn_name;
 	$result->{$parent_node}{$parameters_node}{deliveryServiceName} = $ds_name;
@@ -236,6 +237,7 @@ sub build_parameters {
 	$result->{$parent_node}{$parameters_node}{endDate}             = $end_date;
 	$result->{$parent_node}{$parameters_node}{interval}            = $interval;
 	$result->{$parent_node}{$parameters_node}{metricType}          = $metric_type;
+
 	my $queries_node = "language";
 	$result->{$parent_node}{$queries_node}{influxdbDatabaseName} = $self->get_db_name();
 	$result->{$parent_node}{$queries_node}{influxdbSeriesQuery}  = $series_query;
