@@ -23,11 +23,9 @@ use strict;
 use warnings;
 use Schema;
 use Test::TestHelper;
-use Fixtures::DeliveryserviceTmuser;
-use Fixtures::JobAgent;
-use Fixtures::JobStatus;
-use Fixtures::Job;
-use POSIX qw(strftime);
+use Test::MockModule;
+use Connection::InfluxDBAdapter;
+use JSON;
 
 BEGIN { $ENV{MOJO_MODE} = "test" }
 
@@ -42,7 +40,49 @@ my $t      = Test::Mojo->new('TrafficOps');
 Test::TestHelper->unload_core_data($schema);
 Test::TestHelper->load_core_data($schema);
 
-#ok $t->get_ok('/api/1.2/deliveryservice_stats.json')->status_is(200)->json_has( '/response', 'has a response' ), 'No jobs returns successfully?';
+ok $t->post_ok( '/login', => form => { u => Test::TestHelper::ADMIN_USER, p => Test::TestHelper::ADMIN_USER_PASSWORD } )->status_is(302)
+	->or( sub { diag $t->tx->res->content->asset->{content}; } );
+
+my $fake_lwp = new Test::MockModule( 'Connection::InfluxDBAdapter', no_auto => 1 );
+my $fake_header = HTTP::Headers->new;
+$fake_header->header( 'Content-Type' => 'application/json' );    # set
+
+my $fake_answer = {
+	"response" => {
+		"series" => {
+			"count"   => 2,
+			"columns" => [ "time", "mean" ],
+			"values"  => {
+				"2015-05-07T02:00:00Z" => 3309856.31666667,
+				"2015-05-07T02:00:00Z" => 3309856.31666667,
+			},
+		},
+		"summary" => {
+			average               => 1140.232,
+			fifthPercentile       => 0,
+			ninetyFifthPercentile => 1561.47,
+			ninetyFifthPercentile => 1561.47,
+			min                   => 619.22,
+			max                   => 1561.47,
+			total                 => 6841.39,
+		},
+	},
+};
+
+my $json_response = encode_json($fake_answer);
+
+my $fake_response = HTTP::Response->new( 200, undef, $fake_header, $json_response );
+$fake_lwp->mock( 'query', sub { return $fake_response } );
+
+# api/1.2/deliveryservice_stats.json?cdnName=over-the-top&deliveryServiceName=steam-dns&metricType=kbps&cacheGroupName=us-co-denver&startDate=2015-05-06T20:00:00-06:00&endDate=2015-05-06T20:00:00-06:00&interval=60s
+
+ok $t->get_ok(
+	'/api/1.2/deliveryservice_stats.json?cdnName=cdn1&deliveryServiceName=test-ds1&metricType=kbps&cacheGroupName=us-co-denver&startDate=2015-05-06T20:00:00-06:00&endDate=2015-05-06T20:00:00-06:00&interval=60s'
+)->status_is(200)->json_has( '/response', 'has a response' ), 'Query1';
+
+ok $t->get_ok(
+	'/api/1.2/deliveryservice_stats.json?cdnName=cdn1&deliveryServiceName=test-ds1&metricType=kbps&cacheGroupName=us-co-denver&startDate=2015-05-06T20:00:00-06:00&endDate=2015-05-06T20:00:00-06:00&interval=60s'
+)->status_is(200)->json_has( '/response', 'has a response' ), 'Query2';
 
 $dbh->disconnect();
 done_testing();
