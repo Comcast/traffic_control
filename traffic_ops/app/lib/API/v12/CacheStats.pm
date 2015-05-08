@@ -62,6 +62,8 @@ sub index {
 
 	if ( $rc == SUCCESS ) {
 		my $include_series = ( defined($exclude) && $exclude =~ /series/ ) ? 0 : 1;
+
+		# TODO: drichardson - Loop through the grouped values and calculate based upon the response.
 		my $series_query;
 		if ($include_series) {
 			( $rc, $result, $series_query ) = $self->build_series($result);
