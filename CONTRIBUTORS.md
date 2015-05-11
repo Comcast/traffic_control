@@ -7,5 +7,6 @@ Sorted alphabetically
 * **[John Benton](https://github.com/evergreentech)**
 * **[John Rushford](https://github.com/jrushf1239k)**
 * **[Justin Laue](https://github.com/fp-x)**
+* **[Lawrence Wickline](https://github.com/lwickline)**
 * **[Mark Torluemke](https://github.com/mtorluemke)**
 * **[Phil Sorber](https://github.com/PSUdaemon)**
