@@ -30,6 +30,7 @@ use API::DeliveryService::KeysUrlSig qw(URL_SIG_KEYS_BUCKET);
 my $dispatch_table ||= {
 	"logs_xml.config"         => sub { logs_xml_dot_config(@_) },
 	"cacheurl.config"         => sub { cacheurl_dot_config(@_) },
+	"cacheurl_qstring.config" => sub { cacheurl_dot_config(@_) },
 	"records.config"          => sub { generic_config(@_) },
 	"plugin.config"           => sub { generic_config(@_) },
 	"astats.config"           => sub { generic_config(@_) },
@@ -518,14 +519,20 @@ sub cacheurl_dot_config {
 		$data = $self->ds_data($server);
 	}
 
-	# print Dumper($data);
-	foreach my $remap ( @{ $data->{dslist} } ) {
-		if ( $remap->{qstring_ignore} == 1 ) {
-			my $org = $remap->{org};
-			$org =~ /(https?:\/\/)(.*)/;
-			$text .= "$1(" . $2 . "/[^?]+)(?:\\?|\$)  $1\$1\n";
+	if ( $filename !~ /_qstring.config/ ) {
+		foreach my $remap ( @{ $data->{dslist} } ) {
+			if ( $remap->{qstring_ignore} == 1 ) {
+				my $org = $remap->{org};
+				$org =~ /(https?:\/\/)(.*)/;
+				$text .= "$1(" . $2 . "/[^?]+)(?:\\?|\$)  $1\$1\n";
+			}
 		}
 	}
+	else {
+		$text .= "http://([^?]+)(?:\\?|\$)  http://\$1\n";
+		$text .= "https://([^?]+)(?:\\?|\$)  https://\$1\n";
+	}
+
 	return $text;
 }
 
@@ -743,6 +750,9 @@ sub remap_dot_config {
 				$remap_lines{ "map " . $remap->{org} . "    " . $remap->{org} . " \@plugin=header_rewrite.so \@pparam=" . $remap->{mid_hdr_rw_file} . "\n" }
 					= defined;
 			}
+			elsif ( $remap->{qstring_ignore} == 1 ) {
+				$remap_lines{ "map " . $remap->{org} . "    " . $remap->{org} . " \@plugin=cacheurl.so \@pparam=cacheurl_qstring.config\n" } = defined;
+			}
 		}
 		foreach my $key (%remap_lines) {
 			$text .= $key;
@@ -794,6 +804,20 @@ sub remap_text {
 	if ( $remap->{qstring_ignore} == 2 ) {
 		my $dqs_file = "drop_qstring.config";
 		$text .= " \@plugin=regex_remap.so \@pparam=" . $dqs_file;
+	}
+	elsif ( $remap->{qstring_ignore} == 1 ) {
+		my $global_exists =
+			$self->db->resultset('ProfileParameter')
+			->search( { -and => [ profile => $server->profile->id, 'parameter.config_file' => 'cacheurl.config', 'parameter.name' => 'location' ] },
+			{ prefetch => [ 'parameter', 'profile' ] } )->single();
+		if ($global_exists) {
+			$self->app->log->debug(
+				"qstring_ignore == 1, but global cacheurl.config param exists, so skipping remap rename config_file=cacheurl.config parameter if you want to change"
+			);
+		}
+		else {
+			$text .= " \@plugin=cacheurl.so \@pparam=cacheurl_qstring.config";
+		}
 	}
 
 	# Note: should use full path here?
