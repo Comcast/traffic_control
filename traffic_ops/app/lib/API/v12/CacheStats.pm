@@ -133,6 +133,7 @@ sub index {
 	my $end_date    = $self->param('endDate');
 	my $interval    = $self->param('interval') || "60s";    # Valid interval examples 10m (minutes), 10s (seconds), 1h (hour)
 	my $exclude     = $self->param('exclude');
+	my $orderby     = $self->param('orderby');
 	my $limit       = $self->param('limit');
 	my $offset      = $self->param('offset');
 
@@ -143,7 +144,10 @@ sub index {
 			cdn_name    => $cdn_name,
 			start_date  => $start_date,
 			end_date    => $end_date,
-			interval    => $interval
+			interval    => $interval,
+			orderby     => $orderby,
+			limit       => $limit,
+			offset      => $offset
 		}
 	);
 
