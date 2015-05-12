@@ -105,7 +105,7 @@ sub build_summary {
 	my $series_count = 0;
 	if ( $response->is_success() ) {
 		$summary_content   = decode_json($content);
-		$summary           = $builder->summary_response($summary_content);
+		$summary           = Builder::InfluxdbBuilder->summary_response($summary_content);
 		$result->{summary} = $summary;
 		return ( SUCCESS, $result, $summary_query );
 	}
@@ -127,7 +127,7 @@ sub build_series {
 	my $series;
 	if ( $response->is_success() ) {
 		my $series_content = decode_json($content);
-		$series = $builder->series_response($series_content);
+		$series = Builder::InfluxdbBuilder->series_response($series_content);
 		my $series_node = "series";
 		if ( defined($series) && ( keys $series ) ) {
 			$result->{$series_node} = $series;
