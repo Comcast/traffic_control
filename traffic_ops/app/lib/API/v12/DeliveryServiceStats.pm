@@ -25,8 +25,8 @@ use Data::Dumper;
 use Builder::DeliveryServiceStatsBuilder;
 use JSON;
 my $builder;
-use constant SUCCESS => 0;
-use constant ERROR   => 1;
+use constant SUCCESS => 1;
+use constant ERROR   => 0;
 
 #TODO: drichardson
 #      - Add required fields validation see lib/API/User.pm based on Validate::Tiny
@@ -40,6 +40,7 @@ sub index {
 	my $end_date    = $self->param('endDate');
 	my $interval    = $self->param('interval') || "60s";     # Valid interval examples 10m (minutes), 10s (seconds), 1h (hour)
 	my $exclude     = $self->param('exclude');
+	my $orderby     = $self->param('orderby');
 	my $limit       = $self->param('limit');
 	my $offset      = $self->param('offset');
 
@@ -53,11 +54,14 @@ sub index {
 					ds_name     => $ds_name,
 					start_date  => $start_date,
 					end_date    => $end_date,
-					interval    => $interval
+					interval    => $interval,
+					orderby     => $orderby,
+					limit       => $limit,
+					offset      => $offset
 				}
 			);
 
-			my $rc     = 0;
+			my $rc     = SUCCESS;
 			my $result = ();
 			my $summary_query;
 
@@ -67,14 +71,14 @@ sub index {
 				$self->app->log->debug( "summary_query #-> " . $summary_query );
 			}
 
-			if ( $rc == SUCCESS ) {
+			if ($rc) {
 				my $include_series = ( defined($exclude) && $exclude =~ /series/ ) ? 0 : 1;
 				my $series_query;
 				if ($include_series) {
 					( $rc, $result, $series_query ) = $self->build_series($result);
 					$self->app->log->debug( "series_query #-> " . $series_query );
 				}
-				if ( $rc == SUCCESS ) {
+				if ($rc) {
 					$result = $self->build_parameters( $result, $summary_query, $series_query );
 					return $self->success($result);
 				}
@@ -112,7 +116,7 @@ sub build_summary {
 	my $series_count = 0;
 	if ( $response->is_success() ) {
 		$summary_content   = decode_json($content);
-		$summary           = $builder->summary_response($summary_content);
+		$summary           = Builder::InfluxdbBuilder->summary_response($summary_content);
 		$result->{summary} = $summary;
 		return ( SUCCESS, $result, $summary_query );
 	}
@@ -126,14 +130,14 @@ sub build_series {
 	my $result = shift;
 
 	my $series_query       = $builder->series_query();
-	my $response_container = $self->influxdb_query( $self->get_db_name(), $series_query );
+	my $response_container = $self->influxdb_query( $self->get_db_name(), $series_query, "pretty" );
 	my $response           = $response_container->{'response'};
 	my $content            = $response->{_content};
 
 	my $series;
 	if ( $response->is_success() ) {
 		my $series_content = decode_json($content);
-		$series = $builder->series_response($series_content);
+		$series = Builder::InfluxdbBuilder->series_response($series_content);
 		my $series_node = "series";
 		if ( defined($series) && ( keys $series ) ) {
 			$result->{$series_node} = $series;
@@ -149,6 +153,7 @@ sub build_series {
 	}
 }
 
+#TODO: drichardson -refactor the common fields
 sub build_parameters {
 	my $self          = shift;
 	my $result        = shift;
@@ -164,6 +169,7 @@ sub build_parameters {
 	my $exclude     = $self->param('exclude');
 	my $limit       = $self->param('limit');
 	my $offset      = $self->param('offset');
+	my $orderby     = $self->param('orderby');
 
 	my $parent_node     = "query";
 	my $parameters_node = "parameters";
@@ -172,6 +178,9 @@ sub build_parameters {
 	$result->{$parent_node}{$parameters_node}{endDate}             = $end_date;
 	$result->{$parent_node}{$parameters_node}{interval}            = $interval;
 	$result->{$parent_node}{$parameters_node}{metricType}          = $metric_type;
+	$result->{$parent_node}{$parameters_node}{orderby}             = $orderby;
+	$result->{$parent_node}{$parameters_node}{limit}               = $limit;
+	$result->{$parent_node}{$parameters_node}{offset}              = $offset;
 
 	my $queries_node = "language";
 	$result->{$parent_node}{$queries_node}{influxdbDatabaseName} = $self->get_db_name();

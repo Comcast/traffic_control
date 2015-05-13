@@ -118,4 +118,37 @@ sub series_response {
 	}
 }
 
+sub clean_whitespace {
+	my $self  = shift;
+	my $query = shift;
+
+	# cleanup whitespace
+	$query =~ s/\\n//g;
+	$query =~ s/\s+/ /g;
+	return $query;
+}
+
+sub to_influxdb_date {
+	my $self = shift;
+	my $date = shift;
+
+	if ( defined($date) && $date eq "now" ) {
+		$date = 'now()';
+	}
+	else {
+		$date = "'" . $date . "'";
+	}
+	return $date;
+}
+
+sub append_clauses {
+	my $self  = shift;
+	my $query = shift;
+	my $args  = shift;
+	$query = defined( $args->{orderby} ) ? $query .= " ORDER BY " . $args->{orderby} : $query;
+	$query = defined( $args->{limit} )   ? $query .= " LIMIT " . $args->{limit}      : $query;
+	$query = defined( $args->{offset} )  ? $query .= " OFFSET " . $args->{offset}    : $query;
+	return $query;
+}
+
 1;

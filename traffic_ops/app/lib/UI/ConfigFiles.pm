@@ -811,7 +811,9 @@ sub remap_text {
 			->search( { -and => [ profile => $server->profile->id, 'parameter.config_file' => 'cacheurl.config', 'parameter.name' => 'location' ] },
 			{ prefetch => [ 'parameter', 'profile' ] } )->single();
 		if ($global_exists) {
-			$self->app->log->debug("qstring_ignore == 1, but global cacheurl.config param exists, so skipping remap rename config_file=cacheurl.config parameter if you want to change");
+			$self->app->log->debug(
+				"qstring_ignore == 1, but global cacheurl.config param exists, so skipping remap rename config_file=cacheurl.config parameter if you want to change"
+			);
 		}
 		else {
 			$text .= " \@plugin=cacheurl.so \@pparam=cacheurl_qstring.config";

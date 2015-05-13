@@ -25,8 +25,6 @@ use Math::Round;
 use Builder::InfluxdbBuilder;
 use Carp qw(cluck confess);
 
-our @ISA = ("Builder::InfluxdbBuilder");
-
 my $args;
 
 sub new {
@@ -45,9 +43,11 @@ sub validate_keys {
 		end_date    => 1,
 		series_name => 1,
 		interval    => 1,
-		limit       => 1
+		orderby     => 1,
+		limit       => 1,
+		offset      => 1
 	};
-	return $self->SUPER::validate_keys( $args, $valid_keys );
+	return Builder::InfluxdbBuilder->validate_keys( $args, $valid_keys );
 }
 
 sub summary_query {
@@ -64,10 +64,9 @@ sub summary_query {
 		                                         GROUP BY time($args->{interval}), cdn"
 		);
 
-		# cleanup whitespace
-		$query =~ s/\\n//g;
-		$query =~ s/\s+/ /g;
-		return $query;
+		$query = Builder::InfluxdbBuilder->append_clauses( $query, $args );
+
+		return Builder::InfluxdbBuilder->clean_whitespace($query);
 
 	}
 }
@@ -86,10 +85,9 @@ sub series_query {
 							   cdn ORDER BY asc"
 	);
 
-	# cleanup whitespace
-	$query =~ s/\\n//g;
-	$query =~ s/\s+/ /g;
-	return $query;
+	$query = Builder::InfluxdbBuilder->append_clauses( $query, $args );
+
+	return Builder::InfluxdbBuilder->clean_whitespace($query);
 }
 
 1;

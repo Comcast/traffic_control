@@ -25,7 +25,6 @@ use Math::Round;
 use Builder::InfluxdbBuilder;
 use Carp qw(cluck confess);
 
-our @ISA = ("Builder::InfluxdbBuilder");
 my $args;
 
 sub new {
@@ -44,49 +43,55 @@ sub validate_keys {
 		end_date    => 1,
 		series_name => 1,
 		interval    => 1,
-		limit       => 1
+		orderby     => 1,
+		limit       => 1,
+		offset      => 1
 	};
-	return $self->SUPER::validate_keys( $args, $valid_keys );
+	return Builder::InfluxdbBuilder->validate_keys( $args, $valid_keys );
 }
 
 sub summary_query {
 	my $self = shift;
 	if ( $self->validate_keys() ) {
 
+		#my $end_date = "'" . $args->{end_date} . "'";
+
+		my $end_date = Builder::InfluxdbBuilder->to_influxdb_date( $args->{end_date} );
+
 		#'summary' section
 		my $query = sprintf(
 			'%s %s %s',
 			"SELECT mean(value), percentile(value, 5), percentile(value, 95), percentile(value, 98), min(value), max(value), sum(value), count(value) FROM",
-			$args->{series_name}, "WHERE time > '$args->{start_date}' AND
-		                                         time < '$args->{end_date}' AND
-		                                         deliveryservice = '$args->{ds_name}'
-		                                         GROUP BY time($args->{interval}), deliveryservice"
+			$args->{series_name}, "WHERE time >= '$args->{start_date}' AND
+		                                 time <= $end_date AND
+                                         cachegroup = 'total' AND 
+		                                 deliveryservice = '$args->{ds_name}'"
 		);
 
-		# cleanup whitespace
-		$query =~ s/\\n//g;
-		$query =~ s/\s+/ /g;
-		return $query;
-
+		$query = Builder::InfluxdbBuilder->append_clauses( $query, $args );
+		return Builder::InfluxdbBuilder->clean_whitespace($query);
 	}
 }
 
 sub series_query {
 	my $self = shift;
 
+	my $end_date = Builder::InfluxdbBuilder->to_influxdb_date( $args->{end_date} );
+
+	#my $end_date = $args->{end_date};
 	my $query = sprintf(
 		'%s %s %s',
-		"SELECT sum(value) FROM",
-		$args->{series_name}, "WHERE time > '$args->{start_date}' AND 
-                               time < '$args->{end_date}' AND 
-                               deliveryservice = '$args->{ds_name}'
-                               GROUP BY time($args->{interval}) ORDER BY asc"
+		"SELECT sum(value)/count(value) FROM",
+		$args->{series_name}, "WHERE time >='$args->{start_date}' AND 
+                                     time <= $end_date AND 
+                                     cachegroup = 'total' AND 
+                                     deliveryservice = '$args->{ds_name}'
+                                     GROUP BY time($args->{interval}), cachegroup"
 	);
 
-	# cleanup whitespace
-	$query =~ s/\\n//g;
-	$query =~ s/\s+/ /g;
-	return $query;
+	$query = Builder::InfluxdbBuilder->append_clauses( $query, $args );
+
+	return Builder::InfluxdbBuilder->clean_whitespace($query);
 }
 
 1;
