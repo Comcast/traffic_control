@@ -862,6 +862,13 @@ sub startup {
 	$r->get( "/api/$api_version/cache_stats" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'CacheStats#index', namespace => "API::$api_namespace" );
 
+	##stats_summary
+	$r->get( "/api/$api_version/stats_summary" => [ format => [qw(json)] ] )->over( authenticated => 1 )
+	->to( 'StatsSummary#index', namespace => "API::$api_namespace" );
+	$r->post( "/api/$api_version/stats_summary/create")->over( authenticated => 1 )
+	->to( 'StatsSummary#create', namespace => "API::$api_namespace" );
+
+
 	# ------------------------------------------------------------------------
 	# END: Version 1.2
 	# ------------------------------------------------------------------------
