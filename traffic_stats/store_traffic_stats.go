@@ -418,7 +418,6 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 }
 
 func getUrl(url string) ([]byte, error) {
-
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -434,7 +433,7 @@ func getUrl(url string) ([]byte, error) {
 func influxConnect(config *StartupConfig, runningConfig *RunningConfig) (*influx.Client, error) {
 	//Connect to InfluxDb
 	activeServers := len(runningConfig.InfluxDbProps)
-	rand.Seed(42)
+	rand.Seed(4200)
 	//if there is only 1 active, use it
 	if activeServers == 1 {
 		u, err := url.Parse(fmt.Sprintf("http://%s:%d", runningConfig.InfluxDbProps[0].Fqdn, runningConfig.InfluxDbProps[0].Port))
@@ -456,9 +455,10 @@ func influxConnect(config *StartupConfig, runningConfig *RunningConfig) (*influx
 		}
 		return con, nil
 	} else if activeServers > 1 {
-		//try to connect to all ONLINE servers until we find one that works
-		for i := 0; i < activeServers; i++ {
-			u, err := url.Parse(fmt.Sprintf("http://%s:%d", runningConfig.InfluxDbProps[i].Fqdn, runningConfig.InfluxDbProps[i].Port))
+		//try to connect to a random server until we find one that works.  if we dont find one in 20 tries, bail.
+		for i := 0; i < 20; i++ {
+			index := rand.Intn(activeServers)
+			u, err := url.Parse(fmt.Sprintf("http://%s:%d", runningConfig.InfluxDbProps[index].Fqdn, runningConfig.InfluxDbProps[index].Port))
 			if err != nil {
 				errHndlr(err, ERROR)
 			} else {
