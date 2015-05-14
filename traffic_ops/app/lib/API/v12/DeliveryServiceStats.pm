@@ -38,7 +38,6 @@ sub index {
 
 	if ( $self->is_valid_delivery_service_name($ds_name) ) {
 		if ( $self->is_delivery_service_name_assigned($ds_name) ) {
-
 			my $stats = new Extensions::Delegate::Statistics( $self, $self->get_db_name() );
 
 			my ( $rc, $result ) = $stats->get_stats();
