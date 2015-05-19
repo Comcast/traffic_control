@@ -114,9 +114,9 @@ sub get_example_urls {
 				$host =~ s/\.//g;
 				my $p = defined( $example_urls[ $re->{set_number} ] ) ? $example_urls[ $re->{set_number} ] : "";
 				if ( $re->{set_number} == 0 ) {
-					$example_urls[ $re->{set_number} ] = $scheme . '://ccr.' . $host . "." . $cdn_domain . $p;
+					$example_urls[ $re->{set_number} ] = $scheme . '://tr.' . $host . "." . $cdn_domain . $p;
 					if ($scheme2) {
-						$url = $scheme2 . '://ccr.' . $host . "." . $cdn_domain . $p;
+						$url = $scheme2 . '://tr.' . $host . "." . $cdn_domain . $p;
 						push( @example_urls, $url );
 					}
 				}
