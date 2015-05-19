@@ -90,7 +90,11 @@ func (to *Session) SummaryStatsLastUpdated(statName string) (string, error) {
 		fmt.Printf("err is %v\n", err)
 		return "", err
 	}
-	return data.Response.SummaryTime, err
+	if len(data.Response.SummaryTime) > 0 {
+		return data.Response.SummaryTime, nil
+	} else {
+		return "1970-01-01 00:00:00", nil
+	}
 }
 
 func (to *Session) AddSummaryStats(statsSummary StatsSummary) (string, error) {
@@ -102,6 +106,7 @@ func (to *Session) AddSummaryStats(statsSummary StatsSummary) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer response.Body.Close()
 	body, err = ioutil.ReadAll(response.Body)
 	if err != nil {
 		return "", err

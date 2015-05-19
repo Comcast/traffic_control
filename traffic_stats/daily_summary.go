@@ -79,7 +79,6 @@ func main() {
 	formatEndTime := endTime.Format("2006-01-02T15:04:05-00:00")
 	endUTime := endTime.Unix()
 	startUTime := startTime.Unix()
-	fmt.Printf("start time = %v, end time = %v, startUTime = %v, endUTime = %v\n", startTime, endTime, endUTime, startUTime)
 
 	<-time.NewTimer(time.Now().Truncate(time.Duration(pollingInterval) * time.Second).Add(time.Duration(pollingInterval) * time.Second).Sub(time.Now())).C
 	tickerChan := time.Tick(time.Duration(pollingInterval) * time.Second)
@@ -94,7 +93,7 @@ func main() {
 			errHndlr(err, ERROR)
 		}
 		if lastSummaryTime.Day() != now.Day() {
-			fmt.Println("time for an update!!!")
+			log.Info("Summarizing from ", startTime, " (", startUTime, ") to ", endTime, " (", endUTime, ")")
 			// influx connection
 			influxClient, err := influxConnect(config, trafOpsData)
 			if err != nil {
@@ -102,7 +101,7 @@ func main() {
 				errHndlr(err, ERROR)
 			}
 			//create influxdb query
-			fmt.Printf("SELECT sum(value)/6 FROM bandwidth where time > '%v' and time < '%v' group by time(60s), cdn\n", formatStartTime, formatEndTime)
+			log.Infof("SELECT sum(value)/6 FROM bandwidth where time > '%v' and time < '%v' group by time(60s), cdn", formatStartTime, formatEndTime)
 			q := fmt.Sprintf("SELECT sum(value)/6 FROM bandwidth where time > '%v' and time < '%v' group by time(60s), cdn", formatStartTime, formatEndTime)
 			res, err := queryDB(influxClient, q, "cache_stats")
 			if err != nil {
@@ -111,29 +110,43 @@ func main() {
 			}
 			//loop throgh series
 			for _, row := range res[0].Series {
+				prevUtime := startUTime
 				var cdn string
 				max := 0.00
+				bytesServed := 0.00
 				cdn = row.Tags["cdn"]
-				fmt.Println("cdn = ", cdn)
 				for _, record := range row.Values {
 					kbps, _ := record[1].(json.Number).Float64()
+					sampleTime, err := time.Parse("2006-01-02T15:04:05Z", record[0].(string))
+					if err != nil {
+						errHndlr(err, ERROR)
+						continue
+					}
+					sampleUTime := sampleTime.Unix()
 					if kbps > max {
 						max = kbps
 					}
+					duration := sampleUTime - prevUtime
+					bytesServed += float64(duration) * kbps / 8
+					prevUtime = sampleUTime
 				}
-				fmt.Printf("max kbps for cdn %v = %v\n", cdn, max)
-				//store daily_maxkbps in traffic_ops
+				log.Infof("max kbps for cdn %v = %v", cdn, max)
+				log.Infof("bytes served for cdn %v = %v", cdn, bytesServed)
+				//write daily_maxkbps in traffic_ops
 				var statsSummary traffic_ops.StatsSummary
 				statsSummary.CdnName = cdn
 				statsSummary.DeliveryService = "all"
 				statsSummary.StatName = "daily_maxkbps"
 				statsSummary.StatValue = strconv.FormatFloat(max, 'f', 2, 64)
 				statsSummary.SummaryTime = now.Format("2006-01-02 15:04:05")
-				err = storeSummaryStats(config, statsSummary)
+				err = writeSummaryStats(config, statsSummary)
 				if err != nil {
 					log.Error("Could not store daily summary stats in traffic ops!")
 					errHndlr(err, ERROR)
 				}
+				//write bytes served data to traffic_ops
+				statsSummary.StatName = "daily_byteserved"
+				statsSummary.StatValue = strconv.FormatFloat(bytesServed, 'f', 2, 64)
 			}
 		}
 	}
@@ -263,7 +276,7 @@ func getToData(config *StartupConfig, init bool) (TrafOpsData, error) {
 	return trafOpsData, nil
 }
 
-func storeSummaryStats(config *StartupConfig, statsSummary traffic_ops.StatsSummary) error {
+func writeSummaryStats(config *StartupConfig, statsSummary traffic_ops.StatsSummary) error {
 	tm, err := traffic_ops.Login(config.ToUrl, config.ToUser, config.ToPasswd, true)
 	if err != nil {
 		msg := fmt.Sprintf("Could not store summary stats! Error logging in to %v: %v", config.ToUrl, err)

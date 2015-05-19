@@ -461,6 +461,7 @@ func influxConnect(config *StartupConfig, runningConfig *RunningConfig) (*influx
 			u, err := url.Parse(fmt.Sprintf("http://%s:%d", runningConfig.InfluxDbProps[index].Fqdn, runningConfig.InfluxDbProps[index].Port))
 			if err != nil {
 				errHndlr(err, ERROR)
+				continue
 			} else {
 				conf := influx.Config{
 					URL:      *u,
@@ -470,10 +471,12 @@ func influxConnect(config *StartupConfig, runningConfig *RunningConfig) (*influx
 				con, err := influx.NewClient(conf)
 				if err != nil {
 					errHndlr(err, ERROR)
+					continue
 				} else {
 					_, _, err = con.Ping()
 					if err != nil {
 						errHndlr(err, ERROR)
+						continue
 					} else {
 						return con, nil
 					}
