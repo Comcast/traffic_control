@@ -28,6 +28,7 @@ start()
 	# check status return code
 	if [[ $? -eq $STATUS_STOPPED || "$1" == "force" ]] ; then
 		echo "Starting store_traffic_stats.."
+		ulimit -n 4096
 		/usr/bin/nohup /opt/traffic_stats/bin/store_traffic_stats --cfg /opt/traffic_stats/conf/store_traffic_stats.cfg >/opt/traffic_stats/var/log/traffic_stats/store_traffic_stats.out 2>&1 &
 	fi
 	
