@@ -21,6 +21,8 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Carp qw(cluck confess);
 use Data::Dumper;
 use Utils::Helper::DateHelper;
+use JSON;
+use HTTP::Date;
 
 sub register {
 	my ( $self, $app, $conf ) = @_;
@@ -51,7 +53,7 @@ sub register {
 			my $end             = shift;
 			my $interval        = shift;
 
-			my ( $cdn_name, $ds_name ) = $self->get_cdn_name_ds_name($dsid);
+			my ( $cdn_name, $ds_name ) = $self->deliveryservice_lookup_cdn_name_and_ds_name($dsid);
 
 			my $dh = new Utils::Helper::DateHelper();
 			( $start, $end ) = $dh->translate_dates( $start, $end );
@@ -63,7 +65,7 @@ sub register {
 	);
 
 	$app->renderer->add_helper(
-		get_ds_usage => sub {
+		deliveryservice_usage => sub {
 			my $self            = shift;
 			my $dsid            = shift;
 			my $cachegroup_name = shift;
@@ -72,7 +74,7 @@ sub register {
 			my $end             = shift;
 			my $interval        = shift;
 
-			my ( $cdn_name, $ds_name ) = $self->get_cdn_name_ds_name($dsid);
+			my ( $cdn_name, $ds_name ) = $self->deliveryservice_lookup_cdn_name_and_ds_name($dsid);
 
 			my $dh = new Utils::Helper::DateHelper();
 			( $start, $end ) = $dh->translate_dates( $start, $end );
@@ -87,9 +89,20 @@ sub register {
 	);
 
 	$app->renderer->add_helper(
-		get_cdn_name_ds_name => sub {
+		build_match => sub {
+			my $self            = shift;
+			my $cdn_name        = shift;
+			my $ds_name         = shift;
+			my $cachegroup_name = shift;
+			my $peak_usage_type = shift;
+			return $cdn_name . ":" . $ds_name . ":" . $cachegroup_name . ":all:" . $peak_usage_type;
+		}
+	);
+
+	$app->renderer->add_helper(
+		deliveryservice_lookup_cdn_name_and_ds_name => sub {
 			my $self = shift;
-			my $dsid = shift;
+			my $dsid = shift || confess("Delivery Service id is required");
 
 			my $cdn_name = "all";
 			my $ds_name  = "all";
@@ -105,14 +118,114 @@ sub register {
 			return ( $cdn_name, $ds_name );
 		}
 	);
+
 	$app->renderer->add_helper(
-		build_match => sub {
-			my $self            = shift;
-			my $cdn_name        = shift;
-			my $ds_name         = shift;
-			my $cachegroup_name = shift;
-			my $peak_usage_type = shift;
-			return $cdn_name . ":" . $ds_name . ":" . $cachegroup_name . ":all:" . $peak_usage_type;
+		is_delivery_service_assigned => sub {
+			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $id   = shift || confess("Please supply a delivery service ID");
+
+			my $user_id =
+				$self->db->resultset('TmUser')->search( { username => $self->current_user()->{username} } )->get_column('id')->single();
+			my @ds_ids = ();
+
+			if ( defined($user_id) ) {
+				@ds_ids = $self->db->resultset('DeliveryserviceTmuser')->search( { tm_user_id => $user_id } )->get_column('deliveryservice')->all();
+			}
+
+			my %ds_hash = map { $_ => 1 } @ds_ids;
+
+			# no external user ID = internal; assume authenticated due to route configuration
+			if ( !defined($user_id) ) {
+				return (1);
+			}
+			elsif ($user_id) {
+				my $result = $self->db->resultset("Deliveryservice")->search( { id => $id } )->single();
+
+				if ( exists( $ds_hash{ $result->id } ) ) {
+					return (1);
+				}
+			}
+
+			return (0);
+		}
+	);
+
+	$app->renderer->add_helper(
+		is_delivery_service_name_assigned => sub {
+			my $self    = shift || confess("Call on an instance of Utils::Helper");
+			my $ds_name = shift || confess("Please supply a delivery service name (xml_id)");
+
+			my $user_id =
+				$self->db->resultset('TmUser')->search( { username => $self->current_user()->{username} } )->get_column('id')->single();
+			my @ds_ids = ();
+
+			if ( defined($user_id) ) {
+				@ds_ids = $self->db->resultset('DeliveryserviceTmuser')->search( { tm_user_id => $user_id } )->get_column('deliveryservice')->all();
+			}
+
+			my %ds_hash = map { $_ => 1 } @ds_ids;
+
+			# no external user ID = internal; assume authenticated due to route configuration
+			if ( !defined($user_id) ) {
+				return (1);
+			}
+			elsif ($user_id) {
+				my $result = $self->db->resultset("Deliveryservice")->search( { xml_id => $ds_name } )->single();
+
+				if ( exists( $ds_hash{ $result->id } ) ) {
+					return (1);
+				}
+			}
+
+			return (0);
+		}
+	);
+
+	$app->renderer->add_helper(
+		is_valid_delivery_service => sub {
+			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $id   = shift || confess("Please supply a delivery service ID");
+
+			my $result = $self->db->resultset("Deliveryservice")->find( { id => $id } );
+
+			if ( defined($result) ) {
+				return (1);
+			}
+			else {
+				return (0);
+			}
+		}
+	);
+
+	$app->renderer->add_helper(
+		is_valid_delivery_service_name => sub {
+			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $name = shift || confess("Please supply a delivery service 'name' (xml_id)");
+
+			my $result = $self->db->resultset("Deliveryservice")->find( { xml_id => $name } );
+
+			if ( defined($result) ) {
+				return (1);
+			}
+			else {
+				return (0);
+			}
+		}
+	);
+
+	$app->renderer->add_helper(
+		get_delivery_service_name => sub {
+			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $id   = shift || confess("Please supply a delivery service ID");
+
+			my $result = $self->db->resultset("Deliveryservice")->search( { id => $id } )->single();
+
+			if ( defined($result) ) {
+				return ( $result->xml_id );
+			}
+			else {
+				return (0);
+			}
 		}
 	);
 

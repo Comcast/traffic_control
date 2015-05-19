@@ -41,6 +41,8 @@ use User::pwent;
 use POSIX qw(strftime);
 use Utils::JsonConfig;
 use MojoX::Log::Log4perl;
+use File::Find;
+use File::Basename;
 
 use constant SESSION_TIMEOUT => 14400;
 my $logging_root_dir;
@@ -845,15 +847,37 @@ sub startup {
 	# USED TO BE - POST /api/1.1/user/profile.json
 	$r->post('/api/1.1/user/current/update')->over( authenticated => 1 )->to( 'User#update_current', namespace => 'API' );
 
+	# ------------------------------------------------------------------------
+	# END: Version 1.1
+	# ------------------------------------------------------------------------
+
+	# ------------------------------------------------------------------------
+	# API Routes 1.2
+	# ------------------------------------------------------------------------
+	my $api_version   = "1.2";
+	my $api_namespace = "v12";
+
+	$r->get( "/api/$api_version/deliveryservice_stats" => [ format => [qw(json)] ] )->over( authenticated => 1 )
+		->to( 'DeliveryServiceStats#index', namespace => "API::$api_namespace" );
+	$r->get( "/api/$api_version/cache_stats" => [ format => [qw(json)] ] )->over( authenticated => 1 )
+		->to( 'CacheStats#index', namespace => "API::$api_namespace" );
+
+	##stats_summary
+	$r->get( "/api/$api_version/stats_summary" => [ format => [qw(json)] ] )->over( authenticated => 1 )
+	->to( 'StatsSummary#index', namespace => "API::$api_namespace" );
+	$r->post( "/api/$api_version/stats_summary/create")->over( authenticated => 1 )
+	->to( 'StatsSummary#create', namespace => "API::$api_namespace" );
+
+
+	# ------------------------------------------------------------------------
+	# END: Version 1.2
+	# ------------------------------------------------------------------------
+
 	# -- CATCH ALL
 	$r->get('/api/(*everything)')->to( 'Cdn#catch_all', namespace => 'API' );
 	$r->post('/api/(*everything)')->to( 'Cdn#catch_all', namespace => 'API' );
 	$r->put('/api/(*everything)')->to( 'Cdn#catch_all', namespace => 'API' );
 	$r->delete('/api/(*everything)')->to( 'Cdn#catch_all', namespace => 'API' );
-
-	# ------------------------------------------------------------------------
-	# END: Version 1.1
-	# ------------------------------------------------------------------------
 
 	$r->get(
 		'/(*everything)' => sub {
@@ -962,23 +986,27 @@ sub setup_mojo_plugins {
 	my $pwd = cwd();
 	my $dir = "$pwd/lib/MojoPlugins";
 
-	opendir( DIR, $dir ) or die $!;
+	my @file_list;
+	find(
+		sub {
+			return unless -f;         #Must be a file
+			return unless /\.pm$/;    #Must end with `.pl` suffix
+			push @file_list, $File::Find::name;
+		},
+		$dir
+	);
 
-	while ( my $file = readdir(DIR) ) {
+	#print join "\n", @file_list;
+	foreach my $file (@file_list) {
+		open my $fn, '<', $file;
+		my $first_line = <$fn>;
+		my ( $package_keyword, $package_name ) = ( $first_line =~ m/(package )(.*);/ );
+		close $fn;
 
-		# Use a regular expression to ignore files beginning with a period
-		next if ( $file =~ m/^\./ );
-
-		( my $file_without_extension = $file ) =~ s/\.[^.]+$//;
-		my $package = "MojoPlugins::" . $file_without_extension;
-
-		#print("Loading:  $package\n");
-		$plugins->load_plugin($package);
-		$self->plugin($package);
-
+		#print("Loading:  $package_name\n");
+		$plugins->load_plugin($package_name);
+		$self->plugin($package_name);
 	}
-
-	closedir(DIR);
 
 	my $registration_email_from = $config->{'portal'}{'registration_email_from'};
 	if ( defined($registration_email_from) ) {

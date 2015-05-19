@@ -20,103 +20,142 @@ Parameter
 =========
 **GET /api/1.1/parameters.json**
 
-  Authentication Required: Yes
 
-  **Return Values**
+.. Description.
 
-  +------------------+--------+----------------------------------------------------+
-  |    Parameter     |  Type  |                    Description                     |
-  +==================+========+====================================================+
-  | ``last_updated`` | string | The Time / Date this server entry was last updated |
-  +------------------+--------+----------------------------------------------------+
-  | ``value``        | string | The parameter value                                |
-  +------------------+--------+----------------------------------------------------+
-  | ``name``         | string | The parameter name                                 |
-  +------------------+--------+----------------------------------------------------+
-  | ``config_file``  | string | The parameter config_file                          |
-  +------------------+--------+----------------------------------------------------+
+Authentication Required: Yes
 
-  **Response Example** ::
+Response Content Type: application/json
+
+**Response Messages**
+
+::
 
 
-    {
-     "response": [
-        {
-           "last_updated": "2012-09-17 21:41:22",
-           "value": "foo.bar.net",
-           "name": "domain_name",
-           "config_file": "FooConfig.xml"
-        },
-        {
-           "last_updated": "2012-09-17 21:41:22",
-           "value": "0,1,2,3,4,5,6",
-           "name": "Drive_Letters",
-           "config_file": "storage.config"
-        },
-        {
-           "last_updated": "2012-09-17 21:41:22",
-           "value": "STRING __HOSTNAME__",
-           "name": "CONFIG proxy.config.proxy_name",
-           "config_file": "records.config"
-        }
-     ],
-     "version": "1.1"
-    }
+  HTTP Status Code: 200
+  Reason: Success
+
+
+**Return Values**
+
++----------------------+--------+------------------------------------------------+
+| Parameter            | Type   | Description                                    |
++======================+========+================================================+
+|``last_updated``      | string |                                                |
++----------------------+--------+------------------------------------------------+
+|``value``             | string |                                                |
++----------------------+--------+------------------------------------------------+
+|``name``              | string |                                                |
++----------------------+--------+------------------------------------------------+
+|``config_file``       | string |                                                |
++----------------------+--------+------------------------------------------------+
+
+**Response Example**
+
+
+::
+
+
+  {
+   "response": [
+      {
+         "last_updated": "2012-09-17 21:41:22",
+         "value": "foo.bar.net",
+         "name": "domain_name",
+         "config_file": "FooConfig.xml"
+      },
+      {
+         "last_updated": "2012-09-17 21:41:22",
+         "value": "0,1,2,3,4,5,6",
+         "name": "Drive_Letters",
+         "config_file": "storage.config"
+      },
+      {
+         "last_updated": "2012-09-17 21:41:22",
+         "value": "STRING __HOSTNAME__",
+         "name": "CONFIG proxy.config.proxy_name",
+         "config_file": "records.config"
+      }
+   ],
+   "version": "1.1"
+  }
+
+For error messages, see :ref:`reference-label-401`.
 
 |
 
 **GET /api/1.1/parameters/profile/:profile_name.json**
 
-  Authentication Required: Yes
 
-  **Request Route Parameters**
-
-  +------------------+----------+-------------+
-  |       Name       | Required | Description |
-  +==================+==========+=============+
-  | ``profile_name`` | yes      |             |
-  +------------------+----------+-------------+
-
-  **Return Values**
-
-  +------------------+--------+----------------------------------------------------+
-  |    Parameter     |  Type  |                    Description                     |
-  +==================+========+====================================================+
-  | ``last_updated`` | string | The Time / Date this server entry was last updated |
-  +------------------+--------+----------------------------------------------------+
-  | ``value``        | string | The parameter value                                |
-  +------------------+--------+----------------------------------------------------+
-  | ``name``         | string | The parameter name                                 |
-  +------------------+--------+----------------------------------------------------+
-  | ``config_file``  | string | The parameter config_file                          |
-  +------------------+--------+----------------------------------------------------+
+.. Description.
 
 
-  **Response Example** ::
+Authentication Required: Yes
+
+**Request Route Parameters**
+
++-----------------+----------+---------------------------------------------------+
+| Name            | Required | Description                                       |
++=================+==========+===================================================+
+|profile_name     | yes      |                                                   |
++-----------------+----------+---------------------------------------------------+
+
+Response Content Type: application/json
+
+**Response Messages**
+
+::
 
 
-    {
-     "response": [
-        {
-           "last_updated": "2012-09-17 21:41:22",
-           "value": "foo.bar.net",
-           "name": "domain_name",
-           "config_file": "FooConfig.xml"
-        },
-        {
-           "last_updated": "2012-09-17 21:41:22",
-           "value": "0,1,2,3,4,5,6",
-           "name": "Drive_Letters",
-           "config_file": "storage.config"
-        },
-        {
-           "last_updated": "2012-09-17 21:41:22",
-           "value": "STRING __HOSTNAME__",
-           "name": "CONFIG proxy.config.proxy_name",
-           "config_file": "records.config"
-        }
-     ],
-     "version": "1.1"
-    }
+  HTTP Status Code: 200
+  Reason: Success
 
+
+**Return Values**
+
++----------------------+--------+------------------------------------------------+
+| Parameter            | Type   | Description                                    |
++======================+========+================================================+
+|``last_updated``      | string |                                                |
++----------------------+--------+------------------------------------------------+
+|``value``             | string |                                                |
++----------------------+--------+------------------------------------------------+
+|``name``              | string |                                                |
++----------------------+--------+------------------------------------------------+
+|``config_file``       | string |                                                |
++----------------------+--------+------------------------------------------------+
+|``version``           | string |                                                |
++----------------------+--------+------------------------------------------------+
+
+**Response Example**
+
+
+::
+
+
+  {
+   "response": [
+      {
+         "last_updated": "2012-09-17 21:41:22",
+         "value": "foo.bar.net",
+         "name": "domain_name",
+         "config_file": "FooConfig.xml"
+      },
+      {
+         "last_updated": "2012-09-17 21:41:22",
+         "value": "0,1,2,3,4,5,6",
+         "name": "Drive_Letters",
+         "config_file": "storage.config"
+      },
+      {
+         "last_updated": "2012-09-17 21:41:22",
+         "value": "STRING __HOSTNAME__",
+         "name": "CONFIG proxy.config.proxy_name",
+         "config_file": "records.config"
+      }
+   ],
+   "version": "1.1"
+  }
+
+For error messages, see :ref:`reference-label-401`.
 
