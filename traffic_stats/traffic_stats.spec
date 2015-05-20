@@ -35,6 +35,7 @@ cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/write_traffic_st
 cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/ts_daily_summary ${RPM_BUILD_ROOT}/opt/traffic_stats/bin/ts_daily_summary
 cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/traffic_stats.cfg ${RPM_BUILD_ROOT}/opt/traffic_stats/conf/traffic_stats.cfg
 cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/traffic_stats_seelog.xml ${RPM_BUILD_ROOT}/opt/traffic_stats/conf/traffic_stats_seelog.xml
+cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/traffic_stats.init ${RPM_BUILD_ROOT}/etc/init.d/traffic_stats
 cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/write_traffic_stats.init ${RPM_BUILD_ROOT}/etc/init.d/write_traffic_stats
 cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/ts_daily_summary.init ${RPM_BUILD_ROOT}/etc/init.d/ts_daily_summary
 cp $GOPATH/src/github.com/comcast/traffic_control/traffic_stats/traffic_stats.logrotate ${RPM_BUILD_ROOT}/etc/logrotate.d/traffic_stats
@@ -97,6 +98,7 @@ fi
 %attr(755, traffic_stats, traffic_stats) /opt/traffic_stats/bin/*
 %attr(755, traffic_stats, traffic_stats) /etc/init.d/write_traffic_stats
 %attr(755, traffic_stats, traffic_stats) /etc/init.d/ts_daily_summary
+%attr(755, traffic_stats, traffic_stats) /etc/init.d/traffic_stats
 
 %preun
 # args for hooks: http://www.ibm.com/developerworks/library/l-rpm2/
