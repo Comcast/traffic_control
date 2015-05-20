@@ -101,8 +101,8 @@ func main() {
 				errHndlr(err, ERROR)
 			}
 			//create influxdb query
-			log.Infof("SELECT sum(value)/6 FROM bandwidth where time > '%v' and time < '%v' group by time(60s), cdn", formatStartTime, formatEndTime)
-			q := fmt.Sprintf("SELECT sum(value)/6 FROM bandwidth where time > '%v' and time < '%v' group by time(60s), cdn", formatStartTime, formatEndTime)
+			log.Infof("SELECT sum(value)/6 FROM bandwidth where time > '%v' and time < '%v' group by time(60s), cdn fill(0)", formatStartTime, formatEndTime)
+			q := fmt.Sprintf("SELECT sum(value)/6 FROM bandwidth where time > '%v' and time < '%v' group by time(60s), cdn fill(0)", formatStartTime, formatEndTime)
 			res, err := queryDB(influxClient, q, "cache_stats")
 			if err != nil {
 				fmt.Printf("err = %v\n", err)
@@ -116,7 +116,11 @@ func main() {
 				bytesServed := 0.00
 				cdn = row.Tags["cdn"]
 				for _, record := range row.Values {
-					kbps, _ := record[1].(json.Number).Float64()
+					kbps, err := record[1].(json.Number).Float64()
+					if err != nil {
+						errHndlr(err, ERROR)
+						continue
+					}
 					sampleTime, err := time.Parse("2006-01-02T15:04:05Z", record[0].(string))
 					if err != nil {
 						errHndlr(err, ERROR)
