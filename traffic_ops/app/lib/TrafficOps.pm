@@ -41,6 +41,8 @@ use User::pwent;
 use POSIX qw(strftime);
 use Utils::JsonConfig;
 use MojoX::Log::Log4perl;
+use Utils::Helper::Datasource;
+Utils::Helper::Datasource->load_extensions;
 
 use constant SESSION_TIMEOUT => 14400;
 my $logging_root_dir;

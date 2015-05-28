@@ -81,7 +81,7 @@ sub genfiles {
 	$file =~ s/^regex_remap_.*\.config$/regex_remap_\.config/;
 	$file =~ s/^cacheurl_.*\.config$/cacheurl_\.config/;
 	if ( $file =~ /^to_ext_.*\.config$/ ) {
-		$file     =~ s/^to_ext_.*\.config$/to_ext_\.config/;
+		$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 		$org_name =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 	}
 
@@ -131,7 +131,7 @@ sub gen_fancybox_data {
 		$file =~ s/^regex_remap_.*\.config$/regex_remap_\.config/;
 		$file =~ s/^cacheurl_.*\.config$/cacheurl_\.config/;
 		if ( $file =~ /^to_ext_.*\.config$/ ) {
-			$file     =~ s/^to_ext_.*\.config$/to_ext_\.config/;
+			$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 			$org_name =~ s/^to_ext_(.*)\.config$/$1.config/;
 		}
 
@@ -1197,7 +1197,8 @@ sub to_ext_dot_config {
 	my $text   = $self->header_comment( $server->host_name );
 
 	# get the subroutine name for the this file from the Extensions::ConfigList
-	my $ext_hash_ref = &Extensions::ConfigList::hash_ref();
+	my $ext          = new Extensions::ConfigList();
+	my $ext_hash_ref = $ext->hash_ref();
 	my $subroutine   = $ext_hash_ref->{$file};
 
 	# And call it - the below calls the subroutine in the var $subroutine.
