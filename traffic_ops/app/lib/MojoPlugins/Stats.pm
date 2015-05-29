@@ -26,13 +26,13 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Round qw(nearest);
 use Extensions::DatasourceList;
 use Utils::Helper::Datasource;
-use Extensions::CustomDatasourceList;
+use Extensions::Statistics;
 Utils::Helper::Datasource->load_extensions;
 
 sub register {
 	my ( $self, $app, $conf ) = @_;
 	$app->renderer->add_helper(
-		get_stats => sub {
+		v11_get_stats => sub {
 			my $self     = shift;
 			my $match    = shift;
 			my $start    = shift;
@@ -49,20 +49,25 @@ sub register {
 			}
 
 			my $data;
+			my $rc                       = 0;
 			my $default_retention_period = 86400;    # one day
 
 			my $retention_period =
 				   $self->db->resultset('Parameter')->search( { name => "RetentionPeriod", config_file => "redis.config" } )->get_column('value')->single()
 				|| $default_retention_period;
 
+			my $stats = new Extensions::Statistics();
+
 			# numeric start/end only which should be done upstream but let's be extra cautious
 			if ( $start =~ /^\d+$/ && $end =~ /^\d+$/ && $window_start < ( time() - $retention_period - 60 ) ) {  # -60 for diff between client and our time
-				$data = $self->get_stats_long_term( $match, $start, $end, $interval );
-				$self->app->log->debug( "data #-> " . Dumper($data) );
+				$self->app->log->debug("LONG TERM FLOW");
+				( $rc, $data ) = $stats->v11_long_term( $self, $match, $start, $end, $interval );
 			}
 			else {
+				$self->app->log->debug("SHORT TERM FLOW");
+
 				# get_usage uses now/now as start/end, so it will pass through to short_term
-				$data = $self->get_stats_short_term( $match, $start, $end, $interval );
+				( $rc, $data ) = $stats->v11_short_term( $self, $match, $start, $end, $interval );
 			}
 
 			if ( defined($data) ) {
@@ -71,10 +76,10 @@ sub register {
 					$self->calc_summary($data);
 				}
 
-				return ($data);
+				return ( $rc, $data );
 			}
 			else {
-				return (undef);
+				return ( $rc, undef );
 			}
 
 		}
@@ -245,208 +250,6 @@ sub register {
 
 			return ($data);
 
-		}
-	);
-	$app->renderer->add_helper(
-		get_stats_short_term => sub {
-			my $self     = shift;
-			my $match    = shift;
-			my $start    = shift;
-			my $end      = shift;
-			my $interval = shift;
-
-			my $REDIS_METRIC_INTERVAL = 10;
-
-			my $redis = $self->redis_connect();
-
-			# my $ret = $redis->ping();
-			# if ( !defined($ret) || $ret ne "PONG" ) {
-			# 	$self->app->log->info("No response from ping: " . Dumper($ret));
-			# }
-			my $last_one = 0;
-			if ( $end eq "now" && $start eq "now" ) {
-				$end      = time();
-				$start    = time();
-				$last_one = 1;
-			}
-
-			if ( $interval < 10 ) {    # note 10 is the minimum interval, and the hardcoded interval of getting samples into redis.
-				$interval = 10;        # minimum
-			}
-			my $startts = [gettimeofday];
-
-			my $max_kbps_match = $match;
-			my @parts          = split( /:/, $match );
-			my $cdn_name       = $parts[0];
-			my $ds_name        = $parts[1];
-			my $cg_name        = $parts[2];
-			my $host_name      = $parts[3];
-			my $stat_name      = $parts[4];
-			my $capacity;
-
-			if ( $stat_name =~ /daily_/ ) {
-				$capacity = 0;
-			}
-			elsif ( $ds_name ne "all" ) {
-				$capacity = $self->db->resultset('Deliveryservice')->search( { xml_id => $ds_name } )->get_column('global_max_mbps')->single() * 1000;
-			}
-			else {
-				my $mkbps_match = $cdn_name . ":" . $ds_name . ":" . $cg_name . ":" . $host_name . ":maxKbps";
-				$capacity = ( $redis->zrange( $mkbps_match, -1, -1 ) )[0];
-			}
-
-			$capacity = $capacity * 0.85;    # TODO JvD var is not always defined, hardcode
-			my $e1 = tv_interval($startts);
-			my @vals;
-			my @times;
-			my $jdata;
-
-			$jdata->{cdnName}             = $cdn_name;
-			$jdata->{deliveryServiceName} = $ds_name;
-			$jdata->{cacheGroupName}      = $cg_name;
-			$jdata->{hostName}            = $host_name;
-			$jdata->{statName}            = $stat_name;
-
-			my $first = int( ( $start - time ) / $REDIS_METRIC_INTERVAL );
-			my $last  = int( ( $end - time ) / $REDIS_METRIC_INTERVAL );
-			if ( $last >= 0 ) {
-				$last = -1;
-			}
-			if ( $stat_name !~ /^daily_/ ) {
-				if ( $last_one == 1 ) {
-					$jdata->{redisCommand} = "   lrange " . $cdn_name . ":tstamp -1 -1; lrange " . $match . " -1 -1";
-					@vals = $redis->lrange( $match, -1, -1 );
-					@times = $redis->lrange( $cdn_name . ":tstamp", -1, -1 );
-				}
-				else {
-
-					$jdata->{redisCommand} =
-						"   lrange " . $cdn_name . ":tstamp " . $first . " " . $last . "; lrange " . $match . " " . $first . " " . $last;
-					@times = $redis->lrange( $cdn_name . ":tstamp", $first, $last );
-					@vals = $redis->lrange( $match, $first, $last );
-
-					# print $#times . " -- " . $#vals . "\n";
-				}
-				my $prev_tstamp = 0;
-				my $j           = 0;
-
-				my $cc    = 1;
-				my $total = 0;
-				my $i     = 0;
-				while ( $i <= $#vals ) {
-					my $tstamp = $times[$i];
-					my $val    = $vals[$i];
-
-					$i++;
-
-					# occasionally the delta will be +/- 1 from $REDIS_METRIC_INTERVAL
-					my $delta = nearest( $REDIS_METRIC_INTERVAL, $tstamp - $prev_tstamp );
-
-					if ( $delta != $REDIS_METRIC_INTERVAL ) {
-						if (   exists( $jdata->{series} )
-							&& scalar( @{ $jdata->{series} } ) > 0
-							&& exists( $jdata->{series}->[$j]->{samples} )
-							&& scalar( @{ $jdata->{series}->[$j]->{samples} } ) > 0 )
-						{
-
-							# move the index forward one to account for the gap
-							$j++;
-						}
-						$jdata->{series}->[$j]->{timeBase} = int($tstamp);
-						$cc                                = 1;
-						$total                             = 0;
-					}
-					$total += $val;
-					if ( $cc % ( $interval / $REDIS_METRIC_INTERVAL ) == 0 ) {
-						push( @{ $jdata->{series}->[$j]->{samples} }, int( $total / ( $interval / $REDIS_METRIC_INTERVAL ) ) );
-						$total = 0;
-					}
-					$cc++;
-					$prev_tstamp = $tstamp;
-				}
-
-				# it's possible that the timeBase was inserted but no samples exist; delete the series if so
-				if ( exists( $jdata->{series} ) && ref( $jdata->{series} ) eq "ARRAY" ) {
-					my @deletes;
-
-					for ( my $x = 0; $x < scalar( @{ $jdata->{series} } ); $x++ ) {
-						if (  !exists( $jdata->{series}->[$x]->{samples} )
-							|| ref( $jdata->{series}->[$x]->{samples} ) ne "ARRAY"
-							|| scalar( @{ $jdata->{series}->[$x]->{samples} } ) == 0 )
-						{
-							push( @deletes, $x );
-						}
-					}
-
-					for my $r (@deletes) {
-						delete( $jdata->{series}->[$r] );
-					}
-
-					# if for some reason we now have no series, delete the key from the structure
-					if ( scalar( @{ $jdata->{series} } ) == 0 ) {
-						delete( $jdata->{series} );
-					}
-				}
-			}
-			else {
-				my @daily_vals = $redis->lrange( $match, $first, $last );
-				$jdata->{redisCommand} = "   lrange " . $match . " " . $first . " " . $last;
-				my $j           = -1;
-				my $prev_tstamp = 0;
-				foreach my $line (@daily_vals) {
-					my ( $tstamp, $val ) = split( /:/, $line );
-					if ( $tstamp - $prev_tstamp != $interval ) {
-						$j++;
-						$jdata->{series}->[$j]->{timeBase} = int($tstamp);
-					}
-					push( @{ $jdata->{series}->[$j]->{samples} }, int($val) );
-					$prev_tstamp = $tstamp;
-					push( @times, $tstamp );    # TODO JvD
-					push( @vals,  $val );
-				}
-			}
-
-			my $e2 = tv_interval($startts);
-			$jdata->{interval} = int($interval);
-			$jdata->{start}    = gmtime( $times[0] );
-			$jdata->{end}      = gmtime( $times[ $#vals - 1 ] );
-			$jdata->{number}   = $#vals;
-			$jdata->{capacity} = $capacity;
-
-			$redis->quit();
-			my $e3 = tv_interval($startts);
-			$jdata->{elapsed} = $e3 . ' (' . $e1 . ',' . $e2 . ')';
-			return $jdata;
-		}
-	);
-	$app->renderer->add_helper(
-		get_stats_long_term => sub {
-			my $self     = shift;
-			my $match    = shift;
-			my $start    = shift;
-			my $end      = shift;
-			my $interval = shift;
-
-			# get the subroutine name for the for the long term stats from the Extensions::DatasourceList
-			# make this into a "Statistics->long_term()"
-			my $ext          = new Extensions::CustomDatasourceList();
-			my $ext_hash_ref = $ext->hash_ref();
-			my $subroutine   = $ext_hash_ref->{stats_long_term};
-
-			if ( !defined($subroutine) ) {
-				return (
-					{
-						message => {
-							type    => "error",
-							content => "No Traffic Ops Extension defined for \"stats_long_term\"",
-						}
-					}
-				);
-			}
-
-			# And call it - the below calls the subroutine in the var $subroutine.
-			my $data = &{ \&{$subroutine} }( $self, $match, $start, $end, $interval );
-			return $data;
 		}
 	);
 	$app->renderer->add_helper(

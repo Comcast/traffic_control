@@ -41,6 +41,7 @@ use User::pwent;
 use POSIX qw(strftime);
 use Utils::JsonConfig;
 use MojoX::Log::Log4perl;
+use File::Find;
 use Utils::Helper::Datasource;
 Utils::Helper::Datasource->load_extensions;
 
@@ -959,28 +960,31 @@ sub setup_mojo_plugins {
 	);
 
 	# Custom TO Plugins
+	my $pwd     = cwd();
+	my $dir     = "$pwd/lib/MojoPlugins";
 	my $plugins = Mojolicious::Plugins->new;
 
-	my $pwd = cwd();
-	my $dir = "$pwd/lib/MojoPlugins";
+	my @file_list;
+	find(
+		sub {
+			return unless -f;         #Must be a file
+			return unless /\.pm$/;    #Must end with `.pl` suffix
+			push @file_list, $File::Find::name;
+		},
+		$dir
+	);
 
-	opendir( DIR, $dir ) or die $!;
+	#print join "\n", @file_list;
+	foreach my $file (@file_list) {
+		open my $fn, '<', $file;
+		my $first_line = <$fn>;
+		my ( $package_keyword, $package_name ) = ( $first_line =~ m/(package )(.*);/ );
+		close $fn;
 
-	while ( my $file = readdir(DIR) ) {
-
-		# Use a regular expression to ignore files beginning with a period
-		next if ( $file =~ m/^\./ );
-
-		( my $file_without_extension = $file ) =~ s/\.[^.]+$//;
-		my $package = "MojoPlugins::" . $file_without_extension;
-
-		#print("Loading:  $package\n");
-		$plugins->load_plugin($package);
-		$self->plugin($package);
-
+		#print("Loading:  $package_name\n");
+		$plugins->load_plugin($package_name);
+		$self->plugin($package_name);
 	}
-
-	closedir(DIR);
 
 	my $registration_email_from = $config->{'portal'}{'registration_email_from'};
 	if ( defined($registration_email_from) ) {
