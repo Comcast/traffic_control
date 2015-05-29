@@ -60,12 +60,12 @@ sub register {
 
 			# numeric start/end only which should be done upstream but let's be extra cautious
 			if ( $start =~ /^\d+$/ && $end =~ /^\d+$/ && $window_start < ( time() - $retention_period - 60 ) ) {  # -60 for diff between client and our time
-				$self->app->log->debug("LONG TERM FLOW");
+				$self->app->log->debug("Retrieving 'long term' stats...");
 				( $rc, $formatted_response ) = $stats->v11_long_term( $self, $match, $start, $end, $interval );
 				$self->app->log->debug( "formatted_response #-> " . Dumper($formatted_response) );
 			}
 			else {
-				$self->app->log->debug("SHORT TERM FLOW");
+				$self->app->log->debug("Retrieving 'short term' stats...");
 
 				# get_usage uses now/now as start/end, so it will pass through to short_term
 				( $rc, $formatted_response ) = $stats->v11_short_term( $self, $match, $start, $end, $interval );
