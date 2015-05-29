@@ -1007,8 +1007,6 @@ sub setup_mojo_plugins {
 		$self->plugin($package_name);
 	}
 
-	closedir(DIR);
-
 	my $to_email_from = $config->{'to'}{'email_from'};
 	if ( defined($to_email_from) ) {
 
