@@ -16,8 +16,6 @@ package Extensions::DatasourceList;
 #
 #
 #
-use UI::Utils;
-use Mojo::Base 'Mojolicious::Controller';
 
 #
 # To add a data source extension:

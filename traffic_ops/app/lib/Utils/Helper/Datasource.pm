@@ -21,6 +21,7 @@ use Carp qw(cluck confess);
 use JSON;
 use Data::Dumper;
 use Mojo::UserAgent;
+use File::Find;
 
 use constant { TIMEOUT => 30, };
 
@@ -302,6 +303,53 @@ sub calculate_stats {
 	}
 
 	return ($data);
+}
+
+sub load_module {
+	my $module = shift;
+	if ( defined( $ENV{"TO_EXTENSIONS_LIB"} ) ) {
+		print "env: " . $ENV{"TO_EXTENSIONS_LIB"} . "\n";
+		my $use = $module;
+		eval $use;
+	}
+}
+
+sub load_extensions {
+	my $module;
+	my $to_ext_lib_env = $ENV{"TO_EXTENSIONS_LIB"};
+	if ( defined($to_ext_lib_env) ) {
+		if ( -e $to_ext_lib_env ) {
+			print "Using Extensions library path: " . $to_ext_lib_env . "\n";
+			my @file_list;
+			find(
+				sub {
+					return unless -f;         #Must be a file
+					return unless /\.pm$/;    #Must end with `.pl` suffix
+					push @file_list, $File::Find::name;
+				},
+				$to_ext_lib_env
+			);
+
+			#print join "\n", @file_list;
+			foreach my $file (@file_list) {
+				open my $fn, '<', $file;
+				my $first_line = <$fn>;
+				my ( $package_keyword, $package_name ) = ( $first_line =~ m/(package )(.*);/ );
+				close $fn;
+
+				#print "package_name #-> (" . $package_name . ")\n";
+			}
+		}
+	}
+}
+
+sub check_is_loaded {
+	my ($pkg) = @_;
+	( my $file = $pkg ) =~ s/::/\//g;
+	$file .= '.pm';
+	my @loaded = grep { $_ eq $file } keys %INC;
+	my $is_loaded = ( @loaded ? 1 : 0 );
+	return $is_loaded;
 }
 
 1;
