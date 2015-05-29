@@ -48,7 +48,7 @@ sub register {
 				${$var} =~ s/\.\d+$//g;
 			}
 
-			my $data;
+			my $formatted_response;
 			my $rc                       = 0;
 			my $default_retention_period = 86400;    # one day
 
@@ -61,26 +61,17 @@ sub register {
 			# numeric start/end only which should be done upstream but let's be extra cautious
 			if ( $start =~ /^\d+$/ && $end =~ /^\d+$/ && $window_start < ( time() - $retention_period - 60 ) ) {  # -60 for diff between client and our time
 				$self->app->log->debug("LONG TERM FLOW");
-				( $rc, $data ) = $stats->v11_long_term( $self, $match, $start, $end, $interval );
+				( $rc, $formatted_response ) = $stats->v11_long_term( $self, $match, $start, $end, $interval );
+				$self->app->log->debug( "formatted_response #-> " . Dumper($formatted_response) );
 			}
 			else {
 				$self->app->log->debug("SHORT TERM FLOW");
 
 				# get_usage uses now/now as start/end, so it will pass through to short_term
-				( $rc, $data ) = $stats->v11_short_term( $self, $match, $start, $end, $interval );
+				( $rc, $formatted_response ) = $stats->v11_short_term( $self, $match, $start, $end, $interval );
 			}
 
-			if ( defined($data) ) {
-				if ( ref($data) eq "HASH" && exists( $data->{series} ) ) {
-					$self->normalize_intervals( $data, $interval );
-					$self->calc_summary($data);
-				}
-
-				return ( $rc, $data );
-			}
-			else {
-				return ( $rc, undef );
-			}
+			return ( $rc, $formatted_response );
 
 		}
 	);
