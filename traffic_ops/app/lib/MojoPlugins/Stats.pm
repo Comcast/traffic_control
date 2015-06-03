@@ -24,9 +24,8 @@ use JSON;
 use Utils::CCR;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Round qw(nearest);
-use Extensions::DatasourceList;
 use Utils::Helper::Datasource;
-use Extensions::Statistics;
+use Extensions::Delegate::Statistics;
 Utils::Helper::Datasource->load_extensions;
 
 sub register {
@@ -56,19 +55,20 @@ sub register {
 				   $self->db->resultset('Parameter')->search( { name => "RetentionPeriod", config_file => "redis.config" } )->get_column('value')->single()
 				|| $default_retention_period;
 
-			my $stats = new Extensions::Statistics();
+			my $stats = new Extensions::Delegate::Statistics();
 
 			# numeric start/end only which should be done upstream but let's be extra cautious
 			if ( $start =~ /^\d+$/ && $end =~ /^\d+$/ && $window_start < ( time() - $retention_period - 60 ) ) {  # -60 for diff between client and our time
 				$self->app->log->debug("Retrieving 'long term' stats...");
-				( $rc, $formatted_response ) = $stats->v11_long_term( $self, $match, $start, $end, $interval );
-				$self->app->log->debug( "formatted_response #-> " . Dumper($formatted_response) );
+				( $rc, $formatted_response ) = $stats->long_term( $self, $match, $start, $end, $interval );
+
+				#$self->app->log->debug( "formatted_response #-> " . Dumper($formatted_response) );
 			}
 			else {
 				$self->app->log->debug("Retrieving 'short term' stats...");
 
 				# get_usage uses now/now as start/end, so it will pass through to short_term
-				( $rc, $formatted_response ) = $stats->v11_short_term( $self, $match, $start, $end, $interval );
+				( $rc, $formatted_response ) = $stats->short_term_redis( $self, $match, $start, $end, $interval );
 			}
 
 			return ( $rc, $formatted_response );
@@ -294,6 +294,14 @@ sub register {
 			$self->success($data);
 		}
 	);
+}
+
+# TODO: drichardson - invoke the InfluxDB code flow.
+sub short_term {
+}
+
+# TODO: drichardson - invoke the v11_long_term then flip against the
+sub long_term {
 }
 
 1;
