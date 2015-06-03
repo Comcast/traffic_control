@@ -205,13 +205,13 @@ insert ignore into profile_parameter (profile, parameter) value (
 insert into parameter (name, config_file, value) select * from (select 'DNSRoutingName', 'CRConfig.json', 'tr') as temp where not exists (select name from parameter where name = 'DNSRoutingName' and config_file = 'CRConfig.json' and value = 'tr') limit 1;
 insert into parameter (name, config_file, value) select * from (select 'HTTPRoutingName', 'CRConfig.json', 'edge') as temp where not exists (select name from parameter where name = 'HTTPRoutingName' and config_file = 'CRConfig.json' and value = 'edge') limit 1;
 
-SET @param_id := (select id from parameter where name = 'DNSRoutingName' and value = 'tr' and config_file = 'CRConig.json');
+SET @param_id := (select id from parameter where name = 'DNSRoutingName' and value = 'tr' and config_file = 'CRConfig.json');
 INSERT IGNORE INTO profile_parameter (profile, parameter )
   SELECT id, @param_id
   FROM profile
   where name like 'CCR%' ;
 
-SET @param_id := (select id from parameter where name = 'HTTPRoutingName' and value = 'edge' and config_file = 'CRConig.json');
+SET @param_id := (select id from parameter where name = 'HTTPRoutingName' and value = 'edge' and config_file = 'CRConfig.json');
 INSERT IGNORE INTO profile_parameter (profile, parameter )
   SELECT id, @param_id
   FROM profile
