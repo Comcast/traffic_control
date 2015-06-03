@@ -227,6 +227,8 @@ sub read {
 				"ipv6_routing_enabled"   => \$row->ipv6_routing_enabled,
 				"range_request_handling" => $row->range_request_handling,
 				"cacheurl"               => $row->cacheurl,
+				"origin_shield"			 => $row->origin_shield,
+				"routing_name"			 => $row->routing_name,
 			}
 		);
 	}
@@ -638,6 +640,7 @@ sub update {
 			mid_header_rewrite     => $self->param('ds.mid_header_rewrite') eq "" ? undef : $self->param('ds.mid_header_rewrite'),
 			regex_remap   => $self->param('ds.regex_remap') eq ""   ? undef : $self->param('ds.regex_remap'),
 			origin_shield => $self->param('ds.origin_shield') eq "" ? undef : $self->param('ds.origin_shield'),
+			routing_name => $self->param('ds.routing_name') eq "" ? undef : $self->param('ds.routing_name'),
 			cacheurl      => $self->param('ds.cacheurl') eq ""      ? undef : $self->param('ds.cacheurl'),
 		);
 
@@ -826,6 +829,7 @@ sub create {
 				mid_header_rewrite     => $self->param('ds.mid_header_rewrite') eq "" ? undef : $self->param('ds.mid_header_rewrite'),
 				regex_remap   => $self->param('ds.regex_remap') eq ""   ? undef : $self->param('ds.regex_remap'),
 				origin_shield => $self->param('ds.origin_shield') eq "" ? undef : $self->param('ds.origin_shield'),
+				routing_name => $self->param('ds.routing_name') eq "" ? undef : $self->param('ds.routing_name'),
 				cacheurl      => $self->param('ds.cacheurl') eq ""      ? undef : $self->param('ds.cacheurl'),
 			}
 		);

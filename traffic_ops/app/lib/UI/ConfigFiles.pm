@@ -226,6 +226,7 @@ sub ds_data {
 		my $protocol               = $row->protocol;
 		my $range_request_handling = $row->range_request_handling;
 		my $origin_shield          = $row->origin_shield;
+		my $routing_name           = $row->routing_name;
 		my $cacheurl               = $row->cacheurl;
 
 		if ( $re_type eq 'HOST_REGEXP' ) {
@@ -286,6 +287,7 @@ sub ds_data {
 		$dsinfo->{dslist}->[$j]->{"regex_remap"}            = $regex_remap;
 		$dsinfo->{dslist}->[$j]->{"range_request_handling"} = $range_request_handling;
 		$dsinfo->{dslist}->[$j]->{"origin_shield"}          = $origin_shield;
+		$dsinfo->{dslist}->[$j]->{"routing_name"}           = $routing_name;
 		$dsinfo->{dslist}->[$j]->{"cacheurl"}               = $cacheurl;
 
 		if ( defined($edge_header_rewrite) ) {

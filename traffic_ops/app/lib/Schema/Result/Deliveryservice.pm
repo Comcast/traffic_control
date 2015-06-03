@@ -223,6 +223,12 @@ __PACKAGE__->table("deliveryservice");
   is_nullable: 1
   size: 1024
 
+=head2 routing_name
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 1024
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -300,6 +306,8 @@ __PACKAGE__->add_columns(
   "regex_remap",
   { data_type => "varchar", is_nullable => 1, size => 1024 },
   "cacheurl",
+  { data_type => "varchar", is_nullable => 1, size => 1024 },
+  "routing_name",
   { data_type => "varchar", is_nullable => 1, size => 1024 },
 );
 
@@ -451,8 +459,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07043 @ 2015-05-21 13:27:11
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:aC8b86PwhNGcg4du7wqpWg
+# Created by DBIx::Class::Schema::Loader v0.07043 @ 2015-06-03 12:46:47
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:bp2KzaGH4bkVLScZuKo5Fw
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 #
