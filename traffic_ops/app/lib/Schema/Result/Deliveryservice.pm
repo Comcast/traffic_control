@@ -223,19 +223,17 @@ __PACKAGE__->table("deliveryservice");
   is_nullable: 1
   size: 1024
 
-<<<<<<< HEAD
 =head2 routing_name
 
   data_type: 'varchar'
   is_nullable: 1
   size: 1024
-=======
+
 =head2 remap_text
 
   data_type: 'varchar'
   is_nullable: 1
   size: 2048
->>>>>>> 1735ccb3eecd5fb5354ceeaf57b117878a54e1b9
 
 =cut
 
