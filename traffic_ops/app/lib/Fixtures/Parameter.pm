@@ -570,7 +570,15 @@ my %definition_for = (
 			value       => 'INT 33554432',
 		},
 	},
-
+	'maxRevalDurationDays' => {
+		new   => 'Parameter',
+		using => {
+			id          => 62,
+			name        => 'maxRevalDurationDays',
+			config_file => 'regex_revalidate.config',
+			value       => '32',
+		},
+	},
 );
 
 sub get_definition {
