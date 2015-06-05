@@ -78,6 +78,7 @@ sub register {
 
 			my $dh = new Utils::Helper::DateHelper();
 			( $start, $end ) = $dh->translate_dates( $start, $end );
+
 			my $match = $self->build_match( $cdn_name, $ds_name, $cachegroup_name, $metric_type );
 			my ( $rc, $j ) = $self->v11_get_stats( $match, $start, $end, $interval );
 			if ( $rc > 0 ) {

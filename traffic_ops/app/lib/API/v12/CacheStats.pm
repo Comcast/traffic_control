@@ -21,12 +21,12 @@ package API::v12::CacheStats;
 use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
-use Builder::InfluxdbBuilder;
-use Builder::CacheStatsBuilder;
 use JSON;
 my $builder;
 use constant SUCCESS => 0;
 use constant ERROR   => 1;
+use Utils::Helper::Datasource;
+Utils::Helper::Datasource->load_extensions;
 
 #TODO: drichardson
 #      - Add required fields validation see lib/API/User.pm based on Validate::Tiny
