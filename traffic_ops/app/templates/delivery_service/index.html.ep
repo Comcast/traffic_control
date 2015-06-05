@@ -105,7 +105,6 @@ $("a.fancybox").fancybox({
 			<th>Protocol</th>
 			<th>IPv6</th> 
 			<th>BGF</th> 
-			<th title="Custom Routing Name">CRN</th>
 		</tr>
 	</thead>
 </table>
