@@ -37,6 +37,7 @@ sub ccr_config {
 
 # Produces a list of Cdns for traversing child links
 sub gen_crconfig_json {
+	#my $ds = shift;
 	my $self     = shift;
 	my $cdn_name = shift;
 	my $data_obj;
@@ -245,7 +246,16 @@ sub gen_crconfig_json {
 						my $host_copy = $host;
 						$host_copy =~ s/$host_regex1//g;
 						if ( $protocol eq 'DNS' ) {
-							$remap = 'edge' . $host_copy . $ccr_domain_name;
+							my $routingNameParam = 'edge';
+
+							 if ( defined( $row->routing_name ) ){
+								$routingNameParam = $row->routing_name;
+							 }
+							 elsif ( exists($data_obj->{'config'}->{'routing.name.dns'} ) && defined( $data_obj->{'config'}->{'routing.name.dns'} ) ){
+								$routingNameParam = $data_obj->{'config'}->{'routing.name.dns'};
+							 }
+
+							$remap = $routingNameParam . $host_copy . $ccr_domain_name;
 						}
 						else {
 							$remap = $cache_tracker{$server} . $host_copy . $ccr_domain_name;

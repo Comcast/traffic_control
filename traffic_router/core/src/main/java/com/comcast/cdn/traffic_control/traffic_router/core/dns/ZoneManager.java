@@ -66,15 +66,13 @@ public class ZoneManager extends Resolver {
 
 	private final TrafficRouter trafficRouter;
 	private final List<Zone> _zones;
-	private static String dnsRoutingName;
-	private static String httpRoutingName;
+	private static String defaultDnsRoutingName;
+	private static String defaultHttpRoutingName;
 
 	private final StatTracker statTracker;
 
 	public ZoneManager(final TrafficRouter tr, final StatTracker statTracker, final String drn, final String hrn) throws IOException {
-		dnsRoutingName = drn.toLowerCase();
-		httpRoutingName = hrn.toLowerCase();
-
+		setDefaultRoutingNames(drn, hrn, tr.getCacheRegister());
 		_zones = generateZones(tr.getCacheRegister());
 		try {
 			writeZones(_zones, Config.getVarDir());
@@ -83,6 +81,22 @@ public class ZoneManager extends Resolver {
 		}
 		trafficRouter = tr;
 		this.statTracker = statTracker;
+	}
+
+	private static void setDefaultRoutingNames(final String dnsStr, final String httpStr, final CacheRegister tr) {
+		final JSONObject config = tr.getConfig();
+
+		if (config.has("routing.name.dns")) {
+			setDefaultDnsRoutingName(config.optString("routing.name.dns"));
+		} else {
+			setDefaultDnsRoutingName(dnsStr);
+		}
+
+		if (config.has("routing.name.http")) {
+			setDefaultHttpRoutingName(config.optString("routing.name.http"));
+		} else {
+			setDefaultHttpRoutingName(httpStr);
+		}
 	}
 
 	private static void writeZones(final List<Zone> zones, final String confDir) throws IOException {
@@ -217,7 +231,6 @@ public class ZoneManager extends Resolver {
 			final JSONObject ttl, final String domain, final DeliveryService ds) 
 					throws TextParseException, UnknownHostException {
 		final boolean addTrafficRouters = (ds != null && ds.isDns()) ? false : true;
-		final boolean useTrafficRouterStr = (ds != null) ? true : false;
 		final boolean ip6RoutingEnabled = (ds == null || (ds != null && ds.isIp6RoutingEnabled())) ? true : false;
 
 		for(String key : JSONObject.getNames(trafficRouters)) {
@@ -246,14 +259,21 @@ public class ZoneManager extends Resolver {
 				continue;
 			}
 
-			addTrafficRouterIps(list, domain, key, trJo, ttl, ip6RoutingEnabled, useTrafficRouterStr);
+			Name trRoutingName;
+			if (ds != null && ds.getRoutingName() != null) {
+				trRoutingName = newName(ds.getRoutingName(), domain);
+			} else if (ds != null && ds.getRoutingName() == null) {
+				trRoutingName = newName(getDefaultHttpRoutingName(), domain);
+			} else {
+				trRoutingName = newName(key, domain);
+			}
+
+			addTrafficRouterIps(list, trJo, ttl, ip6RoutingEnabled, trRoutingName);
 		}
 	}
 
-	private static void addTrafficRouterIps(final List<Record> list, final String domain, final String key,
-			final JSONObject trJo, final JSONObject ttl, final boolean addTrafficRoutersAAAA, final boolean useTrafficRouterStr) 
+	private static void addTrafficRouterIps(final List<Record> list, final JSONObject trJo, final JSONObject ttl, final boolean addTrafficRoutersAAAA, final Name trName) 
 					throws TextParseException, UnknownHostException {
-		final Name trName = (useTrafficRouterStr)? newName(getHttpRoutingName(), domain):newName(key,domain);
 		list.add(new ARecord(trName,
 				DClass.IN,
 				getLong(ttl, "A", 60),
@@ -288,7 +308,8 @@ public class ZoneManager extends Resolver {
 					zholder = new ArrayList<Record>();
 					zoneMap.put(domain, zholder);
 				}
-				if (host.equalsIgnoreCase(getDnsRoutingName())) {
+				String routingName = (ds.getRoutingName() != null) ? ds.getRoutingName() : getDefaultDnsRoutingName();
+				if (host.equalsIgnoreCase(routingName)) {
 					continue;
 				}
 				final Name name = new Name(fqdn+".");
@@ -411,7 +432,10 @@ public class ZoneManager extends Resolver {
 		final Track track = StatTracker.getTrack();
 		List<InetRecord> addresses = null;
 		try {
-			addresses = trafficRouter.route(request, track);
+			addresses = trafficRouter.route(request, track, getDefaultDnsRoutingName());
+			if (addresses == null) {
+				return null;
+			}
 			return fillZone(staticZone, name, addresses);
 		} catch (final Exception e) {
 			LOGGER.error(e.getMessage(), e);
@@ -546,22 +570,31 @@ public class ZoneManager extends Resolver {
 
 		if (sr.isSuccessful()) {
 			return zone;
-		} else if (qname.toString().toLowerCase().matches(getDnsRoutingName() + "\\..*")) {
-			final Zone dynamicZone = createDynamicZone(zone, qname, qtype, clientAddress);
-
-			if (dynamicZone != null) {
-				return dynamicZone;
-			}
 		}
+
+		final Zone dynamicZone = createDynamicZone(zone, qname, qtype, clientAddress);
+
+		if (dynamicZone != null) {
+			return dynamicZone;
+		}
+
 
 		return zone;
 	}
 
-	private static String getDnsRoutingName() {
-		return dnsRoutingName;
+	private static String getDefaultDnsRoutingName() {
+		return defaultDnsRoutingName;
 	}
 
-	private static String getHttpRoutingName() {
-		return httpRoutingName;
+	private static String getDefaultHttpRoutingName() {
+		return defaultHttpRoutingName;
+	}
+
+	private static void setDefaultDnsRoutingName(final String dnsStr) {
+		defaultDnsRoutingName = dnsStr.toLowerCase();
+	}
+
+	private static void setDefaultHttpRoutingName(final String httpStr) {
+		defaultHttpRoutingName = httpStr.toLowerCase();
 	}
 }
