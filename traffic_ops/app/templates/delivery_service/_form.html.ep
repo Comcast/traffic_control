@@ -449,7 +449,18 @@
 		%= field('ds.origin_shield')->text(class => 'field', readonly => 'readonly');
 		<% } %>
 	</div><br>
-		<div class="block" id="active_row">
+	<div class="block">
+		<% unless (field('ds.routing_name')->valid) { %>
+			<span class="field-with-error"><%= field('ds.routing_name')->error %></span>
+		<% } %>
+		%= label_for 'routing_name' => 'Routing Name', class => 'label'
+		<% if ($priv_level >= 20) { %>
+		%= field('ds.routing_name')->text(class => 'field', id => 'routing_name', name => 'ds.routing_name');
+		<% } else { %>
+		%= field('ds.routing_name')->text(class => 'field', readonly => 'readonly');
+		<% } %>
+	</div><br>
+	<div class="block" id="active_row">
 		<% unless (field('ds.active')->valid) { %>
 			<span class="field-with-error"><%= field('ds.active')->error %></span>
 		<% } %>

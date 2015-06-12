@@ -153,7 +153,6 @@ insert into parameter (name, config_file, value) select * from (select 'DsStats'
 insert into parameter (name, config_file, value) select * from (select 'DsStats', 'traffic_stats.config', 'tps_5xx') as temp where not exists (select name from parameter where name = 'DsStats' and config_file = 'traffic_stats.config' and value = 'tps_5xx') limit 1;
 insert into parameter (name, config_file, value) select * from (select 'DsStats', 'traffic_stats.config', 'tps_total') as temp where not exists (select name from parameter where name = 'DsStats' and config_file = 'traffic_stats.config' and value = 'tps_total') limit 1;
 
-
 insert ignore into profile_parameter (profile, parameter) value (
   (select id from profile where name = 'TRAFFIC_STATS'), 
   (select id from parameter where name = 'CacheStats' and config_file = 'traffic_stats.config' and value = 'bandwidth')
@@ -202,3 +201,18 @@ insert ignore into profile_parameter (profile, parameter) value (
   (select id from profile where name = 'TRAFFIC_STATS'), 
   (select id from parameter where name = 'DsStats' and config_file = 'traffic_stats.config' and value = 'tps_total')
 );
+
+insert into parameter (name, config_file, value) select * from (select 'routing.name.dns', 'CRConfig.json', 'tr') as temp where not exists (select name from parameter where name = 'routing.name.dns' and config_file = 'CRConfig.json' and value = 'tr') limit 1;
+insert into parameter (name, config_file, value) select * from (select 'routing.name.http', 'CRConfig.json', 'edge') as temp where not exists (select name from parameter where name = 'routing.name.http' and config_file = 'CRConfig.json' and value = 'edge') limit 1;
+
+SET @param_id := (select id from parameter where name = 'routing.name.dns' and value = 'tr' and config_file = 'CRConfig.json');
+INSERT IGNORE INTO profile_parameter (profile, parameter )
+  SELECT id, @param_id
+  FROM profile
+  where name like 'CCR%' ;
+
+SET @param_id := (select id from parameter where name = 'routing.name.http' and value = 'edge' and config_file = 'CRConfig.json');
+INSERT IGNORE INTO profile_parameter (profile, parameter )
+  SELECT id, @param_id
+  FROM profile
+  where name like 'CCR%' ;

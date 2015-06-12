@@ -59,6 +59,7 @@ public class DeliveryService {
 	private final Geolocation missLocation;
 	private final Dispersion dispersion;
 	private final boolean ip6RoutingEnabled;
+	private String routingName = null;
 
 	public DeliveryService(final String id, final JSONObject dsJo) throws JSONException {
 		this.id = id;
@@ -89,6 +90,10 @@ public class DeliveryService {
 
 		this.dispersion = new Dispersion(dsJo.optJSONObject("dispersion"));
 		this.ip6RoutingEnabled = dsJo.optBoolean("ip6RoutingEnabled", false);
+
+		if(dsJo.has("routingName")) {
+			this.routingName = dsJo.getString("routingName").toLowerCase();
+		}
 	}
 
 	public String getId() {
@@ -401,5 +406,9 @@ public class DeliveryService {
 
 	public boolean isIp6RoutingEnabled() {
 		return ip6RoutingEnabled;
+	}
+
+	public String getRoutingName() {
+		return routingName;
 	}
 }

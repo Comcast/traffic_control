@@ -37,6 +37,7 @@ sub ccr_config {
 
 # Produces a list of Cdns for traversing child links
 sub gen_crconfig_json {
+	#my $ds = shift;
 	my $self     = shift;
 	my $cdn_name = shift;
 	my $data_obj;
@@ -188,6 +189,7 @@ sub gen_crconfig_json {
 		else {
 			$protocol = 'HTTP';
 		}
+
 		my @server_subrows = $row->deliveryservice_servers->all;
 		my @regex_subrows  = $row->deliveryservice_regexes->all;
 		my $regex_to_props;
@@ -244,7 +246,16 @@ sub gen_crconfig_json {
 						my $host_copy = $host;
 						$host_copy =~ s/$host_regex1//g;
 						if ( $protocol eq 'DNS' ) {
-							$remap = 'edge' . $host_copy . $ccr_domain_name;
+							my $routingNameParam = 'edge';
+
+							 if ( defined( $row->routing_name ) ){
+								$routingNameParam = $row->routing_name;
+							 }
+							 elsif ( exists($data_obj->{'config'}->{'routing.name.dns'} ) && defined( $data_obj->{'config'}->{'routing.name.dns'} ) ){
+								$routingNameParam = $data_obj->{'config'}->{'routing.name.dns'};
+							 }
+
+							$remap = $routingNameParam . $host_copy . $ccr_domain_name;
 						}
 						else {
 							$remap = $cache_tracker{$server} . $host_copy . $ccr_domain_name;
@@ -259,6 +270,7 @@ sub gen_crconfig_json {
 		}
 
 		$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'ttl'} = $row->ccr_dns_ttl;
+
 		my $geo_limit = $row->geo_limit;
 		if ( $geo_limit == 1 ) {
 			$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'coverageZoneOnly'} = 'true';
@@ -310,6 +322,11 @@ sub gen_crconfig_json {
 		if ( defined( $row->miss_long ) && $row->miss_long ne "" ) {
 			$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'missLocation'}->{'long'} = $row->miss_long;
 		}
+
+		if ( defined( $row->routing_name) ) {
+			$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'routingName'} = $row->routing_name;
+		}
+
 		$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'ttls'} =
 			{ 'A' => $row->ccr_dns_ttl, 'AAAA' => $row->ccr_dns_ttl, 'NS' => "3600", 'SOA' => "86400" };
 		$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'soa'}->{'minimum'} = "30";
@@ -489,6 +506,7 @@ sub crconfig_strings {
 sub stringify_ds {
 	my $ds = shift;
 	my $string;
+
 	foreach my $matchset ( @{ $ds->{'matchsets'} } ) {
 		$string .= "|<br>&emsp;protocol:" . $matchset->{'protocol'};
 		foreach my $matchlist ( @{ $matchset->{'matchlist'} } ) {
@@ -496,13 +514,20 @@ sub stringify_ds {
 			$string .= "|match-type:" . $matchlist->{'match-type'};
 		}
 	}
+
 	$string .= "|<br>&emsp;CZF Only:" . $ds->{'coverageZoneOnly'};
+
 	if ( defined( $ds->{'geoEnabled'} ) ) {
 		$string .= "|Geo Limit: true; Country: " . $ds->{'geoEnabled'}->[0]->{'countryCode'};
 	}
 	if ( defined( $ds->{'missLocation'} ) ) {
 		$string .= "|GeoMiss: " . $ds->{'missLocation'}->{'lat'} . "," . $ds->{'missLocation'}->{'long'};
 	}
+
+	if ( defined( $ds->{'routingName'} ) ) {
+		$string .= "|routingName: " . $ds->{'routingName'};
+	}
+
 	if ( defined( $ds->{'bypassDestination'} ) ) {
 		$string .= "<br>|BypassDest:";
 		if ( defined( $ds->{'bypassDestination'}->{'DNS'}->{'ip'} ) ) {
@@ -521,9 +546,19 @@ sub stringify_ds {
 	if ( defined( $ds->{'ip6RoutingEnabled'} ) ) {
 		$string .= "|ip6RoutingEnabled: " . $ds->{'ip6RoutingEnabled'};
 	}
+
+	if ( defined( $ds->{'ip6RoutingEnabled'} ) ) {
+		$string .= "|ip6HIgEnabled: " . $ds->{'ip6RoutingEnabled'};
+	}
+
 	if ( defined( $ds->{'maxDnsIpsForLocation'} ) ) {
 		$string .= "|maxDnsIpsForLocation:" . $ds->{'maxDnsIpsForLocation'};
 	}
+
+	if ( defined( $ds->{'maxDnsIpsForLocation'} ) ) {
+		$string .= "|hithere:" . $ds->{'maxDnsIpsForLocation'};
+	}
+
 	$string .= "|<br>&emsp;DNS TTLs: A:" . $ds->{'ttls'}->{'A'} . " AAAA:" . $ds->{'ttls'}->{'AAAA'} . "|";
 	foreach my $dns ( @{ $ds->{'staticDnsEntries'} } ) {
 		$string .= "|<br>&emsp;staticDns: |name:" . $dns->{'name'} . "|type:" . $dns->{'type'} . "|ttl:" . $dns->{'ttl'} . "|addr:" . $dns->{'value'} . "|";

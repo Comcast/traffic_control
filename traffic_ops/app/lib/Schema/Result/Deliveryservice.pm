@@ -223,6 +223,12 @@ __PACKAGE__->table("deliveryservice");
   is_nullable: 1
   size: 1024
 
+=head2 routing_name
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 1024
+
 =head2 remap_text
 
   data_type: 'varchar'
@@ -306,6 +312,8 @@ __PACKAGE__->add_columns(
   "regex_remap",
   { data_type => "varchar", is_nullable => 1, size => 1024 },
   "cacheurl",
+  { data_type => "varchar", is_nullable => 1, size => 1024 },
+  "routing_name",
   { data_type => "varchar", is_nullable => 1, size => 1024 },
   "remap_text",
   { data_type => "varchar", is_nullable => 1, size => 2048 },
@@ -457,6 +465,7 @@ __PACKAGE__->belongs_to(
   { id => "type" },
   { is_deferrable => 1, on_delete => "NO ACTION", on_update => "NO ACTION" },
 );
+
 
 
 # Created by DBIx::Class::Schema::Loader v0.07043 @ 2015-05-30 11:07:18

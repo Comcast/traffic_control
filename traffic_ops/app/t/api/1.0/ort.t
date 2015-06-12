@@ -70,6 +70,7 @@ sub ort_check {
 
 sub genfiles_check {
 	my $host_name = shift;
+
 	$t->get_ok( '/genfiles/view/' . $host_name . '/50-ats.rules' )->status_is(200)->or( sub        { diag $t->tx->res->content->asset->{content}; } );
 	$t->get_ok( '/genfiles/view/' . $host_name . '/astats.config' )->status_is(200)->or( sub       { diag $t->tx->res->content->asset->{content}; } );
 	$t->get_ok( '/genfiles/view/' . $host_name . '/cache.config' )->status_is(200)->or( sub        { diag $t->tx->res->content->asset->{content}; } );
@@ -82,7 +83,7 @@ sub genfiles_check {
 	$t->get_ok( '/genfiles/view/' . $host_name . '/plugin.config' )->status_is(200)->or( sub       { diag $t->tx->res->content->asset->{content}; } );
 	$t->get_ok( '/genfiles/view/' . $host_name . '/records.config' )->status_is(200)->or( sub      { diag $t->tx->res->content->asset->{content}; } );
 
-	#$t->get_ok( '/genfiles/view/' . $host_name . '/regex_revalidate.config' )->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );
+	$t->get_ok( '/genfiles/view/' . $host_name . '/regex_revalidate.config' )->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 	$t->get_ok( '/genfiles/view/' . $host_name . '/remap.config' )->status_is(200)->or( sub   { diag $t->tx->res->content->asset->{content}; } );
 	$t->get_ok( '/genfiles/view/' . $host_name . '/crontab_root' )->status_is(200)->or( sub   { diag $t->tx->res->content->asset->{content}; } );
 	$t->get_ok( '/genfiles/view/' . $host_name . '/storage.config' )->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );

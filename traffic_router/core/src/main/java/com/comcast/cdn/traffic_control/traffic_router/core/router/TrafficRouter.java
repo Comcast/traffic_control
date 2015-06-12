@@ -266,7 +266,7 @@ public class TrafficRouter {
 		return null;
 	}
 
-	public List<InetRecord> route(final DNSRequest request, final Track track) throws GeolocationException {
+	public List<InetRecord> route(final DNSRequest request, final Track track, String routingName) throws GeolocationException {
 		track.setRouteType(RouteType.DNS, request.getHostname());
 
 		final DeliveryService ds = selectDeliveryService(request, false);
@@ -274,6 +274,12 @@ public class TrafficRouter {
 			LOGGER.warn("[dns] No DeliveryService found for: "
 					+ request.getHostname());
 			track.setResult(ResultType.STATIC_ROUTE);
+			return null;
+		}
+		if (ds.getRoutingName() != null){
+			routingName = ds.getRoutingName();
+		}
+		if (!request.getHostname().toLowerCase().matches(routingName + "\\..*")) {
 			return null;
 		}
 		if(!ds.isAvailable()) {
