@@ -130,6 +130,7 @@ sub get_data {
 				"ipv6RoutingEnabled"   => \$row->ipv6_routing_enabled,
 				"rangeRequestHandling" => $row->range_request_handling,
 				"cacheurl"             => $row->cacheurl,
+				"remapText"           => $row->remap_text,
 			}
 		);
 	}
