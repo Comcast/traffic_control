@@ -130,7 +130,7 @@ sub get_data {
 				"ipv6RoutingEnabled"   => \$row->ipv6_routing_enabled,
 				"rangeRequestHandling" => $row->range_request_handling,
 				"cacheurl"             => $row->cacheurl,
-				"remapText"           => $row->remap_text,
+				"remapText"            => $row->remap_text,
 			}
 		);
 	}
@@ -159,7 +159,7 @@ sub get_summary {
 				{ prefetch => [ 'parameter', 'profile' ] } )->single();
 			my $cdn_name = $param->parameter->value;
 			my $match    = $cdn_name . ":" . $result->xml_id . ":all:all:" . $metric_type;
-			my $data     = $self->v11_get_stats( $match, $start, $end, $interval, $window_start, $window_end );
+			my ( $rc, $data ) = $self->v11_get_stats( $match, $start, $end, $interval, $window_start, $window_end );
 
 			if ( defined($data) && ref($data) eq "HASH" && exists( $data->{summary} ) ) {
 				$self->success( { summary => $data->{summary} } );

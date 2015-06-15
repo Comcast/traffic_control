@@ -23,6 +23,7 @@ use Mojo::Base 'Mojolicious::Controller';
 
 use Data::Dumper;
 use JSON;
+use Common::ReturnCodes qw(SUCCESS ERROR);
 Utils::Helper::Datasource->load_extensions;
 
 # TODO: drichardson - How is this different than API/Deliveryservice#peakusage
@@ -49,10 +50,10 @@ sub deliveryservice {
 				}
 			);
 			my ( $rc, $result ) = $stats->v11_get_stats($self);
-			$self->app->log->debug( "rc #-> " . Dumper($rc) );
-			$self->app->log->debug( "result #-> " . Dumper($result) );
+			$self->app->log->debug( "top.rc #-> " . Dumper($rc) );
+			$self->app->log->debug( "top.result #-> " . Dumper($result) );
 
-			if ($rc) {
+			if ( $rc == SUCCESS ) {
 				return $self->success($result);
 			}
 			else {
