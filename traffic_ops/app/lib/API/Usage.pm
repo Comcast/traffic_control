@@ -51,7 +51,8 @@ sub deliveryservice {
 			);
 			my ( $rc, $result ) = $stats->v11_get_stats($self);
 			$self->app->log->debug( "top.rc #-> " . Dumper($rc) );
-			$self->app->log->debug( "top.result #-> " . Dumper($result) );
+
+			#$self->app->log->debug( "top.result #-> " . Dumper($result) );
 
 			if ( $rc == SUCCESS ) {
 				return $self->success($result);

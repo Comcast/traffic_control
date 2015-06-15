@@ -44,19 +44,19 @@ sub index {
 	my $limit       = $self->param('limit');
 	my $offset      = $self->param('offset');
 
+	my $args = {
+		series_name => $metric_type,
+		cdn_name    => $cdn_name,
+		start_date  => $start_date,
+		end_date    => $end_date,
+		interval    => $interval,
+		orderby     => $orderby,
+		limit       => $limit,
+		offset      => $offset
+	};
+
 	# Build the summary section
-	$builder = new Builder::CacheStatsBuilder(
-		{
-			series_name => $metric_type,
-			cdn_name    => $cdn_name,
-			start_date  => $start_date,
-			end_date    => $end_date,
-			interval    => $interval,
-			orderby     => $orderby,
-			limit       => $limit,
-			offset      => $offset
-		}
-	);
+	$builder = new Builder::CacheStatsBuilder($args);
 
 	my $rc     = 0;
 	my $result = ();
