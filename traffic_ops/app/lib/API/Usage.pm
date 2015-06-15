@@ -23,6 +23,7 @@ use Mojo::Base 'Mojolicious::Controller';
 
 use Data::Dumper;
 use JSON;
+Utils::Helper::Datasource->load_extensions;
 
 # TODO: drichardson - How is this different than API/Deliveryservice#peakusage
 sub deliveryservice {
