@@ -25,8 +25,8 @@ use JSON;
 my $builder;
 use constant SUCCESS => 0;
 use constant ERROR   => 1;
-use Utils::Helper::Datasource;
-Utils::Helper::Datasource->load_extensions;
+use Utils::Helper::Extensions;
+Utils::Helper::Extensions->load;
 
 #TODO: drichardson
 #      - Add required fields validation see lib/API/User.pm based on Validate::Tiny

@@ -24,8 +24,8 @@ use JSON;
 use Utils::CCR;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Round qw(nearest);
-use Utils::Helper::Datasource;
-Utils::Helper::Datasource->load_extensions;
+use Utils::Helper::Extensions;
+Utils::Helper::Extensions->load;
 
 sub register {
 	my ( $self, $app, $conf ) = @_;

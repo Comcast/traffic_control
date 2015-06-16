@@ -24,7 +24,8 @@ use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
 use JSON;
 use Common::ReturnCodes qw(SUCCESS ERROR);
-Utils::Helper::Datasource->load_extensions;
+use Utils::Helper::Extensions;
+Utils::Helper::Extensions->load;
 
 # TODO: drichardson - How is this different than API/Deliveryservice#peakusage
 sub deliveryservice {
