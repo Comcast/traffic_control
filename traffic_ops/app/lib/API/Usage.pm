@@ -25,7 +25,7 @@ use Data::Dumper;
 use JSON;
 use Common::ReturnCodes qw(SUCCESS ERROR);
 use Utils::Helper::Extensions;
-Utils::Helper::Extensions->load;
+Utils::Helper::Extensions->use;
 
 # TODO: drichardson - How is this different than API/Deliveryservice#peakusage
 sub deliveryservice {

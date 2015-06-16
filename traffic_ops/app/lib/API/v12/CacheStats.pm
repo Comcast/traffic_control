@@ -26,7 +26,7 @@ my $builder;
 use constant SUCCESS => 0;
 use constant ERROR   => 1;
 use Utils::Helper::Extensions;
-Utils::Helper::Extensions->load;
+Utils::Helper::Extensions->use;
 
 #TODO: drichardson
 #      - Add required fields validation see lib/API/User.pm based on Validate::Tiny

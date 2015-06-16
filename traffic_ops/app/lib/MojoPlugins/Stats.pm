@@ -25,7 +25,7 @@ use Utils::CCR;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Round qw(nearest);
 use Utils::Helper::Extensions;
-Utils::Helper::Extensions->load;
+Utils::Helper::Extensions->use;
 
 sub register {
 	my ( $self, $app, $conf ) = @_;
