@@ -27,6 +27,8 @@ use NetAddr::IP;
 use UI::DeliveryService;
 use JSON;
 use API::DeliveryService::KeysUrlSig qw(URL_SIG_KEYS_BUCKET);
+use Utils::Helper::Extensions;
+Utils::Helper::Extensions->use;
 
 my $dispatch_table ||= {
 	"logs_xml.config"         => sub { logs_xml_dot_config(@_) },
@@ -81,7 +83,7 @@ sub genfiles {
 	$file =~ s/^regex_remap_.*\.config$/regex_remap_\.config/;
 	$file =~ s/^cacheurl_.*\.config$/cacheurl_\.config/;
 	if ( $file =~ /^to_ext_.*\.config$/ ) {
-		$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
+		$file     =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 		$org_name =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 	}
 
@@ -131,7 +133,7 @@ sub gen_fancybox_data {
 		$file =~ s/^regex_remap_.*\.config$/regex_remap_\.config/;
 		$file =~ s/^cacheurl_.*\.config$/cacheurl_\.config/;
 		if ( $file =~ /^to_ext_.*\.config$/ ) {
-			$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
+			$file     =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 			$org_name =~ s/^to_ext_(.*)\.config$/$1.config/;
 		}
 
@@ -855,7 +857,7 @@ sub build_remap_line {
 	my $map_from = shift;
 	my $map_to   = shift;
 
-	if ($remap->{type} eq 'ANY_MAP') {
+	if ( $remap->{type} eq 'ANY_MAP' ) {
 		$text .= $remap->{remap_text} . "\n";
 		return $text;
 	}
@@ -909,7 +911,7 @@ sub build_remap_line {
 	elsif ( $remap->{range_request_handling} == 2 ) {
 		$text .= " \@plugin=cache_range_requests.so ";
 	}
-	if (defined($remap->{remap_text})) {
+	if ( defined( $remap->{remap_text} ) ) {
 		$text .= " " . $remap->{remap_text};
 	}
 	$text .= "\n";
@@ -1094,7 +1096,8 @@ sub regex_revalidate_dot_config {
 		while ( my $dsrow = $rs->next ) {
 			my $ds_cdn_domain = $self->db->resultset('Parameter')->search(
 				{ -and => [ 'me.name' => 'domain_name', 'deliveryservices.id' => $dsrow->id ] },
-				{   join     => { profile_parameters => { profile => { deliveryservices => undef } } },
+				{
+					join     => { profile_parameters => { profile => { deliveryservices => undef } } },
 					distinct => 1
 				}
 			)->get_column('value')->single();
@@ -1214,10 +1217,12 @@ sub to_ext_dot_config {
 	my $server = $self->server_data($id);
 	my $text   = $self->header_comment( $server->host_name );
 
-	# get the subroutine name for the this file from the Extensions::ConfigList
-	my $ext          = new Extensions::ConfigList();
-	my $ext_hash_ref = $ext->hash_ref();
-	my $subroutine   = $ext_hash_ref->{$file};
+	# get the subroutine name for the this file from the parameter
+	my $subroutine =
+		$self->db->resultset('ProfileParameter')
+		->search( { -and => [ profile => $server->profile->id, 'parameter.config_file' => $file, 'parameter.name' => 'SubRoutine' ] },
+		{ prefetch => [ 'parameter', 'profile' ] } )->get_column('parameter.value')->single();
+	$self->app->log->error( "ToExtDotConfigFile == " . $subroutine );
 
 	# And call it - the below calls the subroutine in the var $subroutine.
 	$text .= &{ \&{$subroutine} }( $self, $id, $file );
