@@ -41,7 +41,7 @@ sub deliveryservice {
 		if ( $self->is_delivery_service_assigned($dsid) ) {
 
 			my $stats = new Extensions::Delegate::Statistics(
-				{
+				$self, {
 					dsId           => $dsid,
 					cacheGroupName => $cachegroup_name,
 					metricType     => $metric,
@@ -50,7 +50,7 @@ sub deliveryservice {
 					interval       => $interval,
 				}
 			);
-			my ( $rc, $result ) = $stats->v11_get_stats($self);
+			my ( $rc, $result ) = $stats->v11_get_stats();
 			$self->app->log->debug( "top.rc #-> " . Dumper($rc) );
 
 			#$self->app->log->debug( "top.result #-> " . Dumper($result) );

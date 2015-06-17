@@ -237,7 +237,7 @@ sub metrics {
 			if ( $self->is_delivery_service_assigned($id) ) {
 
 				my $m = new Extensions::Delegate::Metrics(
-					{
+					$self, {
 						metricType => $metric,
 						startDate  => $start,
 						endDate    => $end,
@@ -246,7 +246,7 @@ sub metrics {
 						type       => $type
 					}
 				);
-				my ( $rc, $result ) = $m->get_etl_metrics($self);
+				my ( $rc, $result ) = $m->get_etl_metrics();
 				if ( $rc == SUCCESS ) {
 					return $self->success($result);
 				}

@@ -28,6 +28,7 @@ use JSON;
 use MIME::Base64;
 use UI::DeliveryService;
 use MojoPlugins::Response;
+use Common::ReturnCodes qw(SUCCESS ERROR);
 
 my $valid_server_types = {
 	edge => "EDGE",
@@ -69,25 +70,25 @@ sub usage_overview {
 
 		my $tps_match = sprintf( "%s:all:all:all:tps_total", $cdn_name, $start_date, $end_date );
 		my $st = new Extensions::Delegate::Statistics(
-			{
+			$self, {
 				match     => $tps_match,
 				startDate => $start_date,
 				endDate   => $end_date,
 			}
 		);
 
-		( $rc, $tps ) = $st->v11_get_stats($self);
+		( $rc, $tps ) = $st->v11_get_stats();
 
 		my $kpbs_match = sprintf( "%s:all:all:all:kbps", $cdn_name, $start_date, $end_date );
 		$st = new Extensions::Delegate::Statistics(
-			{
+			$self, {
 				match     => $kpbs_match,
 				startDate => $start_date,
 				endDate   => $end_date,
 			}
 		);
 
-		( $rc, $kbps ) = $st->v11_get_stats($self);
+		( $rc, $kbps ) = $st->v11_get_stats();
 
 		$stats->{tps} += $tps->{series}->[0]->{samples}->[0];
 		$stats->{currentGbps} += $kbps->{series}->[0]->{samples}->[0] / 1000 / 1000;
@@ -829,7 +830,13 @@ sub metrics {
 	my $valid_type = $valid_metric_types->{$metric};
 	if ( exists( $valid_metric_types->{$metric} ) ) {
 		$self->param( type => $valid_metric_types->{$metric} );
-		return ( $self->success( $self->etl_metrics() ) );
+		my ( $rc, $result ) = $self->etl_metrics();
+		if ( $rc == SUCCESS ) {
+			return ( $self->success($result) );
+		}
+		else {
+			return ( $self->alert($result) );
+		}
 	}
 	else {
 		return ( $self->not_found() );
