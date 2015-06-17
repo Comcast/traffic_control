@@ -25,6 +25,8 @@ use POSIX qw(strftime);
 use Utils::Helper::Datasource;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Round qw(nearest);
+Utils::Helper::Extensions->use;
+use Common::ReturnCodes qw(SUCCESS ERROR);
 
 my $valid_server_types = {
 	edge => "EDGE",
@@ -230,48 +232,39 @@ sub metrics {
 	my $data_only  = $self->param("data") || 0;      # data only
 	my $type       = $self->param("server_type");    # mid or edge
 
-	my $config = $self->get_config($metric);
-	my $helper = new Utils::Helper::Datasource( { mojo => $self } );
+	if ( $valid_server_types->{$type} ) {
+		if ( $self->is_valid_delivery_service($id) ) {
+			if ( $self->is_delivery_service_assigned($id) ) {
 
-	if ( $valid_server_types->{$type} && defined($config) && $self->is_valid_delivery_service($id) ) {
-		if ( $self->is_delivery_service_assigned($id) ) {
-			$start =~ s/\.\d+$//g;
-			$end =~ s/\.\d+$//g;
-
-			for my $kvp ( @{ $config->{get_kvp}->( $self->get_delivery_service_name($id), $valid_server_types->{$type}, $start, $end ) } ) {
-				$helper->kv( $kvp->{key}, $kvp->{value} );
+				my $m = new Extensions::Delegate::Metrics(
+					{
+						metricType => $metric,
+						startDate  => $start,
+						endDate    => $end,
+						statsOnly  => $stats_only,
+						dataOnly   => $data_only,
+						type       => $type
+					}
+				);
+				my ( $rc, $result ) = $m->get_etl_metrics($self);
+				if ( $rc == SUCCESS ) {
+					return $self->success($result);
+				}
+				else {
+					return $self->alert($result);
+				}
 			}
-			return $self->build_etl_metrics_response( $helper, $config, $start, $end, $stats_only, $data_only );
+			else {
+				$self->forbidden();
+			}
 		}
 		else {
-			$self->forbidden();
+			$self->alert( "Invalid deliveryservice id: " . $id );
 		}
 	}
 	else {
-		$self->success( get_zero_values( $stats_only, $data_only ) );
+		$self->alert("Invalid server type, only 'mid' or 'edge' allowed");
 	}
-}
-
-sub get_zero_values {
-	my $stats_only = shift;
-	my $data_only  = shift;
-	my $response   = ();
-	$response->{"stats"}{"95thPercentile"} = 0;
-	$response->{"stats"}{"98thPercentile"} = 0;
-	$response->{"stats"}{"5thPercentile"}  = 0;
-	$response->{"stats"}{"mean"}           = 0;
-	$response->{"stats"}{"count"}          = 0;
-	$response->{"stats"}{"min"}            = 0;
-	$response->{"stats"}{"max"}            = 0;
-	$response->{"stats"}{"sum"}            = 0;
-	$response->{"data"}                    = [];
-	if ($stats_only) {
-		delete( $response->{"data"} );
-	}
-	elsif ($data_only) {
-		delete( $response->{"stats"} );
-	}
-	return [$response];
 }
 
 sub capacity {

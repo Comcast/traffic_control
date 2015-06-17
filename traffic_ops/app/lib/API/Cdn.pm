@@ -829,7 +829,7 @@ sub metrics {
 	my $valid_type = $valid_metric_types->{$metric};
 	if ( exists( $valid_metric_types->{$metric} ) ) {
 		$self->param( type => $valid_metric_types->{$metric} );
-		return ( $self->etl_metrics() );
+		return ( $self->success( $self->etl_metrics() ) );
 	}
 	else {
 		return ( $self->not_found() );
