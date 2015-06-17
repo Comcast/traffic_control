@@ -53,6 +53,9 @@ sub register {
 			my $end             = shift;
 			my $interval        = shift;
 
+			#			my $ds_helper = new Utils::DeliveryService($self);
+			#			my ( $cdn_name, $ds_name ) = $ds_helper->deliveryservice_lookup_cdn_name_and_ds_name($dsid);
+
 			my ( $cdn_name, $ds_name ) = $self->deliveryservice_lookup_cdn_name_and_ds_name($dsid);
 
 			my $dh = new Utils::Helper::DateHelper();
@@ -79,7 +82,7 @@ sub register {
 			my $dh = new Utils::Helper::DateHelper();
 			( $start, $end ) = $dh->translate_dates( $start, $end );
 
-			my $match = $self->build_match( $cdn_name, $ds_name, $cachegroup_name, $metric_type );
+			my $match = Utils::DeliveryService->build_match( $cdn_name, $ds_name, $cachegroup_name, $metric_type );
 			my ( $rc, $j ) = $self->v11_get_stats( $match, $start, $end, $interval );
 			if ( $rc > 0 ) {
 				return $self->alert($j);
@@ -91,17 +94,6 @@ sub register {
 
 				return $self->success($j);
 			}
-		}
-	);
-
-	$app->renderer->add_helper(
-		build_match => sub {
-			my $self            = shift;
-			my $cdn_name        = shift;
-			my $ds_name         = shift;
-			my $cachegroup_name = shift;
-			my $peak_usage_type = shift;
-			return $cdn_name . ":" . $ds_name . ":" . $cachegroup_name . ":all:" . $peak_usage_type;
 		}
 	);
 
