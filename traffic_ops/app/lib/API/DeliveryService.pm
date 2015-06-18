@@ -142,32 +142,17 @@ sub get_data {
 sub get_summary {
 	my $self = shift;
 
-	my $metric_type  = $self->param("metric");
-	my $start        = $self->param("start");
-	my $end          = $self->param("end");
-	my $interval     = $self->param("interval");
-	my $window_start = $self->param("window_start");
-	my $window_end   = $self->param("window_end");
-	my $location     = "all";                          # NOTE: We can easily turn this into a param in the future if/when necessary
-
 	my $id = $self->param('id');
 
 	if ( $self->is_valid_delivery_service($id) ) {
 		if ( $self->is_delivery_service_assigned($id) ) {
-			my $result = $self->db->resultset("Deliveryservice")->search( { id => $self->param('id') } )->single();
-			my $param =
-				$self->db->resultset('ProfileParameter')
-				->search( { -and => [ 'parameter.name' => 'CDN_name', 'parameter.name' => 'CDN_name', 'me.profile' => $result->profile->id ] },
-				{ prefetch => [ 'parameter', 'profile' ] } )->single();
-			my $cdn_name = $param->parameter->value;
-			my $match    = $cdn_name . ":" . $result->xml_id . ":all:all:" . $metric_type;
-			my ( $rc, $data ) = $self->v11_get_stats( $match, $start, $end, $interval, $window_start, $window_end );
-
-			if ( defined($data) && ref($data) eq "HASH" && exists( $data->{summary} ) ) {
-				$self->success( { summary => $data->{summary} } );
+			my $stats = new Extensions::Delegate::Statistics($self);
+			my ( $rc, $result ) = $stats->get_summary();
+			if ( $rc == SUCCESS ) {
+				return $self->success($result);
 			}
 			else {
-				$self->success( get_summary_zero_values() );
+				return $self->alert($result);
 			}
 		}
 		else {
@@ -177,16 +162,6 @@ sub get_summary {
 	else {
 		$self->success( {} );
 	}
-}
-
-sub get_summary_zero_values {
-	my $response = ();
-	$response->{"ninetyFifth"} = 0;
-	$response->{"average"}     = 0;
-	$response->{"min"}         = 0;
-	$response->{"max"}         = 0;
-	$response->{"total"}       = 0;
-	return $response;
 }
 
 sub routing {
@@ -236,16 +211,7 @@ sub metrics {
 		if ( $self->is_valid_delivery_service($id) ) {
 			if ( $self->is_delivery_service_assigned($id) ) {
 
-				my $m = new Extensions::Delegate::Metrics(
-					$self, {
-						metricType => $metric,
-						startDate  => $start,
-						endDate    => $end,
-						statsOnly  => $stats_only,
-						dataOnly   => $data_only,
-						type       => $type
-					}
-				);
+				my $m = new Extensions::Delegate::Metrics($self);
 				my ( $rc, $result ) = $m->get_etl_metrics();
 				if ( $rc == SUCCESS ) {
 					return $self->success($result);
@@ -408,19 +374,20 @@ sub state {
 	}
 }
 
-# TODO: drichardson - How is this different than API/Usage#deliveryservice
 sub peakusage {
-	my $self            = shift;
-	my $dsid            = $self->param('ds');
-	my $cachegroup_name = $self->param('name');
-	my $peak_usage_type = $self->param('peak_usage_type');
-	my $start           = $self->param('start');
-	my $end             = $self->param('end');
-	my $interval        = $self->param('interval');
+	my $self = shift;
+	my $dsid = $self->param('ds');
 	if ( $self->is_valid_delivery_service($dsid) ) {
 
 		if ( $self->is_delivery_service_assigned($dsid) ) {
-			return $self->deliveryservice_usage( $dsid, $cachegroup_name, $peak_usage_type, $start, $end, $interval );
+			my $stats = new Extensions::Delegate::Statistics($self);
+			my ( $rc, $result ) = $stats->get_daily_usage();
+			if ( $rc == SUCCESS ) {
+				$self->success($result);
+			}
+			else {
+				$self->alert($result);
+			}
 		}
 		else {
 			return $self->forbidden();

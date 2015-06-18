@@ -43,64 +43,16 @@ my $valid_metric_types = {
 
 sub usage_overview {
 	my $self = shift;
-	my $interval = shift || 10;
 
-	my $match_tps  = "all:all:all:tps_total";
-	my $match_kbps = "all:all:all:kbps";
-	my $cdn_list   = {};
-
-	my $stats = {
-		tps         => 0,
-		currentGbps => 0,
-		maxGbps     => 0,
-	};
-
-	my $rs = $self->db->resultset('Parameter')->search( { name => 'CDN_name' } );
-
-	while ( my $row = $rs->next ) {
-		$cdn_list->{ $row->value } = 1;
+	my $st = new Extensions::Delegate::Statistics($self);
+	my ( $rc, $result ) = $st->get_usage_overview();
+	if ( $rc == SUCCESS ) {
+		$self->success($result);
+	}
+	else {
+		$self->alert($result);
 	}
 
-	my $start_date = "now";
-	my $end_date   = "now";
-	my $rc;
-	my $tps;
-	my $kbps;
-	for my $cdn_name ( keys( %{$cdn_list} ) ) {
-
-		my $tps_match = sprintf( "%s:all:all:all:tps_total", $cdn_name, $start_date, $end_date );
-		my $st = new Extensions::Delegate::Statistics(
-			$self, {
-				match     => $tps_match,
-				startDate => $start_date,
-				endDate   => $end_date,
-			}
-		);
-
-		( $rc, $tps ) = $st->v11_get_stats();
-
-		my $kpbs_match = sprintf( "%s:all:all:all:kbps", $cdn_name, $start_date, $end_date );
-		$st = new Extensions::Delegate::Statistics(
-			$self, {
-				match     => $kpbs_match,
-				startDate => $start_date,
-				endDate   => $end_date,
-			}
-		);
-
-		( $rc, $kbps ) = $st->v11_get_stats();
-
-		$stats->{tps} += $tps->{series}->[0]->{samples}->[0];
-		$stats->{currentGbps} += $kbps->{series}->[0]->{samples}->[0] / 1000 / 1000;
-		my $capacity = $kbps->{capacity};
-		$self->app->log->debug( "capacity #-> " . $capacity );
-		if ( defined($capacity) ) {
-			$stats->{maxGbps} += $capacity / 1000 / 1000;
-		}
-
-	}
-
-	$self->success($stats);
 }
 
 sub configs_monitoring {
@@ -516,7 +468,8 @@ sub gen_traffic_router_config {
 
 	my $ds_regex_tracker;
 	my $regexps;
-	my $rs_ds = $self->db->resultset('Deliveryservice')
+	my $rs_ds =
+		$self->db->resultset('Deliveryservice')
 		->search( { 'me.profile' => $ccr_profile_id, 'active' => 1 }, { prefetch => [ 'deliveryservice_servers', 'deliveryservice_regexes', 'type' ] } );
 	while ( my $row = $rs_ds->next ) {
 		my $delivery_service;
@@ -538,7 +491,8 @@ sub gen_traffic_router_config {
 				$regex_to_props->{ $subrow->{'_column_data'}->{'regex'} }->{'pattern'} =
 					$regex_tracker->{ $subrow->{'_column_data'}->{'regex'} }->{'pattern'};
 				$regex_to_props->{ $subrow->{'_column_data'}->{'regex'} }->{'setNumber'} = $subrow->set_number;
-				$regex_to_props->{ $subrow->{'_column_data'}->{'regex'} }->{'type'} = $regex_tracker->{ $subrow->{'_column_data'}->{'regex'} }->{'type'};
+				$regex_to_props->{ $subrow->{'_column_data'}->{'regex'} }->{'type'} =
+					$regex_tracker->{ $subrow->{'_column_data'}->{'regex'} }->{'type'};
 				if ( $regex_to_props->{ $subrow->{'_column_data'}->{'regex'} }->{'type'} eq 'HOST_REGEXP' ) {
 					$ds_to_remap{ $row->xml_id }->[ $subrow->set_number ] = $regex_to_props->{ $subrow->{'_column_data'}->{'regex'} }->{'pattern'};
 				}
@@ -730,26 +684,17 @@ sub get_cdn_name {
 }
 
 sub peakusage {
-	my $self            = shift;
-	my $dsid            = $self->param('ds');
-	my $cachegroup_name = $self->param('name');
-	my $peak_usage_type = $self->param('peak_usage_type');
-	my $start           = $self->param('start');
-	my $end             = $self->param('end');
-	my $interval        = $self->param('interval');
+	my $self = shift;
 
-	return $self->get_daily_usage( $dsid, $cachegroup_name, $peak_usage_type, $start, $end, $interval );
-}
+	my $stats = new Extensions::Delegate::Statistics($self);
+	my ( $rc, $result ) = $stats->get_daily_summary();
 
-sub stats {
-	my $self     = shift;                       # /redis/#match/#start/#end/#interval
-	my $match    = $self->param('match');
-	my $start    = $self->param('start');       # start time in secs since 1970, or "now" to get latest sample
-	my $end      = $self->param('end');         # end time in secs since 1970, or "now" to get latest sample
-	my $interval = $self->param('interval');    # the interval between the samples. 10 is minimum, has to be a multiple of 10
-
-	my $j = $self->v11_get_stats( $match, $start, $end, $interval );
-	$self->render( json => $j );
+	if ( $rc == SUCCESS ) {
+		return $self->success($result);
+	}
+	else {
+		return $self->alert($result);
+	}
 }
 
 # Produces a list of Cdns for traversing child links
@@ -911,7 +856,8 @@ sub dnssec_keys {
 				$dnskey_ttl = '60';
 			}
 			%condition = ( 'parameter.name' => 'DNSKEY.generation.multiplier', 'profile.name' => $ds_profile );
-			$rs_pp = $self->db->resultset('ProfileParameter')->search( \%condition, { prefetch => [ { 'parameter' => undef }, { 'profile' => undef } ] } )
+			$rs_pp =
+				$self->db->resultset('ProfileParameter')->search( \%condition, { prefetch => [ { 'parameter' => undef }, { 'profile' => undef } ] } )
 				->single;
 			if ($rs_pp) {
 				$dnskey_gen_multiplier = $rs_pp->parameter->value;
@@ -920,7 +866,8 @@ sub dnssec_keys {
 				$dnskey_gen_multiplier = '10';
 			}
 			%condition = ( 'parameter.name' => 'DNSKEY.effective.multiplier', 'profile.name' => $ds_profile );
-			$rs_pp = $self->db->resultset('ProfileParameter')->search( \%condition, { prefetch => [ { 'parameter' => undef }, { 'profile' => undef } ] } )
+			$rs_pp =
+				$self->db->resultset('ProfileParameter')->search( \%condition, { prefetch => [ { 'parameter' => undef }, { 'profile' => undef } ] } )
 				->single;
 			if ($rs_pp) {
 				$dnskey_effective_multiplier = $rs_pp->parameter->value;

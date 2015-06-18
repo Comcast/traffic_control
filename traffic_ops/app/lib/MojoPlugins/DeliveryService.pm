@@ -23,6 +23,7 @@ use Data::Dumper;
 use Utils::Helper::DateHelper;
 use JSON;
 use HTTP::Date;
+use Common::ReturnCodes qw(SUCCESS ERROR);
 
 sub register {
 	my ( $self, $app, $conf ) = @_;
@@ -40,80 +41,6 @@ sub register {
 			elsif ( $inp =~ /^\d+$/ )    { return $1; }
 			else                         { return -1; }
 
-		}
-	);
-
-	$app->renderer->add_helper(
-		get_daily_usage => sub {
-			my $self            = shift;
-			my $dsid            = shift;
-			my $cachegroup_name = shift;
-			my $peak_usage_type = shift;
-			my $start           = shift;
-			my $end             = shift;
-			my $interval        = shift;
-
-			#			my $ds_helper = new Utils::DeliveryService($self);
-			#			my ( $cdn_name, $ds_name ) = $ds_helper->deliveryservice_lookup_cdn_name_and_ds_name($dsid);
-
-			my ( $cdn_name, $ds_name ) = $self->deliveryservice_lookup_cdn_name_and_ds_name($dsid);
-
-			my $dh = new Utils::Helper::DateHelper();
-			( $start, $end ) = $dh->translate_dates( $start, $end );
-
-			my $j = $self->daily_summary( $cdn_name, $ds_name, $cachegroup_name );
-
-			$self->success($j);
-		}
-	);
-
-	$app->renderer->add_helper(
-		deliveryservice_usage => sub {
-			my $self            = shift;
-			my $dsid            = shift;
-			my $cachegroup_name = shift;
-			my $metric_type     = shift;
-			my $start           = shift;
-			my $end             = shift;
-			my $interval        = shift;
-
-			my ( $cdn_name, $ds_name ) = $self->deliveryservice_lookup_cdn_name_and_ds_name($dsid);
-
-			my $dh = new Utils::Helper::DateHelper();
-			( $start, $end ) = $dh->translate_dates( $start, $end );
-
-			my $match = Utils::DeliveryService->build_match( $cdn_name, $ds_name, $cachegroup_name, $metric_type );
-			my ( $rc, $j ) = $self->v11_get_stats( $match, $start, $end, $interval );
-			if ( $rc > 0 ) {
-				return $self->alert($j);
-			}
-			else {
-				if ( %{$j} ) {
-					$j->{deliveryServiceId} = $dsid;    # add dsId to data structure
-				}
-
-				return $self->success($j);
-			}
-		}
-	);
-
-	$app->renderer->add_helper(
-		deliveryservice_lookup_cdn_name_and_ds_name => sub {
-			my $self = shift;
-			my $dsid = shift || confess("Delivery Service id is required");
-
-			my $cdn_name = "all";
-			my $ds_name  = "all";
-			if ( $dsid ne "all" ) {
-				my $ds = $self->db->resultset('Deliveryservice')->search( { id => $dsid }, {} )->single();
-				$ds_name = $ds->xml_id;
-				my $param =
-					$self->db->resultset('ProfileParameter')
-					->search( { -and => [ profile => $ds->profile->id, 'parameter.name' => 'CDN_name' ] }, { prefetch => [ 'parameter', 'profile' ] } )
-					->single();
-				$cdn_name = $param->parameter->value;
-			}
-			return ( $cdn_name, $ds_name );
 		}
 	);
 

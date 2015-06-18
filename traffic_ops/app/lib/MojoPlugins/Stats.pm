@@ -29,89 +29,7 @@ Utils::Helper::Extensions->use;
 
 sub register {
 	my ( $self, $app, $conf ) = @_;
-	$app->renderer->add_helper(
-		v11_get_stats => sub {
-			my $self     = shift;
-			my $match    = shift;
-			my $start    = shift;
-			my $end      = shift;
-			my $interval = shift;
 
-			# these arguments allow us to grab small windows for summary data while retaining the larger window and short/long term logic below
-			my $window_start = shift || $start;
-			my $window_end   = shift || $end;
-
-			# remove any trailing .XXX from the times sent to us from angular
-			for my $var ( \$start, \$end, \$window_start, \$window_end ) {
-				${$var} =~ s/\.\d+$//g;
-			}
-
-			my $formatted_response;
-			my $rc                       = 0;
-			my $default_retention_period = 86400;    # one day
-
-			my $retention_period =
-				   $self->db->resultset('Parameter')->search( { name => "RetentionPeriod", config_file => "redis.config" } )->get_column('value')->single()
-				|| $default_retention_period;
-
-			my $stats = new Extensions::Delegate::Statistics();
-
-			# numeric start/end only which should be done upstream but let's be extra cautious
-			if ( $start =~ /^\d+$/ && $end =~ /^\d+$/ && $window_start < ( time() - $retention_period - 60 ) ) {  # -60 for diff between client and our time
-				$self->app->log->debug("Retrieving 'long term' stats...");
-				( $rc, $formatted_response ) = $stats->long_term( $self, $match, $start, $end, $interval );
-
-				#$self->app->log->debug( "formatted_response #-> " . Dumper($formatted_response) );
-			}
-			else {
-				$self->app->log->debug("Retrieving 'short term' stats...");
-
-				# get_usage uses now/now as start/end, so it will pass through to short_term
-				( $rc, $formatted_response ) = $stats->short_term_redis( $self, $match, $start, $end, $interval );
-			}
-
-			return ( $rc, $formatted_response );
-
-		}
-	);
-	$app->renderer->add_helper(
-		daily_summary => sub {
-			my $self            = shift;
-			my $cdn_name        = shift;
-			my $ds_name         = shift;
-			my $cachegroup_name = shift;
-
-			my $redis = $self->redis_connect();
-
-			if ( $cdn_name eq "all" && $ds_name eq "all" && $cachegroup_name eq "all" ) {
-				$cdn_name = "*";
-			}
-
-			my @keys = $redis->keys( $cdn_name . ':' . $ds_name . ':' . $cachegroup_name . ':all:daily*' );
-
-			my $jdata;
-			my $totalbytes_served = 0;
-			foreach my $key (@keys) {
-				my @vals = $redis->lrange( $key, -30000, -1 );
-				foreach my $line (@vals) {
-					my ( $utime, $val ) = split( /:/, $line );
-					my $outkey = $key;
-					if ( $key =~ /kbps$/ ) {
-						$outkey =~ s/kbps/gbps/;
-						$jdata->{$outkey}->{$utime} = $val / ( 1000 * 1000 );    # so this'll be Gbps
-					}
-					else {
-						$outkey =~ s/bytes_served/gigabytes_served/;
-						$jdata->{$key}->{$utime} = $val / ( 1024 * 1024 * 1024 );    # so this'll be GBytes
-						$totalbytes_served += $val;
-					}
-				}
-			}
-			$jdata->{TotalGBytesServedSinceStart} = $totalbytes_served / ( 1024 * 1024 * 1024 );    # so this'll be GBytes
-			$redis->quit();
-			return $jdata;
-		}
-	);
 	$app->renderer->add_helper(
 		get_cache_capacity => sub {
 			my $self = shift;
@@ -293,14 +211,6 @@ sub register {
 			$self->success($data);
 		}
 	);
-}
-
-# TODO: drichardson - invoke the InfluxDB code flow.
-sub short_term {
-}
-
-# TODO: drichardson - invoke the v11_long_term then flip against the
-sub long_term {
 }
 
 1;

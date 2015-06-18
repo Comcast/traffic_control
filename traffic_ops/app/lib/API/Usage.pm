@@ -27,33 +27,15 @@ use Common::ReturnCodes qw(SUCCESS ERROR);
 use Utils::Helper::Extensions;
 Utils::Helper::Extensions->use;
 
-# TODO: drichardson - How is this different than API/Deliveryservice#peakusage
 sub deliveryservice {
-	my $self            = shift;
-	my $dsid            = $self->param('ds');
-	my $cachegroup_name = $self->param('name');
-	my $metric          = $self->param('metric');
-	my $start_date      = $self->param('start_date');
-	my $end_date        = $self->param('end_date');
-	my $interval        = $self->param('interval');
+	my $self = shift;
+	my $dsid = $self->param('ds');
 
 	if ( $self->is_valid_delivery_service($dsid) ) {
 		if ( $self->is_delivery_service_assigned($dsid) ) {
 
-			my $stats = new Extensions::Delegate::Statistics(
-				$self, {
-					dsId           => $dsid,
-					cacheGroupName => $cachegroup_name,
-					metricType     => $metric,
-					startDate      => $start_date,
-					endDate        => $end_date,
-					interval       => $interval,
-				}
-			);
+			my $stats = new Extensions::Delegate::Statistics($self);
 			my ( $rc, $result ) = $stats->v11_get_stats();
-			$self->app->log->debug( "top.rc #-> " . Dumper($rc) );
-
-			#$self->app->log->debug( "top.result #-> " . Dumper($result) );
 
 			if ( $rc == SUCCESS ) {
 				return $self->success($result);
@@ -69,31 +51,6 @@ sub deliveryservice {
 	else {
 		$self->success( {} );
 	}
-
-}
-
-sub deliveryservice2 {
-	my $self            = shift;
-	my $dsid            = $self->param('ds');
-	my $cachegroup_name = $self->param('name');
-	my $metric          = $self->param('metric');
-	my $start           = $self->param('start_date');
-	my $end             = $self->param('end_date');
-	my $interval        = $self->param('interval');
-
-	if ( $self->is_valid_delivery_service($dsid) ) {
-
-		if ( $self->is_delivery_service_assigned($dsid) ) {
-			return $self->deliveryservice_usage( $dsid, $cachegroup_name, $metric, $start, $end, $interval );
-		}
-		else {
-			return $self->forbidden();
-		}
-	}
-	else {
-		$self->success( {} );
-	}
-
 }
 
 1;
