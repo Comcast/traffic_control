@@ -22,7 +22,6 @@ use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
 use POSIX qw(strftime);
-use Utils::Helper::Datasource;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Round qw(nearest);
 Utils::Helper::Extensions->use;
