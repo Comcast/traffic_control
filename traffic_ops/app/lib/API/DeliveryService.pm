@@ -207,11 +207,12 @@ sub metrics {
 	my $data_only  = $self->param("data") || 0;      # data only
 	my $type       = $self->param("server_type");    # mid or edge
 
-	if ( $valid_server_types->{$type} ) {
+	my $spdb_device_type = $valid_server_types->{$type};
+	if ( defined($spdb_device_type) ) {
 		if ( $self->is_valid_delivery_service($id) ) {
 			if ( $self->is_delivery_service_assigned($id) ) {
 
-				my $m = new Extensions::Delegate::Metrics($self);
+				my $m = new Extensions::Delegate::Metrics( $self, $spdb_device_type );
 				my ( $rc, $result ) = $m->get_etl_metrics();
 				if ( $rc == SUCCESS ) {
 					return $self->success($result);
