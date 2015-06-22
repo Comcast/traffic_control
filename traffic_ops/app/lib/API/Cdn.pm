@@ -19,16 +19,29 @@ package API::Cdn;
 
 use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
-use Utils::Rascal;
 use Data::Dumper;
-use Time::HiRes qw(gettimeofday tv_interval);
-use Math::Round qw(nearest);
 use Carp qw(cluck confess);
 use JSON;
 use MIME::Base64;
 use UI::DeliveryService;
 use MojoPlugins::Response;
 use Common::ReturnCodes qw(SUCCESS ERROR);
+
+################################################################################
+# WARNING: This route is unauthenticated!
+# Note: we only have a summary route thus far.
+################################################################################
+sub metrics {
+	my $self = shift;
+	my $m    = new Extensions::Delegate::Metrics($self);
+	my ( $rc, $result ) = $m->get_etl_metrics();
+	if ( $rc == SUCCESS ) {
+		return ( $self->success($result) );
+	}
+	else {
+		return ( $self->alert($result) );
+	}
+}
 
 sub usage_overview {
 	my $self = shift;
@@ -41,7 +54,20 @@ sub usage_overview {
 	else {
 		$self->alert($result);
 	}
+}
 
+sub peakusage {
+	my $self = shift;
+
+	my $stats = new Extensions::Delegate::Statistics($self);
+	my ( $rc, $result ) = $stats->get_daily_summary();
+
+	if ( $rc == SUCCESS ) {
+		return $self->success($result);
+	}
+	else {
+		return $self->alert($result);
+	}
 }
 
 sub configs_monitoring {
@@ -670,20 +696,6 @@ sub get_cdn_name {
 		$cdn_name = $param->parameter->value;
 	}
 	return $cdn_name;
-}
-
-sub peakusage {
-	my $self = shift;
-
-	my $stats = new Extensions::Delegate::Statistics($self);
-	my ( $rc, $result ) = $stats->get_daily_summary();
-
-	if ( $rc == SUCCESS ) {
-		return $self->success($result);
-	}
-	else {
-		return $self->alert($result);
-	}
 }
 
 # Produces a list of Cdns for traversing child links
