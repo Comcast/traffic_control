@@ -197,39 +197,27 @@ sub routing {
 }
 
 sub metrics {
-	my $self       = shift;
-	my $id         = $self->param("id");
-	my $metric     = $self->param("metric");
-	my $start      = $self->param("start");          # start time in secs since 1970
-	my $end        = $self->param("end");            # end time in secs since 1970
-	my $stats_only = $self->param("stats") || 0;     # stats only
-	my $data_only  = $self->param("data") || 0;      # data only
-	my $type       = $self->param("server_type");    # mid or edge
+	my $self = shift;
+	my $id   = $self->param("id");
 
-	my $spdb_device_type = $valid_server_types->{$type};
-	if ( defined($spdb_device_type) ) {
-		if ( $self->is_valid_delivery_service($id) ) {
-			if ( $self->is_delivery_service_assigned($id) ) {
+	if ( $self->is_valid_delivery_service($id) ) {
+		if ( $self->is_delivery_service_assigned($id) ) {
 
-				my $m = new Extensions::Delegate::Metrics( $self, $spdb_device_type );
-				my ( $rc, $result ) = $m->get_etl_metrics();
-				if ( $rc == SUCCESS ) {
-					return $self->success($result);
-				}
-				else {
-					return $self->alert($result);
-				}
+			my $m = new Extensions::Delegate::Metrics($self);
+			my ( $rc, $result ) = $m->get_etl_metrics();
+			if ( $rc == SUCCESS ) {
+				return $self->success($result);
 			}
 			else {
-				$self->forbidden();
+				return $self->alert($result);
 			}
 		}
 		else {
-			$self->alert( "Invalid deliveryservice id: " . $id );
+			$self->forbidden();
 		}
 	}
 	else {
-		$self->alert("Invalid server type, only 'mid' or 'edge' allowed");
+		$self->alert( "Invalid deliveryservice id: " . $id );
 	}
 }
 

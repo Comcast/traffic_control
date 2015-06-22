@@ -30,17 +30,6 @@ use UI::DeliveryService;
 use MojoPlugins::Response;
 use Common::ReturnCodes qw(SUCCESS ERROR);
 
-my $valid_server_types = {
-	edge => "EDGE",
-	mid  => "MID",
-};
-
-# this structure maps the above types to the allowed metrics below
-my $valid_metric_types = {
-	origin_tps => "mid",
-	ooff       => "mid",
-};
-
 sub usage_overview {
 	my $self = shift;
 
@@ -769,22 +758,14 @@ sub domains {
 # Note: we only have a summary route thus far.
 ################################################################################
 sub metrics {
-	my $self   = shift;
-	my $metric = $self->param("metric");
-
-	my $valid_type = $valid_metric_types->{$metric};
-	if ( exists( $valid_metric_types->{$metric} ) ) {
-		$self->param( type => $valid_metric_types->{$metric} );
-		my ( $rc, $result ) = $self->etl_metrics();
-		if ( $rc == SUCCESS ) {
-			return ( $self->success($result) );
-		}
-		else {
-			return ( $self->alert($result) );
-		}
+	my $self = shift;
+	my $m    = new Extensions::Delegate::Metrics($self);
+	my ( $rc, $result ) = $m->get_etl_metrics();
+	if ( $rc == SUCCESS ) {
+		return ( $self->success($result) );
 	}
 	else {
-		return ( $self->not_found() );
+		return ( $self->alert($result) );
 	}
 }
 
