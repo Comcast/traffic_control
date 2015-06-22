@@ -765,22 +765,6 @@ sub domains {
 	$self->success( \@data );
 }
 
-################################################################################
-# WARNING: This route is unauthenticated!
-# Note: we only have a summary route thus far.
-################################################################################
-sub metrics {
-	my $self = shift;
-	my $m    = new Extensions::Delegate::Metrics($self);
-	my ( $rc, $result ) = $m->get_etl_metrics();
-	if ( $rc == SUCCESS ) {
-		return ( $self->success($result) );
-	}
-	else {
-		return ( $self->alert($result) );
-	}
-}
-
 sub dnssec_keys {
 	my $self = shift;
 	if ( !&is_admin($self) ) {
