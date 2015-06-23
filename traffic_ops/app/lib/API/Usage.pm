@@ -28,11 +28,11 @@ use Utils::Helper::Extensions;
 Utils::Helper::Extensions->use;
 
 sub deliveryservice {
-	my $self = shift;
-	my $dsid = $self->param('ds');
+	my $self  = shift;
+	my $ds_id = $self->param("ds_id");
 
-	if ( $self->is_valid_delivery_service($dsid) ) {
-		if ( $self->is_delivery_service_assigned($dsid) ) {
+	if ( $self->is_valid_delivery_service($ds_id) ) {
+		if ( $self->is_delivery_service_assigned($ds_id) ) {
 
 			my $stats = new Extensions::Delegate::Statistics($self);
 			my ( $rc, $result ) = $stats->v11_get_stats();
