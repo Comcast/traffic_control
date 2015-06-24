@@ -26,13 +26,14 @@ use Data::Dumper;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Round qw(nearest);
 use Carp qw(cluck confess);
+use Common::ReturnCodes qw(SUCCESS ERROR);
 
 #TODO: drichardson - remove after 1.2 cleaned up
 sub stats {
 	my $self = shift;
 
 	my $st = new Extensions::Delegate::Statistics($self);
-	my ( $rc, $result ) = $st->get_usage_overview();
+	my ( $rc, $result ) = $st->v11_get_stats();
 	if ( $rc == SUCCESS ) {
 		$self->success($result);
 	}
