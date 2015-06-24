@@ -35,7 +35,7 @@ sub deliveryservice {
 		if ( $self->is_delivery_service_assigned($ds_id) ) {
 
 			my $stats = new Extensions::Delegate::Statistics($self);
-			my ( $rc, $result ) = $stats->v11_get_stats();
+			my ( $rc, $result ) = $stats->get_deliveryservice_usage();
 
 			if ( $rc == SUCCESS ) {
 				return $self->success($result);
