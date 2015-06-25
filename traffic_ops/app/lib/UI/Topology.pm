@@ -16,7 +16,6 @@ package UI::Topology;
 #
 #
 #
-
 use UI::Utils;
 use UI::Render;
 use List::Compare;
@@ -37,7 +36,6 @@ sub ccr_config {
 
 # Produces a list of Cdns for traversing child links
 sub gen_crconfig_json {
-	#my $ds = shift;
 	my $self     = shift;
 	my $cdn_name = shift;
 	my $data_obj;
@@ -70,7 +68,6 @@ sub gen_crconfig_json {
 		else {
 			my $e = Mojo::Exception->throw( "No profiles found for CDN_name: " . $cdn_name );
 		}
-#@cache_rascal_profiles = $self->db->resultset('Profile')->search( { id => { -in => \@cdn_profiles }, name => [{ like => 'EDGE%'}, {like => 'MID%'}, {like => 'RASCAL%'}, {like => 'CDSIS%'} ] } )->get_column('id')->all();
 	}
 	else {
 		my $e = Mojo::Exception->throw( "Parameter ID not found for CDN_name: " . $cdn_name );
@@ -547,16 +544,8 @@ sub stringify_ds {
 		$string .= "|ip6RoutingEnabled: " . $ds->{'ip6RoutingEnabled'};
 	}
 
-	if ( defined( $ds->{'ip6RoutingEnabled'} ) ) {
-		$string .= "|ip6HIgEnabled: " . $ds->{'ip6RoutingEnabled'};
-	}
-
 	if ( defined( $ds->{'maxDnsIpsForLocation'} ) ) {
 		$string .= "|maxDnsIpsForLocation:" . $ds->{'maxDnsIpsForLocation'};
-	}
-
-	if ( defined( $ds->{'maxDnsIpsForLocation'} ) ) {
-		$string .= "|hithere:" . $ds->{'maxDnsIpsForLocation'};
 	}
 
 	$string .= "|<br>&emsp;DNS TTLs: A:" . $ds->{'ttls'}->{'A'} . " AAAA:" . $ds->{'ttls'}->{'AAAA'} . "|";

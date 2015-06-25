@@ -212,7 +212,6 @@ sub ds_data {
 
 	my $j = 0;
 
-	#C$ routing name param
 	my $default_routing_name = $self->db->resultset('ProfileParameter')
 			->search( { -and => [ profile => $server->profile->id, 'parameter.name' => 'routing.name.dns', 'parameter.config_file' => 'CRConfig.json' ] },
 			{ prefetch => [ 'parameter', 'profile' ] } )->get_column('parameter.value')->single();
@@ -245,7 +244,6 @@ sub ds_data {
 				$re =~ s/\.\*//g;
 
 				my $hname = "ccr";
-				#C$ routing name param
 				if ($ds_type =~ /^DNS/){
 					if (defined ($routing_name)){
 						$hname = $routing_name;
@@ -257,8 +255,6 @@ sub ds_data {
 						$hname = "edge";
 					}
 				};
-
-				#my $hname = $ds_type =~ /^DNS/ ? "edge" : "ccr";
 
 				my $map_from = "http://" . $hname . $re . $ds_domain . "/";
 				if ( $protocol == 0 ) {
