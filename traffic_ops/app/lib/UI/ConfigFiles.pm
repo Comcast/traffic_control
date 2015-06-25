@@ -244,14 +244,14 @@ sub ds_data {
 				$re =~ s/\.\*//g;
 
 				my $hname = "ccr";
-				if ($ds_type =~ /^DNS/){
-					if (defined ($routing_name)){
+				if ( $ds_type =~ /^DNS/ ) {
+					if ( defined( $routing_name ) ) {
 						$hname = $routing_name;
 					}
-					elsif (defined $default_routing_name){
+					elsif ( defined( $default_routing_name ) ) {
 						$hname = $default_routing_name;
 					}
-					else{
+					else {
 						$hname = "edge";
 					}
 				};
