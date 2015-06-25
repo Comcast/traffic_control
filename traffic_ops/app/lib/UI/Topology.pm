@@ -243,16 +243,15 @@ sub gen_crconfig_json {
 						my $host_copy = $host;
 						$host_copy =~ s/$host_regex1//g;
 						if ( $protocol eq 'DNS' ) {
-							my $routingNameParam = 'edge';
+							my $routing_name_param = 'edge';
 
-							 if ( defined( $row->routing_name ) ){
-								$routingNameParam = $row->routing_name;
-							 }
-							 elsif ( exists($data_obj->{'config'}->{'routing.name.dns'} ) && defined( $data_obj->{'config'}->{'routing.name.dns'} ) ){
-								$routingNameParam = $data_obj->{'config'}->{'routing.name.dns'};
-							 }
-
-							$remap = $routingNameParam . $host_copy . $ccr_domain_name;
+							if ( defined( $row->routing_name ) ) {
+								$routing_name_param  = $row->routing_name;
+							}
+							elsif ( exists( $data_obj->{'config'}->{'routing.name.dns'} ) && defined( $data_obj->{'config'}->{'routing.name.dns'} ) ) {
+								$routing_name_param  = $data_obj->{'config'}->{'routing.name.dns'};
+							}
+							$remap = $routing_name_param . $host_copy . $ccr_domain_name;
 						}
 						else {
 							$remap = $cache_tracker{$server} . $host_copy . $ccr_domain_name;

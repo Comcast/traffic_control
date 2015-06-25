@@ -81,7 +81,7 @@ sub get_example_urls {
 
 	my $routing_name;
 
-	if ( defined $data->routing_name ) {
+	if ( defined( $data->routing_name ) ) {
 		$routing_name = $data->routing_name;
 	}
 	else {
@@ -95,7 +95,7 @@ sub get_example_urls {
 			}
 			)->get_column('value')->single();
 		}
-		else{
+		else {
 			$routing_name = $self->db->resultset('Parameter')->search(
 			{ -and => [ 'me.name' => 'routing.name.http', 'profile.id' => $profile_id ] },
 			{
@@ -220,8 +220,8 @@ sub read {
 				"ipv6_routing_enabled"   => \$row->ipv6_routing_enabled,
 				"range_request_handling" => $row->range_request_handling,
 				"cacheurl"               => $row->cacheurl,
-				"origin_shield"			 => $row->origin_shield,
-				"routing_name"			 => $row->routing_name,
+				"origin_shield"          => $row->origin_shield,
+				"routing_name"           => $row->routing_name,
 				"remap_text"             => $row->remap_text,
 			}
 		);
@@ -630,7 +630,7 @@ sub update {
 			mid_header_rewrite     => $self->param('ds.mid_header_rewrite') eq "" ? undef : $self->param('ds.mid_header_rewrite'),
 			regex_remap   => $self->param('ds.regex_remap')   eq "" ? undef : $self->param('ds.regex_remap'),
 			origin_shield => $self->param('ds.origin_shield') eq "" ? undef : $self->param('ds.origin_shield'),
-			routing_name => $self->param('ds.routing_name') eq "" ? undef : $self->param('ds.routing_name'),
+			routing_name  => $self->param('ds.routing_name')  eq "" ? undef : $self->param('ds.routing_name'),
 			cacheurl      => $self->param('ds.cacheurl')      eq "" ? undef : $self->param('ds.cacheurl'),
 			remap_text    => $self->param('ds.remap_text')    eq "" ? undef : $self->param('ds.remap_text'),
 		);
@@ -816,7 +816,7 @@ sub create {
 				mid_header_rewrite     => $self->param('ds.mid_header_rewrite') eq "" ? undef : $self->param('ds.mid_header_rewrite'),
 				regex_remap   => $self->param('ds.regex_remap')   eq "" ? undef : $self->param('ds.regex_remap'),
 				origin_shield => $self->param('ds.origin_shield') eq "" ? undef : $self->param('ds.origin_shield'),
-				routing_name => $self->param('ds.routing_name') eq "" ? undef : $self->param('ds.routing_name'),
+				routing_name  => $self->param('ds.routing_name')  eq "" ? undef : $self->param('ds.routing_name'),
 				cacheurl      => $self->param('ds.cacheurl')      eq "" ? undef : $self->param('ds.cacheurl'),
 				remap_text    => $self->param('ds.remap_text')    eq "" ? undef : $self->param('ds.remap_text'),
 			}
