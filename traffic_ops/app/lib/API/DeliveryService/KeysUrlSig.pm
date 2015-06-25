@@ -20,7 +20,6 @@ package API::DeliveryService::KeysUrlSig;
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
 use API::Keys;
-use Utils::Helper;
 use JSON;
 use UI::Utils;
 use constant URL_SIG_KEYS_BUCKET => "url_sig_keys";
@@ -52,11 +51,9 @@ sub generate {
 		$ds_id = $rs->id;
 	}
 
-	my $helper = new Utils::Helper( { mojo => $self } );
-
 	# Admins can always do this, otherwise verify the user
-	if ( ( defined($rs) && $helper->is_valid_delivery_service($ds_id) ) ) {
-		if ( &is_admin($self) || $helper->is_delivery_service_assigned($ds_id) ) {
+	if ( ( defined($rs) && $self->is_valid_delivery_service($ds_id) ) ) {
+		if ( &is_admin($self) || $self->is_delivery_service_assigned($ds_id) ) {
 			my $url_sig_key_values_json = $self->generate_random_sigs_for_ds();
 			if ( defined($rs) ) {
 

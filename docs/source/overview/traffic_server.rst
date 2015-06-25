@@ -20,7 +20,9 @@ The caches in a Traffic Control CDN are servers running the Apache Traffic Serve
 
 .. |arrow| image:: fwda.png
 
-.. _rl-cachegroup:
+.. index::
+   Cache Group - Overview
+
 
 |arrow| Cache Group
 -------------------
@@ -42,7 +44,8 @@ The caches in a Traffic Control CDN are servers running the Apache Traffic Serve
 All caches (and other servers) are assigned a Profile in Traffic Ops. 
 
 
-.. _rl-profile:
+.. index::
+   Profile - Overview 
 
 |arrow| Profile
 ---------------

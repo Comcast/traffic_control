@@ -23,15 +23,32 @@ Static DNS Entries
 
 Authentication Required: Yes
 
+Response Content Type: application/json
+
+**Response Messages**
+
+::
+
+
+  HTTP Status Code: 200
+  Reason: Success
+
 **Response Properties**
 
 +----------------------+--------+------------------------------------------------+
 | Parameter            | Type   | Description                                    |
 +======================+========+================================================+
-| TBD                  | array  |                                                |
+|                      | array  |                                                |
 +----------------------+--------+------------------------------------------------+
 
-**Response Example** ::
+**Response Example**
 
-	TBD
 
+::
+
+  {
+   "response": [],
+   "version": "1.1"
+  }
+
+For error messages, see :ref:`reference-label-401`.

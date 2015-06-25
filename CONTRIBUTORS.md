@@ -9,5 +9,4 @@ Sorted alphabetically
 * **[Justin Laue](https://github.com/fp-x)**
 * **[Lawrence Wickline](https://github.com/lwickline)**
 * **[Mark Torluemke](https://github.com/mtorluemke)**
-* **[Petro, Christopher C.](https://github.com/petrocc)**
 * **[Phil Sorber](https://github.com/PSUdaemon)**

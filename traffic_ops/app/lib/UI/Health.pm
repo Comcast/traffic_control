@@ -21,7 +21,6 @@ use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use Utils::Rascal;
 use Utils::CCR;
-use Utils::Helper;
 use Data::Dumper;
 use Carp qw(cluck confess);
 

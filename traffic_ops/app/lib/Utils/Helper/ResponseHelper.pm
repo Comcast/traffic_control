@@ -36,7 +36,7 @@ sub new {
 #  for exposing that data to the API
 #
 sub camelcase_response_keys {
-	my $self = shift || confess("Call on an instance of Utils::Helper");
+	my $self = shift || confess("Call on an instance of Utils::Helper::ResponseHelper");
 	my @data = shift;
 	my @camelcase_response;
 
