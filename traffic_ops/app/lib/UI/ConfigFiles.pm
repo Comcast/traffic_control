@@ -212,10 +212,6 @@ sub ds_data {
 
 	my $j = 0;
 
-	my $default_routing_name = $self->db->resultset('ProfileParameter')
-			->search( { -and => [ profile => $server->profile->id, 'parameter.name' => 'routing.name.dns', 'parameter.config_file' => 'CRConfig.json' ] },
-			{ prefetch => [ 'parameter', 'profile' ] } )->get_column('parameter.value')->single();
-
 	while ( my $row = $rs->next ) {
 		my $org_server             = $row->org_server_fqdn;
 		my $dscp                   = $row->dscp;
@@ -234,7 +230,16 @@ sub ds_data {
 		my $routing_name           = $row->routing_name;
 		my $cacheurl               = $row->cacheurl;
 		my $remap_text             = $row->remap_text;
+		my $profile                = $row->profile;
 
+		my $default_routing_name = "edge";
+
+		if ( defined($profile) ) {
+			$default_routing_name = $self->db->resultset('ProfileParameter')
+				->search( { -and => [ profile => $profile, 'parameter.name' => 'routing.name.dns', 'parameter.config_file' => 'CRConfig.json' ] },
+				{ prefetch => [ 'parameter', 'profile' ] } )->get_column('parameter.value')->single();
+		}
+					
 		if ( $re_type eq 'HOST_REGEXP' ) {
 			my $host_re = $row->pattern;
 			my $map_to  = $org_server . "/";
@@ -243,20 +248,15 @@ sub ds_data {
 				$re =~ s/\\//g;
 				$re =~ s/\.\*//g;
 
-				my $hname = "ccr";
-				if ( $ds_type =~ /^DNS/ ) {
-					if ( defined( $routing_name ) ) {
-						$hname = $routing_name;
-					}
-					elsif ( defined( $default_routing_name ) ) {
-						$hname = $default_routing_name;
-					}
-					else {
-						$hname = "edge";
-					}
-				};
+			if ( defined( $routing_name ) ) {
+				$hname = $routing_name;
+			}
+			else {
+				$hname = $default_routing_name;
+			}
+		}
 
-				my $map_from = "http://" . $hname . $re . $ds_domain . "/";
+		my $map_from = "http://" . $hname . $re . $ds_domain . "/";
 				if ( $protocol == 0 ) {
 					$dsinfo->{dslist}->[$j]->{"remap_line"}->{$map_from} = $map_to;
 				}

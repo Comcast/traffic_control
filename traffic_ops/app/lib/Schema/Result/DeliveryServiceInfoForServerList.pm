@@ -49,6 +49,7 @@ SELECT DISTINCT
     deliveryservice.range_request_handling as range_request_handling,
     deliveryservice.origin_shield as origin_shield,
     deliveryservice.routing_name as routing_name,
+	deliveryservice.profile as profile,
     regex.pattern AS pattern,
     retype.name AS re_type,
     dstype.name AS ds_type,
@@ -96,6 +97,7 @@ __PACKAGE__->add_columns(
 	"range_request_handling", { data_type => "tinyint", is_nullable => 0, size => 4 },
 	"origin_shield",          { data_type => "varchar", is_nullable => 0, size => 1024 },
 	"routing_name",           { data_type => "varchar", is_nullable => 0, size => 1024 },
+	"profile",                { data_type => "integer", is_nullable => 0, size => 11 },
 );
 
 1;
