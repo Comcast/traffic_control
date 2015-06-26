@@ -1,13 +1,13 @@
 {
 	"rascal-config": {
 		"hack.ttl": "30",
-		"tm.healthParams.polling.url": "http://${tmHostname}/health/${cdnName}",
-		"tm.dataServer.polling.url": "http://${tmHostname}/dataserver/orderby/id",
+		"tm.healthParams.polling.url": "https://${tmHostname}/health/${cdnName}",
+		"tm.dataServer.polling.url": "https://${tmHostname}/dataserver/orderby/id",
 		"tm.polling.interval": "5000",
 		"health.threadPool": "4",
 		"health.polling.interval": "5000",
 		"health.event-count": "200",
-		"tm.crConfig.polling.url": "http://${tmHostname}/CRConfig-Snapshots/${cdnName}/CRConfig.xml",
+		"tm.crConfig.polling.url": "https://${tmHostname}/CRConfig-Snapshots/${cdnName}/CRConfig.xml",
 		"CDN_name": "CDN9"
 	},
 	"profiles": {
