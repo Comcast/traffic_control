@@ -233,6 +233,7 @@ sub ds_data {
 		my $profile                = $row->profile;
 
 		my $default_routing_name = "edge";
+		my $hname = "ccr";
 
 		if ( defined($profile) ) {
 			$default_routing_name = $self->db->resultset('ProfileParameter')
