@@ -106,6 +106,7 @@ sub get_data {
 				"dnsBypassIp6"         => $row->dns_bypass_ip6,
 				"dnsBypassTtl"         => $row->dns_bypass_ttl,
 				"orgServerFqdn"        => $row->org_server_fqdn,
+				"multiSiteOrigin"      => $row->multi_site_origin,
 				"ccrDnsTtl"            => $row->ccr_dns_ttl,
 				"type"                 => $row->type->name,
 				"profileName"          => $row->profile->name,
@@ -129,6 +130,8 @@ sub get_data {
 				"protocol"             => $row->protocol,
 				"ipv6RoutingEnabled"   => \$row->ipv6_routing_enabled,
 				"rangeRequestHandling" => $row->range_request_handling,
+				"cacheurl"             => $row->cacheurl,
+				"remapText"           => $row->remap_text,
 			}
 		);
 	}
