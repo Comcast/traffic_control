@@ -289,7 +289,7 @@ func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxCl
 			}
 			pts = append(pts,
 				influx.Point{
-					Name: statName,
+					Measurement: statName,
 					Tags: map[string]string{
 						"deliveryservice": dsName,
 						"cdn":             cdnName,
@@ -298,7 +298,7 @@ func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, influxCl
 					Fields: map[string]interface{}{
 						"value": statFloatValue,
 					},
-					Timestamp: newTime,
+					Time:      newTime,
 					Precision: "ms",
 				},
 			)
@@ -385,7 +385,7 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 			//add stat data to pts array
 			pts = append(pts,
 				influx.Point{
-					Name: dataKey,
+					Measurement: dataKey,
 					Tags: map[string]string{
 						"cachegroup": cacheGroupMap[cacheName],
 						"hostname":   cacheName,
@@ -394,7 +394,7 @@ func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cach
 					Fields: map[string]interface{}{
 						"value": statFloatValue,
 					},
-					Timestamp: newTime,
+					Time:      newTime,
 					Precision: "ms",
 				},
 			)
