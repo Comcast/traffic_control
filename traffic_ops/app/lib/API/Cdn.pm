@@ -21,6 +21,8 @@ package API::Cdn;
 use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
+use Time::HiRes qw(gettimeofday tv_interval);
+use Math::Round qw(nearest);
 use Carp qw(cluck confess);
 use JSON;
 use MIME::Base64;

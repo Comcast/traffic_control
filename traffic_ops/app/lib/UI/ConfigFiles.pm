@@ -949,9 +949,6 @@ sub parent_dot_config {
 	if ( !defined($data) ) {
 		$data = $self->ds_data($server);
 	}
-
-	# Origin Shield or Multi Site Origin
-	$self->app->log->debug("id = $id and server_type = $server_type");
 	if ( $server_type eq 'MID' ) {
 		foreach my $ds ( @{ $data->{dslist} } ) {
 			my $xml_id            = $ds->{ds_xml_id};
@@ -987,9 +984,7 @@ sub parent_dot_config {
 				$text .= "\" round_robin=consistent_hash go_direct=false parent_is_proxy=false";
 			}
 		}
-
-		#$text .= "dest_domain=. go_direct=true\n"; # this is implicit.
-		$self->app->log->debug( "MID PARENT.CONFIG:\n" . $text . "\n" );
+		$text .= "dest_domain=. go_direct=true\n";
 		return $text;
 	}
 	else {

@@ -122,7 +122,7 @@ sub gen_crconfig_json {
 			$data_obj->{'monitors'}->{ $row->host_name }->{'location'} = $row->cachegroup->name;
 			$data_obj->{'monitors'}->{ $row->host_name }->{'port'}     = $row->tcp_port;
 			$data_obj->{'monitors'}->{ $row->host_name }->{'ip'}       = $row->ip_address;
-			$data_obj->{'monitors'}->{ $row->host_name }->{'ip6'}      = ( $row->ip6_address || "" );
+			$data_obj->{'monitors'}->{ $row->host_name }->{'ip6'}      = $row->ip6_address;
 			$data_obj->{'monitors'}->{ $row->host_name }->{'profile'}  = $row->profile->name;
 
 		}
@@ -138,7 +138,7 @@ sub gen_crconfig_json {
 			$data_obj->{'contentRouters'}->{ $row->host_name }->{'port'}     = $row->tcp_port;
 			$data_obj->{'contentRouters'}->{ $row->host_name }->{'api.port'} = $port;
 			$data_obj->{'contentRouters'}->{ $row->host_name }->{'ip'}       = $row->ip_address;
-			$data_obj->{'contentRouters'}->{ $row->host_name }->{'ip6'}      = ( $row->ip6_address || "" );
+			$data_obj->{'contentRouters'}->{ $row->host_name }->{'ip6'}      = $row->ip6_address;
 			$data_obj->{'contentRouters'}->{ $row->host_name }->{'profile'}  = $row->profile->name;
 		}
 		elsif ( $row->type->name eq "EDGE" || $row->type->name eq "MID" ) {

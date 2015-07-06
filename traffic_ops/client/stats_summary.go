@@ -19,6 +19,10 @@ package client
 import (
 	"encoding/json"
 	"errors"
+<<<<<<< HEAD
+	"fmt"
+=======
+>>>>>>> master
 	"io/ioutil"
 	"strconv"
 )
@@ -36,6 +40,16 @@ type StatsSummary struct {
 	SummaryTime     string `json:"summaryTime"`
 }
 
+<<<<<<< HEAD
+type LastUpdated struct {
+	Version  string `json:"version"`
+	Response struct {
+		SummaryTime string `json:"summaryTime"`
+	} `json:"response"`
+}
+
+=======
+>>>>>>> master
 func (to *Session) SummaryStats(cdn string, deliveryService string, statName string) ([]StatsSummary, error) {
 	var queryParams []string
 	if len(cdn) > 0 {
@@ -67,17 +81,37 @@ func (to *Session) SummaryStats(cdn string, deliveryService string, statName str
 	return ssList.Response, err
 }
 
+<<<<<<< HEAD
+func (to *Session) SummaryStatsLastUpdated(statName string) (string, error) {
+=======
 func (to *Session) SummaryStatsLastUpdated(statName string) ([]StatsSummary, error) {
+>>>>>>> master
 	queryUrl := "/api/1.2/stats_summary.json?lastSummaryDate=true"
 	if len(statName) > 0 {
 		queryUrl += "?statName=" + statName
 	}
 	body, err := to.getBytes(queryUrl)
 	if err != nil {
+<<<<<<< HEAD
+		return "", err
+	}
+	var data LastUpdated
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		fmt.Printf("err is %v\n", err)
+		return "", err
+	}
+	if len(data.Response.SummaryTime) > 0 {
+		return data.Response.SummaryTime, nil
+	} else {
+		return "1970-01-01 00:00:00", nil
+	}
+=======
 		return nil, err
 	}
 	ssList, err := ssUnmarshall(body)
 	return ssList.Response, err
+>>>>>>> master
 }
 
 func (to *Session) AddSummaryStats(statsSummary StatsSummary) (string, error) {
@@ -89,6 +123,10 @@ func (to *Session) AddSummaryStats(statsSummary StatsSummary) (string, error) {
 	if err != nil {
 		return "", err
 	}
+<<<<<<< HEAD
+	defer response.Body.Close()
+=======
+>>>>>>> master
 	body, err = ioutil.ReadAll(response.Body)
 	if err != nil {
 		return "", err

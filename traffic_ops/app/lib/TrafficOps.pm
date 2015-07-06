@@ -875,8 +875,9 @@ sub startup {
 
 	##stats_summary
 	$r->get( "/api/$api_version/stats_summary" => [ format => [qw(json)] ] )->over( authenticated => 1 )
-		->to( 'StatsSummary#index', namespace => "API::$api_namespace" );
-	$r->post("/api/$api_version/stats_summary/create")->over( authenticated => 1 )->to( 'StatsSummary#create', namespace => "API::$api_namespace" );
+	->to( 'StatsSummary#index', namespace => "API::$api_namespace" );
+	$r->post( "/api/$api_version/stats_summary/create")->over( authenticated => 1 )
+	->to( 'StatsSummary#create', namespace => "API::$api_namespace" );
 
 	# ------------------------------------------------------------------------
 	# END: Version 1.2
@@ -994,6 +995,7 @@ sub setup_mojo_plugins {
 		}
 	);
 
+
 	# Custom TO Plugins
 	my $mojo_plugins_dir;
 	foreach my $dir (@INC) {
@@ -1025,7 +1027,7 @@ sub setup_mojo_plugins {
 		$plugins->load_plugin($package_name);
 		$self->plugin($package_name);
 	}
-
+	
 	my $to_email_from = $config->{'to'}{'email_from'};
 	if ( defined($to_email_from) ) {
 

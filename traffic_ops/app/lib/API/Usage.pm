@@ -52,5 +52,4 @@ sub deliveryservice {
 		$self->success( {} );
 	}
 }
-
 1;

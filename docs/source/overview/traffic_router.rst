@@ -106,4 +106,3 @@ Traffic Router is inserted into the HTTP retrieval process by making it DNS auth
 In many cases DNS content routing is the best possible option, especially in cases where the client is receiving small objects from the CDN like images and web pages. 
 
 Traffic Router is redundant and horizontally scalable by adding more instances into the DNS hierarchy using NS records.
-
