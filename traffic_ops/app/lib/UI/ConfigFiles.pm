@@ -948,7 +948,6 @@ sub parent_dot_config {
 	if ( !defined($data) ) {
 		$data = $self->ds_data($server);
 	}
-
 	if ( $server_type eq 'MID' ) {
 		foreach my $ds ( @{ $data->{dslist} } ) {
 			my $xml_id            = $ds->{ds_xml_id};
@@ -984,13 +983,7 @@ sub parent_dot_config {
 				$text .= "\" round_robin=consistent_hash go_direct=false parent_is_proxy=false";
 			}
 		}
-<<<<<<< HEAD
-
-		#$text .= "dest_domain=. go_direct=true\n"; # this is implicit.
-		$self->app->log->debug( "MID PARENT.CONFIG:\n" . $text . "\n" );
-=======
 		$text .= "dest_domain=. go_direct=true\n";
->>>>>>> defaulted undefined values
 		return $text;
 	}
 	else {
@@ -1042,11 +1035,6 @@ sub parent_dot_config {
 		}
 
 		$text .= "\n";
-<<<<<<< HEAD
-
-		# $self->app->log->debug($text);
-=======
->>>>>>> defaulted undefined values
 		return $text;
 	}
 }

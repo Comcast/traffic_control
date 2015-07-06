@@ -21,33 +21,45 @@ Regions
 
 **GET /api/1.1/regions.json**
 
-  Authentication Required: 
+Authentication Required: 
 
-  Response Content Type: application/json
+Response Content Type: application/json
 
-  **Response Properties**
+**Response Messages**
 
-  +----------------------+--------+------------------------------------------------+
-  | Parameter            | Type   | Description                                    |
-  +======================+========+================================================+
-  |``name``              | string |                                                |
-  +----------------------+--------+------------------------------------------------+
-  |``id``                | string |                                                |
-  +----------------------+--------+------------------------------------------------+
+::
 
-  **Response Example** ::
 
-    {
-     "response": [
-        {
-           "name": "Atlanta",
-           "id": "6"
-        },
-        {
-           "name": "Beltway",
-           "id": "1"
-        }
-     ],
-     "version": "1.1"
-    }
+  HTTP Status Code: 200
+  Reason: Success
 
+**Response Properties**
+
++----------------------+--------+------------------------------------------------+
+| Parameter            | Type   | Description                                    |
++======================+========+================================================+
+|``name``              | string |                                                |
++----------------------+--------+------------------------------------------------+
+|``id``                | string |                                                |
++----------------------+--------+------------------------------------------------+
+
+**Response Example**
+
+
+::
+
+  {
+   "response": [
+      {
+         "name": "Atlanta",
+         "id": "6"
+      },
+      {
+         "name": "Beltway",
+         "id": "1"
+      }
+   ],
+   "version": "1.1"
+  }
+
+For error messages, see :ref:`reference-label-401`.  

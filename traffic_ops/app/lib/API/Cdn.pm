@@ -21,7 +21,6 @@ use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use Utils::Rascal;
 use Data::Dumper;
-use Utils::Helper;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Round qw(nearest);
 use Carp qw(cluck confess);

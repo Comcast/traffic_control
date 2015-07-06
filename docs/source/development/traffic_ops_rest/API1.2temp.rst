@@ -14,18 +14,15 @@
 .. limitations under the License.
 .. 
 
-Developer's Guide
-*****************
-Use this guide to start developing applications that consume the Traffic Control APIs, to create extensions to Traffic Ops, or work on Traffic Control itself.
+API 1.2
+=======
 
-.. toctree::
-  :maxdepth: 2
+API 1.2 Roadmap
+---------------
 
-  traffic_ops_rest_apis
-  traffic_ops
-  traffic_ops_extensions
-  traffic_router
-  traffic_monitor
-  traffic_stats
-  traffic_server
+- Convert route parameters from unix time to ISO8601 standard
+- Convert enpoints to the following URI convention:
 
+GET /api/:version/scope/attribute/attribute-value/resource.json
+
+Example: /api/1.2/deliveryservices/73/startDate/2015-03-01T00:00:00-07:00/endDate/2015-03-03T23:59:00-07:00/usage.json

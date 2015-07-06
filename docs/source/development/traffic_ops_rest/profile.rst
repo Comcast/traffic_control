@@ -22,50 +22,78 @@ Profiles
 
 **GET /api/1.1/profiles**
 
-	Authentication Required: Yes
+Authentication Required: Yes
 
-	**Response Properties**
+Response Content Type: application/json
 
-	+-----------------+--------+----------------------------------------------------+
-	|    Parameter    |  Type  |                    Description                     |
-	+=================+========+====================================================+
-	| ``lastUpdated`` | array  | The Time / Date this server entry was last updated |
-	+-----------------+--------+----------------------------------------------------+
-	| ``name``        | string | The name for the profile                           |
-	+-----------------+--------+----------------------------------------------------+
-	| ``id``          | string | Primary key                                        |
-	+-----------------+--------+----------------------------------------------------+
-	| ``description`` | string | The description for the profile                    |
-	+-----------------+--------+----------------------------------------------------+
+**Response Messages**
+
+::
+
+  HTTP Status Code: 200
+  Reason: Success
+
+**Response Properties**
+
++-----------------+--------+---------------------------------+
+| Parameter       | Type   | Description                     |
++=================+========+=================================+
+| ``lastUpdated`` | array  |                                 |
++-----------------+--------+---------------------------------+
+| ``name``        | string | The name for the profile        |
++-----------------+--------+---------------------------------+
+| ``id``          | string | Primary key                     |
++-----------------+--------+---------------------------------+
+| ``description`` | string | The description for the profile |
++-----------------+--------+---------------------------------+
 
 
-	**Response Example** ::
+**Response Example**
 
-		TBD
+
+::
+
+	TBD
   
+
+For error messages, see :ref:`reference-label-401`.
 
 | 
 
 
 **GET /api/1.1/profiles/trimmed.json**
 
-	Authentication Required: Yes
+Authentication Required: 
 
-	**Response Properties**
+Response Content Type: application/json
 
-	+-------------+--------+-------------+
-	|  Parameter  |  Type  | Description |
-	+=============+========+=============+
-	| ``alerts``  | array  |             |
-	+-------------+--------+-------------+
-	| ``>level``  | string |             |
-	+-------------+--------+-------------+
-	| ``>text``   | string |             |
-	+-------------+--------+-------------+
-	| ``version`` | string |             |
-	+-------------+--------+-------------+
+**Response Messages**
 
-	**Response Example** ::
+::
 
-	 	TBD 
 
+  HTTP Status Code: 200
+  Reason: Success
+
+**Response Properties**
+
++----------------------+--------+------------------------------------------------+
+| Parameter            | Type   | Description                                    |
++======================+========+================================================+
+|``alerts``            | array  |                                                |
++----------------------+--------+------------------------------------------------+
+|> ``level``           | string |                                                |
++----------------------+--------+------------------------------------------------+
+|> ``text``            | string |                                                |
++----------------------+--------+------------------------------------------------+
+|``version``           | string |                                                |
++----------------------+--------+------------------------------------------------+
+
+**Response Example**
+
+
+::
+
+ 	TBD 
+
+For error messages, see :ref:`reference-label-401`.

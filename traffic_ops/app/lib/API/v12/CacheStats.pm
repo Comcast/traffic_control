@@ -22,6 +22,7 @@ use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
 <<<<<<< HEAD
+<<<<<<< HEAD
 use Utils::Helper;
 use JSON;
 use Helper::Stats;
@@ -114,6 +115,8 @@ sub index2 {
 	else {
 		$self->success( {} );
 =======
+=======
+>>>>>>> 80aad4ad9830d985887b1275a35d801affc9bbeb
 use Builder::InfluxdbBuilder;
 use Builder::CacheStatsBuilder;
 use JSON;
@@ -178,11 +181,15 @@ sub index {
 	}
 	else {
 		return $self->alert($result);
+<<<<<<< HEAD
 >>>>>>> created the CacheStats backend and refactor builders accordingly
+=======
+>>>>>>> 80aad4ad9830d985887b1275a35d801affc9bbeb
 	}
 
 }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 #TODO: drichardson -- pull this into a MojoPlugin
 sub index {
@@ -202,19 +209,25 @@ sub index {
 	# Build the summary section
 	my $summary_query = $stats_helper->build_summary_query( $series_name, $start_date, $end_date, $interval, $limit );
 =======
+=======
+>>>>>>> 80aad4ad9830d985887b1275a35d801affc9bbeb
 sub build_summary {
 	my $self   = shift;
 	my $result = shift;
 
 	my $summary_query = $builder->summary_query();
 	$self->app->log->debug( "summary_query #-> " . $summary_query );
+<<<<<<< HEAD
 >>>>>>> created the CacheStats backend and refactor builders accordingly
+=======
+>>>>>>> 80aad4ad9830d985887b1275a35d801affc9bbeb
 
 	my $response_container = $self->influxdb_query( $self->get_db_name(), $summary_query );
 	my $response           = $response_container->{'response'};
 	my $content            = $response->{_content};
 
 	my $summary;
+<<<<<<< HEAD
 <<<<<<< HEAD
 	my $series_count;
 	if ( $response->is_success() ) {
@@ -270,6 +283,8 @@ sub get_series {
 	my $series_query = shift;
 
 =======
+=======
+>>>>>>> 80aad4ad9830d985887b1275a35d801affc9bbeb
 	my $summary_content;
 	my $series_count = 0;
 	if ( $response->is_success() ) {
@@ -289,11 +304,15 @@ sub build_series {
 
 	my $series_query = $builder->series_query();
 	$self->app->log->debug( "series_query #-> " . $series_query );
+<<<<<<< HEAD
 >>>>>>> created the CacheStats backend and refactor builders accordingly
+=======
+>>>>>>> 80aad4ad9830d985887b1275a35d801affc9bbeb
 	my $response_container = $self->influxdb_query( $self->get_db_name(), $series_query );
 	my $response           = $response_container->{'response'};
 	my $content            = $response->{_content};
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 	if ( $response->is_success() ) {
 		my $series_content = decode_json($content);
@@ -310,6 +329,8 @@ sub get_db_name {
 	my $mode = $self->app->mode;
 	my $conf = Utils::JsonConfig->load_conf( $mode, MojoPlugins::InfluxDB->INFLUXDB_CONF_FILE_NAME );
 =======
+=======
+>>>>>>> 80aad4ad9830d985887b1275a35d801affc9bbeb
 	my $series;
 	if ( $response->is_success() ) {
 		my $series_content = decode_json($content);
@@ -370,7 +391,10 @@ sub get_db_name {
 	my $mode      = $self->app->mode;
 	my $conf_file = MojoPlugins::InfluxDB->INFLUXDB_CONF_FILE_NAME;
 	my $conf      = Utils::JsonConfig->load_conf( $mode, $conf_file );
+<<<<<<< HEAD
 >>>>>>> created the CacheStats backend and refactor builders accordingly
+=======
+>>>>>>> 80aad4ad9830d985887b1275a35d801affc9bbeb
 	return $conf->{cache_stats_db_name};
 }
 

@@ -20,12 +20,15 @@ package Utils::Helper::Datasource;
 use Carp qw(cluck confess);
 use JSON;
 use Data::Dumper;
-use Utils::Helper;
 use Mojo::UserAgent;
 
-our @ISA = ("Utils::Helper");    # inherit our constructor and mojo methods
-
 use constant { TIMEOUT => 30, };
+
+sub new {
+	my $self  = {};
+	my $class = shift;
+	return ( bless( $self, $class ) );
+}
 
 sub kv {
 	my $self  = shift || confess("Call on an instance of Utils::Helper::Datasource");

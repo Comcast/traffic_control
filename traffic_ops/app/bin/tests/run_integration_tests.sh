@@ -1,6 +1,4 @@
-#
-#
-#!/bin/sh
+#!/bin/bash 
 #
 # Copyright 2015 Comcast Cable Communications Management, LLC
 #
@@ -16,13 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+TO_HOME=/vol1/jenkins/jobs/traffic_ops_integration_tests
+TRAFFIC_OPS_APP=$TO_HOME/workspace/traffic_ops/app
+export INSTALL_DIR=/opt/traffic_ops
+export LOCAL_DIR=$INSTALL_DIR/lib
+export PERL5LIB=$TRAFFIC_OPS_APP/lib:$LOCAL_DIR:$LOCAL_DIR/perl5/
+export PATH=$PATH:$INSTALL_DIR/install/bin
+#For Mojo
+export MOJO_MODE=integration
 
-BCK_FILE="/opt/tmredis/backup/tm_redis_`date +%m%d20%y`.json"; export BCK_FILE
-LOG_FILE="/opt/tmredis/var/log/tmredis/backup_redis_daily.out"; export LOG_FILE
-/opt/tmredis/bin/backup_redis_daily -file=$BCK_FILE -redis=localhost:6379 > $LOG_FILE 2>&1 
+rm -fv $TRAFFIC_OPS_APP/*.tap
+/bin/mkdir -p $TRAFFIC_OPS_APP/log
+cd $TRAFFIC_OPS_APP
+db/admin.pl --env=$MOJO_MODE setup
 
-if [ -f $BCK_FILE ]; then
-	/bin/gzip $BCK_FILE
-else
-	echo "ERROR: $BCK_FILE does not exist"
-fi
+cd $TRAFFIC_OPS_APP
+$INSTALL_DIR/app/bin/prove -vrp --formatter=TAP::Formatter::Jenkins t_integration/

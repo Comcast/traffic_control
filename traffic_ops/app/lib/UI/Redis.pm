@@ -25,7 +25,6 @@ use Redis;
 use Data::Dumper;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Round qw(nearest);
-use Utils::Helper;
 use Carp qw(cluck confess);
 
 sub stats {
