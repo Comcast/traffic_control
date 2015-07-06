@@ -43,6 +43,9 @@ use Utils::JsonConfig;
 use MojoX::Log::Log4perl;
 use File::Find;
 use File::Basename;
+use Env qw(PERL5LIB);
+use Utils::Helper::Extensions;
+use File::Path qw(make_path);
 
 use constant SESSION_TIMEOUT => 14400;
 my $logging_root_dir;
@@ -53,6 +56,8 @@ my $config;
 local $/;    #Enable 'slurp' mode
 
 has schema => sub { return Schema->connect_to_database };
+my $to_extensions_lib = $ENV{'TO_EXTENSION_LIB'};
+has watch => sub { [qw(lib templates $to_extensions_lib)] };
 
 if ( !defined $ENV{MOJO_CONFIG} ) {
 	$ENV{'MOJO_CONFIG'} = 'conf/cdn.conf';
@@ -80,6 +85,7 @@ if ( -e $ldap_conf_path ) {
 sub startup {
 	my $self = shift;
 	$mode = $self->mode;
+
 	$self->setup_logging($mode);
 	$self->validate_cdn_conf();
 	$self->setup_mojo_plugins();
@@ -573,7 +579,7 @@ sub startup {
 	$r->get('/redis/info/#shortname')->over( authenticated => 1 )->to( 'Redis#info', namespace => 'UI' );
 
 	# deprecated - see: /api/1.1/redis/match/#match/start_date/:start
-	$r->get('/redis/#match/:start/:end/:interval')->over( authenticated => 1 )->to( 'Redis#stats', namespace => 'UI' );
+	$r->get('/redis/#match/:start_date/:end_date/:interval')->over( authenticated => 1 )->to( 'Redis#stats', namespace => 'UI' );
 
 	# select * from table where id=ID;
 	$r->get('/server_by_id/:id')->over( authenticated => 1 )->to( 'Server#server_by_id', namespace => 'UI' );
@@ -657,7 +663,7 @@ sub startup {
 	# -- DELIVERY SERVICE: Metrics
 	# USED TO BE - GET /api/1.1/services/:id/summary/:stat/:start/:end/:interval/:window_start/:window_end.json
 	$r->get(
-		'/api/1.1/deliveryservices/:id/edge/metric_types/:metric/start_date/:start/end_date/:end/interval/:interval/window_start/:window_start/window_end/:window_end'
+		'/api/1.1/deliveryservices/:id/edge/metric_types/:metric_type/start_date/:start_date/end_date/:end_date/interval/:interval/window_start/:window_start/window_end/:window_end'
 			=> [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'DeliveryService#get_summary', namespace => 'API' );
 
 	## -- DELIVERY SERVICE: SSL Keys
@@ -688,10 +694,9 @@ sub startup {
 
 	# Supports ?stats=true&data=true
 	# USED TO BE - GET /api/1.1/deliveryservices/:id/metrics/:type/:metric/:start/:end.json
-	$r->get( '/api/1.1/deliveryservices/:id/server_types/:server_type/metric_types/:metric/start_date/:start/end_date/:end' => [ format => [qw(json)] ] )
-		->over( authenticated => 1 )->to( 'DeliveryService#metrics', namespace => 'API' );
+	$r->get( '/api/1.1/deliveryservices/:id/server_types/:server_type/metric_types/:metric_type/start_date/:start_date/end_date/:end_date' =>
+			[ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'DeliveryService#metrics', namespace => 'API' );
 
-	#$r->get( '/api/1.1/deliveryservices/:id/summary/:stat/:start/:end/:interval/:window_start/:window_end' => [ format => [qw(json)] ] )
 	#	->over( authenticated => 1 )->to( 'DeliveryService#get_summary', namespace => 'API' );
 	# -- DELIVERY SERVICE SERVER - #NEW
 	# Supports ?orderby=key
@@ -704,7 +709,7 @@ sub startup {
 
 	# -- METRICS
 	# USED TO BE - GET /api/1.1/metrics/:type/:metric/:start/:end.json
-	$r->get( '/api/1.1/metrics/server_types/:server_type/metric_types/:metric/start_date/:start/end_date/:end' => [ format => [qw(json)] ] )
+	$r->get( '/api/1.1/metrics/server_types/:server_type/metric_types/:metric_type/start_date/:start_date/end_date/:end_date' => [ format => [qw(json)] ] )
 		->over( authenticated => 1 )->to( 'Metrics#index', namespace => 'API' );
 
 	# -- PARAMETER #NEW
@@ -714,8 +719,8 @@ sub startup {
 
 	# USED TO BE - GET /api/1.1/usage/:ds/:loc/:stat/:start/:end/:interval
 	$r->get(
-		'/api/1.1/usage/deliveryservices/:ds/cachegroups/:name/metric_types/:metric/start_date/:start_date/end_date/:end_date/interval/:interval' =>
-			[ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Usage#deliveryservice', namespace => 'API' );
+		'/api/1.1/usage/deliveryservices/:ds_id/cachegroups/:name/metric_types/:metric_type/start_date/:start_date/end_date/:end_date/interval/:interval'
+			=> [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Usage#deliveryservice', namespace => 'API' );
 
 	# -- PHYS_LOCATION #NEW
 	# Supports ?orderby=key
@@ -799,7 +804,8 @@ sub startup {
 
 	#WARNING: this is an intentionally "unauthenticated" route for the Portal Home Page.
 	# USED TO BE - GET /api/1.1/metrics/g/:metric/:start/:end/s.json
-	$r->get( '/api/1.1/cdns/metric_types/:metric/start_date/:start/end_date/:end' => [ format => [qw(json)] ] )->to( 'Cdn#metrics', namespace => 'API' );
+	$r->get( '/api/1.1/cdns/metric_types/:metric_type/start_date/:start_date/end_date/:end_date' => [ format => [qw(json)] ] )
+		->to( 'Cdn#metrics', namespace => 'API' );
 
 	## -- CDNs: DNSSEC Keys
 	## Support for DNSSEC zone signing, key signing, and private keys
@@ -826,7 +832,7 @@ sub startup {
 
 	# -- USAGE
 	# USED TO BE - GET /api/1.1/daily/usage/:ds/:loc/:stat/:start/:end/:interval
-	$r->get( '/api/1.1/cdns/peakusage/:peak_usage_type/deliveryservice/:ds/cachegroup/:name/start_date/:start/end_date/:end/interval/:interval' =>
+	$r->get( '/api/1.1/cdns/peakusage/:metric_type/deliveryservice/:ds_id/cachegroup/:name/start_date/:start_date/end_date/:end_date/interval/:interval' =>
 			[ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Cdn#peakusage', namespace => 'API' );
 
 	# -- USERS
@@ -859,7 +865,6 @@ sub startup {
 	# ------------------------------------------------------------------------
 	# API Routes 1.2
 	# ------------------------------------------------------------------------
-	# -- INFLUXDB
 	my $api_version   = "1.2";
 	my $api_namespace = "v12";
 
@@ -873,7 +878,6 @@ sub startup {
 	->to( 'StatsSummary#index', namespace => "API::$api_namespace" );
 	$r->post( "/api/$api_version/stats_summary/create")->over( authenticated => 1 )
 	->to( 'StatsSummary#create', namespace => "API::$api_namespace" );
-
 
 	# ------------------------------------------------------------------------
 	# END: Version 1.2
@@ -914,6 +918,11 @@ sub setup_logging {
 		my $pwd = cwd();
 		$logging_root_dir = "$pwd/log";
 		$app_root_dir     = ".";
+		make_path(
+			$logging_root_dir, {
+				verbose => 1,
+			}
+		);
 	}
 	my $log4perl_conf = $app_root_dir . "/conf/$mode/log4perl.conf";
 	if ( -e $log4perl_conf ) {
@@ -986,11 +995,16 @@ sub setup_mojo_plugins {
 		}
 	);
 
-	# Custom TO Plugins
-	my $plugins = Mojolicious::Plugins->new;
 
-	my $pwd = cwd();
-	my $dir = "$pwd/lib/MojoPlugins";
+	# Custom TO Plugins
+	my $mojo_plugins_dir;
+	foreach my $dir (@INC) {
+		$mojo_plugins_dir = sprintf( "%s/MojoPlugins", $dir );
+		if ( -e $mojo_plugins_dir ) {
+			last;
+		}
+	}
+	my $plugins = Mojolicious::Plugins->new;
 
 	my @file_list;
 	find(
@@ -999,7 +1013,7 @@ sub setup_mojo_plugins {
 			return unless /\.pm$/;    #Must end with `.pl` suffix
 			push @file_list, $File::Find::name;
 		},
-		$dir
+		$mojo_plugins_dir
 	);
 
 	#print join "\n", @file_list;
@@ -1013,10 +1027,7 @@ sub setup_mojo_plugins {
 		$plugins->load_plugin($package_name);
 		$self->plugin($package_name);
 	}
-
-
-	closedir(DIR);
-
+	
 	my $to_email_from = $config->{'to'}{'email_from'};
 	if ( defined($to_email_from) ) {
 

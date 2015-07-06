@@ -1,14 +1,14 @@
 {
   "cacheGroups": [
     {
-      "longitude": "-121.891944",
-      "latitude": "37.335278",
-      "name": "us-ca-sanjose"
+      "longitude": "-111.891944",
+      "latitude": "33.335278",
+      "name": "us-ca-foo"
     },
     {
-      "longitude": "-71.178099",
-      "latitude": "42.457595",
-      "name": "us-ma-woburn"
+      "longitude": "-10.178099",
+      "latitude": "02.457595",
+      "name": "us-co-vail"
     }
   ]
 }

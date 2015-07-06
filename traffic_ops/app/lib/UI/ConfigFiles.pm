@@ -21,12 +21,13 @@ use UI::Utils;
 
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
-use Extensions::ConfigList;
 use Date::Manip;
 use NetAddr::IP;
 use UI::DeliveryService;
 use JSON;
 use API::DeliveryService::KeysUrlSig qw(URL_SIG_KEYS_BUCKET);
+use Utils::Helper::Extensions;
+Utils::Helper::Extensions->use;
 
 my $dispatch_table ||= {
 	"logs_xml.config"         => sub { logs_xml_dot_config(@_) },
@@ -81,7 +82,7 @@ sub genfiles {
 	$file =~ s/^regex_remap_.*\.config$/regex_remap_\.config/;
 	$file =~ s/^cacheurl_.*\.config$/cacheurl_\.config/;
 	if ( $file =~ /^to_ext_.*\.config$/ ) {
-		$file     =~ s/^to_ext_.*\.config$/to_ext_\.config/;
+		$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 		$org_name =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 	}
 
@@ -131,7 +132,7 @@ sub gen_fancybox_data {
 		$file =~ s/^regex_remap_.*\.config$/regex_remap_\.config/;
 		$file =~ s/^cacheurl_.*\.config$/cacheurl_\.config/;
 		if ( $file =~ /^to_ext_.*\.config$/ ) {
-			$file     =~ s/^to_ext_.*\.config$/to_ext_\.config/;
+			$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 			$org_name =~ s/^to_ext_(.*)\.config$/$1.config/;
 		}
 
@@ -1249,9 +1250,12 @@ sub to_ext_dot_config {
 	my $server = $self->server_data($id);
 	my $text   = $self->header_comment( $server->host_name );
 
-	# get the subroutine name for the this file from the Extensions::ConfigList
-	my $ext_hash_ref = &Extensions::ConfigList::hash_ref();
-	my $subroutine   = $ext_hash_ref->{$file};
+	# get the subroutine name for this file from the parameter
+	my $subroutine =
+		$self->db->resultset('ProfileParameter')
+		->search( { -and => [ profile => $server->profile->id, 'parameter.config_file' => $file, 'parameter.name' => 'SubRoutine' ] },
+		{ prefetch => [ 'parameter', 'profile' ] } )->get_column('parameter.value')->single();
+	$self->app->log->error( "ToExtDotConfigFile == " . $subroutine );
 
 	# And call it - the below calls the subroutine in the var $subroutine.
 	$text .= &{ \&{$subroutine} }( $self, $id, $file );
