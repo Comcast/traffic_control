@@ -80,11 +80,11 @@ The following tabs are available in the menu at the top of the Traffic Ops user 
   +=====================+=====================================================================================================================================================================+
   | Global Profile      | The table of global parameters. See :ref:`rl-param-prof`. This is where you Create/Read/Update/Delete parameters in the Global profile                              |
   +---------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-  | All Cache Groups    | The table of all parameters *that are assgined to a cachegroup* - this may be slow to pull up, as there can be thousands of parameters.                             |
+  | All Cache Groups    | TBD JvD                                                                                                                                                             |
   +---------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-  | All Profiles        | The table of all parameters *that are assgined to a profile* - this may be slow to pull up, as there can be thousands of parameters.                                |
+  | All Profiles        | The table of all parameters - this may be slow to pull up, as there can be thousands of parameters.                                                                 |
   +---------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-  | Select Profile      | Select the parameter list by profile first, then get a table of just the parameters for that profile.                                                               |
+  | Select Profile      | Select the parameter by Profile first, then get a table of just the parameters for that profile.                                                                    |
   +---------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
   | Orphaned Parameters | A table of parameters that are not associated to any profile of cache group. These parameters either should be deleted or associated with a profile of cache group. |
   +---------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -301,8 +301,6 @@ The fields in the Delivery Service view are:
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | Origin Server Base URL                           | The Origin Server's base URL. This includes the protocol (http or https). Example: ``http://movies.origin.com``                                                                                                     |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Use Multi Site Origin Feature                    | Enable the Multi Site Origin feature for this delivery service. See :ref:`rl-multi-site-origin`                                                                                                                     |
-+--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | CCR profile                                      | The Traffic Router  profile for this delivery service. See :ref:`rl-ccr-profile`.                                                                                                                                   |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | Maximum Bits per Second allowed globally         | The maximum bits per second this delivery service can serve across all EDGE caches before traffic will be diverted to the bypass destination. For a DNS delivery service, the Bypass Ipv4 or Ipv6  will be used     |
@@ -315,23 +313,23 @@ The fields in the Delivery Service view are:
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | Geo Miss Default Longitude                       | Default Longitude for this delivery service. When client localization fails for bot Coverage Zone and Geo Lookup, this the client will be routed as if it was at this long.                                         |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Edge Header Rewrite Rules                        | Header Rewrite rules to apply for this delivery service at the EDGE tier. See :ref:`rl-header-rewrite`. [1]_                                                                                                        |
+| Edge Header Rewrite Rules                        | Header Rewrite rules to apply for this delivery service at the EDGE tier. See :ref:`rl-header-rewrite`.                                                                                                             |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Mid Header Rewrite Rules                         | Header Rewrite rules to apply for this delivery service at the MID tier. See :ref:`rl-header-rewrite`. [1]_                                                                                                         |
+| Mid Header Rewrite Rules                         | Header Rewrite rules to apply for this delivery service at the MID tier. See :ref:`rl-header-rewrite`.                                                                                                              |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Regex Remap Expression                           | Regex Remap rule to apply to this delivery service at the Edge tier. See `ATS documentation on regex_remap <https://docs.trafficserver.apache.org/en/latest/reference/plugins/regex_remap.en.html>`_. [1]_          |
+| Regex Remap Expression                           | Regex Remap rule to apply to this delivery service at the Edge tier. See `ATS documentation on regex_remap <https://docs.trafficserver.apache.org/en/latest/reference/plugins/regex_remap.en.html>`_.               |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Cache URL expression                             | Cache URL rule to apply to this delivery service. See `ATS documentation on cacheurl <https://docs.trafficserver.apache.org/en/latest/reference/plugins/cacheurl.en.html>`_. [1]_                                   |
+| Cache URL expression                             | Cache URL rule to apply to this delivery service. See `ATS documentation on cacheurl <https://docs.trafficserver.apache.org/en/latest/reference/plugins/cacheurl.en.html>`_.                                        |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Raw remap text                                   | For HTTP and DNS deliveryservices, this will get added to the end of the remap line on the cache verbatim. For ANY_MAP deliveryservices this is the remap line. [1]_                                                |
+| Raw remap text                                   | For HTTP and DNS deliveryservices, this will get added to the end of the remap line on the cache verbatim. For ANY_MAP deliveryservices this is the remap line.                                                     |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Long Description                                 | Long description for this delivery service. To be consumed from the APIs by downstream tools (Portal).                                                                                                              |
+| Long Description                                 | Long description for this delivery service. TO be consumed from the APIs by downstream tools (Portal).                                                                                                              |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Customer                                         | Customer description for this delivery service. To be consumed from the APIs by downstream tools (Portal).                                                                                                          |
+| Customer                                         | Customer description for this delivery service. TO be consumed from the APIs by downstream tools (Portal).                                                                                                          |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Service                                          | Service description for this delivery service. To be consumed from the APIs by downstream tools (Portal).                                                                                                           |
+| Service                                          | Service description for this delivery service. TO be consumed from the APIs by downstream tools (Portal).                                                                                                           |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Info URL                                         | Info URL  for this delivery service. To be consumed from the APIs by downstream tools (Portal).                                                                                                                     |
+| Info URL                                         | Info URL  for this delivery service. TO be consumed from the APIs by downstream tools (Portal).                                                                                                                     |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | Check Path                                       | A path (ex: /crossdomain.xml) to verify the connection to the origin server with. This can be used by Check Extension scripts to do periodic health checks against the delivery service.                            |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -350,7 +348,6 @@ The fields in the Delivery Service view are:
 | Regular expressions for this delivery service    | A subtable of the regular expressions to use when routing traffic for this delivery service. See :ref:`rl-ds-regexp`.                                                                                               |
 +--------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-.. [1] These fields are not validated by Traffic Ops to be correct syntactically, and can cause Traffic Server to not start if invalid. Please use with caution.
 
 
 .. index::
@@ -473,43 +470,6 @@ To generate a set of random signed url keys for this delivery service and store 
   CCR Profile
   Traffic Router Profile
 
-.. _rl-multi-site-origin:
-
-Multi Site Origin
-+++++++++++++++++
-.. Note:: The Multi Site Origin feature is based upon a feature n ATS that has yet to be submitted to Traffic Server upstream, until it is, set this to 0. 
-
-Normally, the mid servers are not aware of any redundancy at the origin layer. With Multi Site Origin enabled this changes - Traffic Server (and Traffic Ops) are now made aware of the fact there are multiple origins, and can be configured to do more advanced failover and loadbalancing actions. 
-
-With This feature enabled, origin servers (or origin server VIP names for a site) are going to be entered as servers in to the Traiffic Ops UI. Server type is With This feature enabled, origin servers (or origin server VIP names for a site) are going to be entered as servers in to the Traiffic Ops UI. Server type is ""
-
-
-Parameters in the Origin profile that influence this feature:
-
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+
-| Name                                                                    | Default    | Description                                                                                       |
-+=========================================================================+============+===================================================================================================+
-| CONFIG proxy.config.http.parent_proxy_routing_enable                    | INT 1      | enable parent selection.  This is a required setting.                                             |
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+
-| CONFIG proxy.config.url_remap.remap_required                            | INT 1      | required for parent selection.                                                                    |
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+
-| CONFIG proxy.config.http.parent_proxy.per_parent_connect_attempts       | INT 5      |  maximum of 5 connection attempts per parent (parent.config list) within a transaction.           |
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+
-| CONFIG proxy.config.http.parent_proxy.total_connect_attempts            | INT 10     | maximum of 10 total connection attempts within a transaction.                                     |
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+
-| CONFIG proxy.config.http.parent_origin.simple_retry_enabled             | INT 1      | enables simple retry.                                                                             |
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+
-| CONFIG proxy.config.http.parent_origin.simple_retry_response_codes      | STRING 404 | the response code that invokes simple retry.  May be a comman separated list of response codes.   |
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+
-| CONFIG proxy.config.http.parent_origin.dead_server_retry_response_codes | STRING 503 | the response code that invokes dead server retry.  May be a comma separated list of response codes|
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+
-| CONFIG proxy.config.http.parent_origin.dead_server_retry_enabled        | INT 1      | enables dead server retry.                                                                        |
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+
-| CONFIG proxy.config.diags.debug.enabled                                 | INT 1      | enable debugging for testing only                                                                 |
-+-------------------------------------------------------------------------+------------+---------------------------------------------------------------------------------------------------+        
-
-see `rl-multi-site-origin-qh` for a *quick how to* on this feature.
-
 .. _rl-ccr-profile:
 
 CCR Profile or Traffic Router Profile
@@ -518,6 +478,7 @@ CCR Profile or Traffic Router Profile
 +---------------------------------------+------------------------+---------------------------------------------------------------------------------------------------------------------+
 |                  Name                 |      Config_file       |                                                     Description                                                     |
 +=======================================+========================+=====================================================================================================================+
++---------------------------------------+------------------------+---------------------------------------------------------------------------------------------------------------------+
 | location                              | dns.zone               | Location to store the DNS zone files in the local file system of Traffic Router.                                    |
 +---------------------------------------+------------------------+---------------------------------------------------------------------------------------------------------------------+
 | location                              | http-log4j.properties  | Location to find the log4j.properties file for Traffic Router.                                                      |
@@ -667,6 +628,60 @@ Tools
 
 Generate ISO
 ++++++++++++
+
+Generate ISO is a tool for building custom ISOs for building caches on remote hosts. Currently it only supports Centos 6, but if you're brave and pure of heart you MIGHT be able to get it to work with other unix-like OS's. 
+
+The interface is *mostly* self explainatory as it's got hints.
+
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| Field                         |  Explaination                                                                                                                   |
++===============================+=================================================================================================================================+
+|Choose a server from list:     | This option gets all the server names currently in the Traffic Ops database and will autofill known values.                     |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| OS Version:                   | There needs to be an _osversions.cfg_ file in the ISO directory that maps the name of a directory to a name that shows up here. |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| Hostname:                     | This is the FQDN of the server to be installed. It is required.                                                                 |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| Root password:                | If you don't put anything here it will default to the salted MD5 of "Fred". Whatever put is MD5 hashed and writte to disk.      |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| DHCP:                         | if yes, other IP settings will be ignored                                                                                       |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| IP Address:                   | Required if DHCP=no                                                                                                             |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| Netmask:                      | Required if DHCP=no                                                                                                             |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| Gateway:                      | Required if DHCP=no                                                                                                             |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| IPV6 Address:                 | Optional. /64 is assumed if prefix is omitted                                                                                   |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| IPV6 Gateway:                 | Ignored if an IPV4 gateway is specified                                                                                         |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| Network Device:               | Optional. Typical values are bond0, eth4, etc. Note: if you enter bond0, a LACP bonding config will be written                  |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| MTU:                          | If unsure, set to 1500                                                                                                          |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+| Specify disk for OS install:  | Optional. Typical values are "sda".                                                                                             |
++-------------------------------+---------------------------------------------------------------------------------------------------------------------------------+
+
+
+When you click the **Download ISO** button the folling occurs (all paths relative to the top level of the directory specified in _osversions.cfg_):
+
+#. Reads /etc/resolv.conf to get a list of nameservers. This is a rather ugly hack that is in place until we get a way of configuring it in the interface.
+#. Writes a file in the ks_scripts/state.out that contains directory from _osversions.cfg_ and the mkisofs string that we'll call later.
+#. Writes a file in the ks_scripts/network.cfg that is a bunch of key=value pairs that set up networking.
+#. Creates an MD5 hash of the password you specify and writes it to ks_scripts/password.cfg. Note that if you do not specify a password "Fred" is used. Also note that we have experienced some issues with webbrowsers autofilling that field. 
+#. Writes out a disk configuration file to ks_scripts/disk.cfg.
+#. mkisofs is called against the directory configured in _osversions.cfg_ and an ISO is generated in memory and delivered to your webbrowser.
+
+You now have a customized ISO that can be used to install Red Hat and derivative Linux installations with some modifications to your ks.cfg file. 
+
+Kickstart/Anaconda will mount the ISO at /mnt/stage2 during the install process (at least with 6).
+
+You can directly include the password file anywhere in your ks.cfg file (usually in the top) by doing %include /mnt/stage2/ks_scripts/password.cfg
+
+What we currently do is have 2 scripts, one to do hard drive configuration and one to do network configuration. We trigger those in a %pre section in ks.cfg and they will write config files to /tmp. We will then include those files in the appropriate places using  %pre.
+
+
 
 
 .. _rl-queue-updates:
