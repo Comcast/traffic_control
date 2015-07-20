@@ -1,5 +1,5 @@
 
-Traffic Control is an Open Source implementation of a Content Delivery Network.
+Traffic Control is an Open Source implementation of a Content Delivery Network. 
 
 #### Documentation
 * [Intro](http://traffic-control-cdn.net/docs/latest/index.html)
