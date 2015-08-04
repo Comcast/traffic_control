@@ -1,14 +1,14 @@
 #!/bin/bash
 #
-# Startup script for tmredis
+# Startup script for traffic_stats
 #
 #
 # chkconfig: 345 99 10
-# description: tmredis control script
-# processname: tmredis
+# description: traffic_stats control script
+# processname: traffic_stats
 
 ### BEGIN INIT INFO
-# Provides: tmredis
+# Provides: traffic_stats
 # Required-Start: 
 # Should-Start: 
 # Required-Stop:
@@ -27,8 +27,8 @@ start()
 
 	# check status return code
 	if [[ $? -eq $STATUS_STOPPED || "$1" == "force" ]] ; then
-		echo "Starting tmredis.."
-		/usr/bin/nohup /opt/tmredis/bin/rascal_2_redis --cfg /opt/tmredis/conf/r2r.cfg >/opt/tmredis/var/log/tmredis/tmredis.out 2>&1 &
+		echo "Starting traffic_stats.."
+		/usr/bin/nohup /opt/traffic_stats/bin/rascal_2_redis --cfg /opt/traffic_stats/conf/r2r.cfg >/opt/traffic_stats/var/log/traffic_stats/traffic_stats.out 2>&1 &
 	fi
 	
 	return $?

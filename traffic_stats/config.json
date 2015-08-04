@@ -1,0 +1,9 @@
+{
+    "TmUrl": "https://10.79.55.55",
+    "TmUser": "admin",
+    "TmPasswd": "default",
+    "StatusToMon": "ONLINE",
+    "RedisString": "127.0.0.1:6379",
+    "RedisInterval": 10,
+    "SeelogConfig": "/opt/traffic_stats/conf/seelog.xml"
+}

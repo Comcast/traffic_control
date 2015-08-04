@@ -1,5 +1,5 @@
 <seelog>
     <outputs>
-        <file path="/opt/tmredis/var/log/tmredis/rascal_to_redis.log" />
+        <file path="/opt/traffic_stats/var/log/traffic_stats/rascal_to_redis.log" />
     </outputs>
 </seelog>

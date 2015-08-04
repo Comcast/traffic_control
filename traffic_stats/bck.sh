@@ -17,9 +17,9 @@
 # limitations under the License.
 #
 
-BCK_FILE="/opt/tmredis/backup/tm_redis_`date +%m%d20%y`.json"; export BCK_FILE
-LOG_FILE="/opt/tmredis/var/log/tmredis/backup_redis_daily.out"; export LOG_FILE
-/opt/tmredis/bin/backup_redis_daily -file=$BCK_FILE -redis=localhost:6379 > $LOG_FILE 2>&1 
+BCK_FILE="/opt/traffic_stats/backup/tm_redis_`date +%m%d20%y`.json"; export BCK_FILE
+LOG_FILE="/opt/traffic_stats/var/log/traffic_stats/backup_redis_daily.out"; export LOG_FILE
+/opt/traffic_stats/bin/backup_redis_daily -file=$BCK_FILE -redis=localhost:6379 > $LOG_FILE 2>&1 
 
 if [ -f $BCK_FILE ]; then
 	/bin/gzip $BCK_FILE

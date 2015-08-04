@@ -1,0 +1,2 @@
+20 0 * * * /opt/traffic_stats/bin/bck.sh > /opt/traffic_stats/var/log/traffic_stats/bck.out 2>&1
+0 6 * * * /bin/find /opt/traffic_stats/backup -type f -name '*.gz' -mtime +14 -exec /bin/rm -f {} \; >/dev/null 2>&1
