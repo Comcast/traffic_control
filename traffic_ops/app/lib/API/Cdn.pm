@@ -26,52 +26,7 @@ use JSON;
 use MIME::Base64;
 use UI::DeliveryService;
 use MojoPlugins::Response;
-use Extensions::Delegate::Metrics;
-use Extensions::Delegate::Statistics;
 use Common::ReturnCodes qw(SUCCESS ERROR);
-
-################################################################################
-# WARNING: This route is unauthenticated!
-# Note: we only have a summary route thus far.
-################################################################################
-sub metrics {
-	my $self = shift;
-	my $m    = new Extensions::Delegate::Metrics($self);
-	my ( $rc, $result ) = $m->get_etl_metrics();
-	if ( $rc == SUCCESS ) {
-		return ( $self->success($result) );
-	}
-	else {
-		return ( $self->alert($result) );
-	}
-}
-
-sub usage_overview {
-	my $self = shift;
-
-	my $st = new Extensions::Delegate::Statistics($self);
-	my ( $rc, $result ) = $st->get_usage_overview();
-	if ( $rc == SUCCESS ) {
-		$self->success($result);
-	}
-	else {
-		$self->alert($result);
-	}
-}
-
-sub peakusage {
-	my $self = shift;
-
-	my $stats = new Extensions::Delegate::Statistics($self);
-	my ( $rc, $result ) = $stats->get_daily_summary();
-
-	if ( $rc == SUCCESS ) {
-		return $self->success($result);
-	}
-	else {
-		return $self->alert($result);
-	}
-}
 
 sub configs_monitoring {
 	my $self      = shift;
@@ -596,6 +551,9 @@ sub gen_traffic_router_config {
 			if ( defined( $row->dns_bypass_ip6 ) && $row->dns_bypass_ip6 ne "" ) {
 				$bypass_destination->{'ip6'} = $row->dns_bypass_ip6;
 			}
+			if ( defined( $row->dns_bypass_cname ) && $row->dns_bypass_cname ne "" ) {
+				$bypass_destination->{'cname'} = $row->dns_bypass_cname;
+			}
 			if ( defined( $row->dns_bypass_ttl ) && $row->dns_bypass_ttl ne "" ) {
 				$bypass_destination->{'ttl'} = int( $row->dns_bypass_ttl );
 			}
@@ -1047,6 +1005,13 @@ sub delete_dnssec_keys {
 			$self->alert( { Error => " - SSL keys for key type $key_type and key $key could not be deleted.  Response was" . $response->content } );
 		}
 	}
+}
+
+sub tool_logout {
+	my $self = shift;
+
+	$self->logout();
+	$self->success_message("You are logged out.");
 }
 
 sub catch_all {

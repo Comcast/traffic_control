@@ -1,4 +1,4 @@
-#
+package Utils::Helper::Version;
 #
 # Copyright 2015 Comcast Cable Communications Management, LLC
 #
@@ -15,10 +15,12 @@
 # limitations under the License.
 #
 #
-mkdir -p log
-if [ -z "$TO_EXTENSIONS_LIB" ]; then
-  export PERL5LIB=local/lib/perl5; local/bin/morbo --listen "http://*:3000" -v script/cdn
-else
-  export PERL5LIB=local/lib/perl5; local/bin/morbo --listen "http://*:3000" -v script/cdn -w $TO_EXTENSIONS_LIB -w lib
-fi
-MOJO_LOG_LEVEL=debug
+#
+use UI::Utils;
+
+sub current {
+    my $self = shift;
+    return ( &tm_version() );
+}
+
+1;

@@ -1,4 +1,5 @@
 package UI::VisualStatus;
+
 #
 # Copyright 2015 Comcast Cable Communications Management, LLC
 #
@@ -21,6 +22,26 @@ use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 
 sub graphs {
+	my $self = shift;
+
+	my $pparam =
+		$self->db->resultset('ProfileParameter')
+		->search( { -and => [ 'parameter.name' => 'visual_status_panel_1', 'profile.name' => 'GLOBAL' ] }, { prefetch => [ 'parameter', 'profile' ] } )->single();
+	my $p1_url = defined($pparam) ? $pparam->parameter->value : undef;
+	$pparam =
+		$self->db->resultset('ProfileParameter')
+		->search( { -and => [ 'parameter.name' => 'visual_status_panel_2', 'profile.name' => 'GLOBAL' ] }, { prefetch => [ 'parameter', 'profile' ] } )->single();
+	my $p2_url = defined($pparam) ? $pparam->parameter->value : undef;
+	$self->stash(
+		panel_1_url => $p1_url,
+		panel_2_url => $p2_url
+	);
+
+	&navbarpage($self);
+}
+
+
+sub graphs_redis {
 	my $self = shift;
 
 	my $match_string = $self->param('matchstring');
@@ -72,13 +93,13 @@ sub daily_summary {
 		push( @cdn_names, $row->value );
 	}
 
-	my $tool_instance = $self->db->resultset('Parameter')->search( { -and => [ name => 'tm.instance_name', config_file => 'global' ] } )
-		->get_column('value')->single();
+	my $tool_instance =
+		$self->db->resultset('Parameter')->search( { -and => [ name => 'tm.instance_name', config_file => 'global' ] } )->get_column('value')->single();
 
 	$self->stash(
-		cdn_names  => \@cdn_names,
+		cdn_names     => \@cdn_names,
 		tool_instance => $tool_instance,
-		graph_page => 1,
+		graph_page    => 1,
 	);
 
 	&navbarpage($self);

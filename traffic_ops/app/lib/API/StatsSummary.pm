@@ -1,4 +1,4 @@
-package API::v12::StatsSummary;
+package API::StatsSummary;
 #
 # Copyright 2015 Comcast Cable Communications Management, LLC
 #
@@ -27,33 +27,34 @@ use constant SUCCESS => 0;
 use constant ERROR   => 1;
 
 sub index {
-	my $self        = shift;
-	my $cdn_name = $self->param('cdnName');
-	my $ds_name     = $self->param('deliveryServiceName');
-	my $stat_name = $self->param('statName') ;
+	my $self      = shift;
+	my $cdn_name  = $self->param('cdnName');
+	my $ds_name   = $self->param('deliveryServiceName');
+	my $stat_name = $self->param('statName');
+
 	# TODO: Implement start_date and end_date
 	# my $start_date  = $self->param('startDate');
 	# my $end_date    = $self->param('endDate');
-	my $last_summary_date = $self->param('lastSummaryDate');  ##Boolean.  Used by traffic stats to determine if summary_data needs to be written.
-	my %q; 
+	my $last_summary_date = $self->param('lastSummaryDate');    ##Boolean.  Used by traffic stats to determine if summary_data needs to be written.
+	my %q;
 
-	if ($last_summary_date){
+	if ($last_summary_date) {
 		if ($stat_name) {
 			$self->app->log->debug("statName -> $stat_name");
-			%q = ('stat_name' => $stat_name );
+			%q = ( 'stat_name' => $stat_name );
 		}
 		my $response = $self->db->resultset('StatsSummary')->search( \%q )->get_column('summary_time')->max();
-		return $self->success({"summaryTime" => $response});
-	} 	
+		return $self->success( { "summaryTime" => $response } );
+	}
 	##add name and delivery_service to search
 	if ($cdn_name) {
-	%q = ('cdn_name' => $cdn_name);
+		%q = ( 'cdn_name' => $cdn_name );
 	}
 	if ($ds_name) {
-		%q = (%q, 'deliveryservice_name' => $ds_name );
+		%q = ( %q, 'deliveryservice_name' => $ds_name );
 	}
 	if ($stat_name) {
-		%q = (%q, 'stat_name' => $stat_name);
+		%q = ( %q, 'stat_name' => $stat_name );
 	}
 	my $rs_data = $self->db->resultset('StatsSummary')->search( \%q );
 	my @data;
@@ -65,34 +66,37 @@ sub index {
 				"statName"       		=> $row->stat_name,
 				"statValue" 	 		=> $row->stat_value,
 				"summaryTime" 	 		=> $row->summary_time,
+				"statDate" 	 			=> $row->stat_date,
 		}
 		);
 	}
-	return $self->success(\@data);
+	return $self->success( \@data );
 }
 
 sub create {
-	my $self        = shift;
-	my $cdn_name = $self->req->json->{cdnName} || "all";
-	my $ds_name     = $self->req->json->{deliveryServiceName} || "all";
-	my $stat_name = $self->req->json->{statName}; 
-	my $stat_value = $self->req->json->{statValue};
+	my $self         = shift;
+	my $cdn_name     = $self->req->json->{cdnName} || "all";
+	my $ds_name      = $self->req->json->{deliveryServiceName} || "all";
+	my $stat_name    = $self->req->json->{statName};
+	my $stat_value   = $self->req->json->{statValue};
 	my $summary_time = $self->req->json->{summaryTime};
+	my $stat_date    = $self->req->json->{statDate};
 
-	if (!defined($stat_name) || !defined($stat_value)) {
-		$self->alert({ERROR => "Please provide a stat name and value"})
+	if ( !defined($stat_name) || !defined($stat_value) || !defined($stat_date) ) {
+		$self->alert( { ERROR => "Please provide a stat name, value, and date" } );
 	}
 
 	my $insert = $self->db->resultset('StatsSummary')->create(
-			{
-				cdn_name 				=> $cdn_name,
-				deliveryservice_name 	=> $ds_name,
-				stat_name        		=> $stat_name,
-				stat_value	 			=> $stat_value,
-				summary_time		=> $summary_time,
-			}
-		);
-		$insert->insert();
+		{
+			cdn_name             => $cdn_name,
+			deliveryservice_name => $ds_name,
+			stat_name            => $stat_name,
+			stat_value           => $stat_value,
+			summary_time         => $summary_time,
+			stat_date            => $stat_date,
+		}
+	);
+	$insert->insert();
 
 	return $self->success("Successfully added stats summary record");
 }

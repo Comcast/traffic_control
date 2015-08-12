@@ -26,8 +26,6 @@ use NetAddr::IP;
 use UI::DeliveryService;
 use JSON;
 use API::DeliveryService::KeysUrlSig qw(URL_SIG_KEYS_BUCKET);
-use Utils::Helper::Extensions;
-Utils::Helper::Extensions->use;
 
 my $dispatch_table ||= {
 	"logs_xml.config"         => sub { logs_xml_dot_config(@_) },
@@ -81,10 +79,7 @@ sub genfiles {
 	$file =~ s/^set_dscp_.*\.config$/set_dscp_\.config/;
 	$file =~ s/^regex_remap_.*\.config$/regex_remap_\.config/;
 	$file =~ s/^cacheurl_.*\.config$/cacheurl_\.config/;
-	if ( $file =~ /^to_ext_.*\.config$/ ) {
-		$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
-		$org_name =~ s/^to_ext_.*\.config$/to_ext_\.config/;
-	}
+	$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 
 	my $text = undef;
 	if ( $mode eq 'view' ) {
@@ -131,10 +126,7 @@ sub gen_fancybox_data {
 		$file =~ s/^set_dscp_.*\.config$/set_dscp_\.config/;
 		$file =~ s/^regex_remap_.*\.config$/regex_remap_\.config/;
 		$file =~ s/^cacheurl_.*\.config$/cacheurl_\.config/;
-		if ( $file =~ /^to_ext_.*\.config$/ ) {
-			$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
-			$org_name =~ s/^to_ext_(.*)\.config$/$1.config/;
-		}
+		$file =~ s/^to_ext_.*\.config$/to_ext_\.config/;
 
 		my $text = "boo";
 		if ( defined( $dispatch_table->{$file} ) ) {
@@ -604,7 +596,7 @@ sub cacheurl_dot_config {
 		my $ds_xml_id = $1;
 		my $ds = $self->db->resultset('Deliveryservice')->search( { xml_id => $ds_xml_id }, { prefetch => [ 'type', 'profile' ] } )->single();
 		if ($ds) {
-			$text .= $ds->cacheurl;
+			$text .= $ds->cacheurl . "\n";
 		}
 	}
 	elsif ( $filename eq "cacheurl.config" ) {    # this is the global drop qstring w cacheurl use case
@@ -845,6 +837,9 @@ sub remap_dot_config {
 			if ( defined( $remap->{cacheurl} ) && $remap->{cacheurl} ne "" ) {
 				$mid_remap{ $remap->{org} } .= " \@plugin=cacheurl.so \@pparam=" . $remap->{cacheurl_file};
 			}
+			if ( $remap->{range_request_handling} == 2 ) {
+				$mid_remap{ $remap->{org} } .= " \@plugin=cache_range_requests.so";
+			}
 		}
 		foreach my $key ( keys %mid_remap ) {
 			$text .= "map " . $key . " " . $key . $mid_remap{$key} . "\n";
@@ -960,12 +955,14 @@ sub parent_dot_config {
 
 			my $org_fqdn = $ds->{org};
 			$org_fqdn =~ s/https?:\/\///;
+
+			my $algorithm = "";
+			my $param =
+				$self->db->resultset('ProfileParameter')
+				->search( { -and => [ profile => $server->profile->id, 'parameter.config_file' => 'parent.config', 'parameter.name' => 'algorithm' ] },
+				{ prefetch => [ 'parameter', 'profile' ] } )->single();
+
 			if ( defined($os) ) {
-				my $algorithm = "";
-				my $param =
-					$self->db->resultset('ProfileParameter')
-					->search( { -and => [ profile => $server->profile->id, 'parameter.config_file' => 'parent.config', 'parameter.name' => 'algorithm' ] },
-					{ prefetch => [ 'parameter', 'profile' ] } )->single();
 				my $pselect_alg = defined($param) ? $param->parameter->value : undef;
 				if ( defined($pselect_alg) ) {
 					$algorithm = "round_robin=$pselect_alg";
@@ -984,7 +981,8 @@ sub parent_dot_config {
 						$text .= $parent->{"host_name"} . "." . $parent->{"domain_name"} . ":" . $parent->{"port"} . "|" . $parent->{"weight"} . ";";
 					}
 				}
-				$text .= "\" round_robin=consistent_hash go_direct=false parent_is_proxy=false";
+				my $pselect_alg = defined($param) ? $param->parameter->value : "consistent_hash";
+				$text .= "\" round_robin=$pselect_alg go_direct=false parent_is_proxy=false";
 			}
 		}
 
@@ -1000,7 +998,7 @@ sub parent_dot_config {
 		my %done = ();
 
 		foreach my $remap ( @{ $data->{dslist} } ) {
-			if ( $remap->{type} eq "HTTP_NO_CACHE" || $remap->{type} eq "HTTP_LIVE" ) {
+			if ( $remap->{type} eq "HTTP_NO_CACHE" || $remap->{type} eq "HTTP_LIVE" || $remap->{type} eq "DNS_LIVE" ) {
 				if ( !defined( $done{ $remap->{org} } ) ) {
 					my $org_fqdn = $remap->{org};
 					$org_fqdn =~ s/https?:\/\///;
@@ -1261,6 +1259,10 @@ sub to_ext_dot_config {
 		->search( { -and => [ profile => $server->profile->id, 'parameter.config_file' => $file, 'parameter.name' => 'SubRoutine' ] },
 		{ prefetch => [ 'parameter', 'profile' ] } )->get_column('parameter.value')->single();
 	$self->app->log->error( "ToExtDotConfigFile == " . $subroutine );
+
+	my $package;
+	( $package = $subroutine ) =~ s/(.*)(::)(.*)/$1/;
+	eval "use $package;";
 
 	# And call it - the below calls the subroutine in the var $subroutine.
 	$text .= &{ \&{$subroutine} }( $self, $id, $file );
