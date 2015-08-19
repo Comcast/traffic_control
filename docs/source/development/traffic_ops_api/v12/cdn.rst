@@ -14,15 +14,22 @@
 .. limitations under the License.
 .. 
 
+.. _to-api-v12-cdn:
+
 CDN 
 ===
 
-.. _to-api-cdn-health:
+.. _to-api-v12-cdn-route:
+
+/api/1.2/cdns/health
+++++++++++++++++++++
 
 Health
 ++++++
 
-**GET /api/1.1/cdns/health.json**
+.. _to-api-v12-cdn-health-route:
+
+**GET /api/1.2/cdns/health.json**
 
   Authentication Required: Yes
   
@@ -64,13 +71,12 @@ Health
            }
         ]
      },
-     "version": "1.1"
     }
 
 
 |
 
-**GET /api/1.1/cdns/:name/health.json**
+**GET /api/1.2/cdns/:name/health.json**
 
   Retrieves the health of all locations (cache groups) for a given CDN.
 
@@ -124,12 +130,11 @@ Health
            }
         ]
      },
-     "version": "1.1"
     }
 
 |
 
-**GET /api/1.1/cdns/usage/overview.json**
+**GET /api/1.2/cdns/usage/overview.json**
 
   Retrieves the high-level CDN usage metrics.
 
@@ -156,11 +161,10 @@ Health
         "tps": 36805,
         "maxGbps": 3961
      },
-     "version": "1.1"
     }
 
 
-**GET /api/1.1/cdns/capacity.json**
+**GET /api/1.2/cdns/capacity.json**
 
   Retrieves the aggregate capacity percentages of all locations (cache groups) for a given CDN.
 
@@ -187,17 +191,16 @@ Health
         "utilizedPercent": 10.9060020300395,
         "maintenancePercent": 0.0000139494071146245
      },
-     "version": "1.1"
     }
 
 |
 
-.. _to-api-cdn-routing:
+.. _to-api-v12-cdn-routing:
 
 Routing
 +++++++
 
-**GET /api/1.1/cdns/routing.json**
+**GET /api/1.2/cdns/routing.json**
 
   Authentication Required: Yes
   
@@ -232,18 +235,17 @@ Routing
         "cz": 62.1144608981131,
         "dsr": 0
      },
-     "version": "1.1"
     }
 
 |
 
-.. _to-api-cdn-metrics:
+.. _to-api-v12-cdn-metrics:
 
 Metrics
 +++++++
 
 
-**GET /api/1.1/cdns/metric_types/:metric/start_date/:start/end_date/:end.json**
+**GET /api/1.2/cdns/metric_types/:metric/start_date/:start/end_date/:end.json**
 
   Authentication Required: Yes
   
@@ -322,17 +324,16 @@ Metrics
            "label": "Origin TPS"
         }
      ],
-     "version": "1.1"
     }
 
 |
 
-.. _to-api-cdn-domains:
+.. _to-api-v12-cdn-domains:
 
 Domains
 +++++++
 
-**GET /api/1.1/cdns/domains.json**
+**GET /api/1.2/cdns/domains.json**
 
   Authentication Required: Yes
   
@@ -371,50 +372,17 @@ Domains
            "domainName": "bar.domain.net"
         }
      ],
-     "version": "1.1"
     }
 
 |
 
-.. _to-api-cdn-topology:
+.. _to-api-v12-cdn-topology:
 
 Topology
 ++++++++
-**GET /api/1.1/cdns/configs.json**
+**GET /api/1.2/cdns/:cdn_name/configs.json**
 
-  Retrieves a list of the CDNs available.
-
-  Authentication Required: Yes
-  
-  **Request Route Parameters**
-  None
-
-
-  **Response Properties**
-
-  +-----------------------+--------+-----------------------------------------------+
-  | Parameter             | Type   | Description                                   |
-  +=======================+========+===============================================+
-  |``id``                 | string |                                               |
-  +-----------------------+--------+-----------------------------------------------+
-  |``value``              | string |                                               |
-  +-----------------------+--------+-----------------------------------------------+
-  |``name``               | string |                                               |
-  +-----------------------+--------+-----------------------------------------------+
-  |``config_file``        | string |                                               |
-  +-----------------------+--------+-----------------------------------------------+
-
-  **Response Example** ::
-
-    TBD    
-
-
-
-|
-
-**GET /api/1.1/cdns/:cdn_name/configs.json**
-
-  Retrieves CDN config information based upon the provided cdn name.
+  Retrieves CDN config information.
 
   Authentication Required: Yes
   
@@ -448,7 +416,7 @@ Topology
 
 |
 
-**GET /api/1.1/cdns/:name/configs/monitoring.json**
+**GET /api/1.2/cdns/:name/configs/monitoring.json**
 
   Retrieves CDN monitoring information.
 
@@ -586,7 +554,7 @@ Topology
 
 |
 
-**GET /api/1.1/cdns/:name/configs/routing.json**
+**GET /api/1.2/cdns/:name/configs/routing.json**
 
   Retrieves CDN routing information.
 
@@ -796,12 +764,12 @@ Topology
   TBD
 
  
-.. _to-api-cdn-dnsseckeys:
+.. _to-api-v12-cdn-dnsseckeys:
 
 DNSSEC Keys
 +++++++++++
 
-**GET /api/1.1/cdns/name/:name/dnsseckeys.json**
+**GET /api/1.2/cdns/name/:name/dnsseckeys.json**
 
   Gets a list of dnsseckeys for CDN and all associated Delivery Services.
   Before returning response to user, check to make sure keys aren't expired.  If they are expired, generate new ones.
@@ -885,13 +853,12 @@ DNSSEC Keys
         },
         ... repeated for each ds in the cdn
       },
-      "version": "1.1"
     }
 
 
 |
 
-**GET /api/1.1/cdns/name/:name/dnsseckeys/delete.json**
+**GET /api/1.2/cdns/name/:name/dnsseckeys/delete.json**
 
   Delete dnssec keys for a cdn and all associated delivery services.
 
@@ -923,14 +890,13 @@ DNSSEC Keys
   ::
 
     {  
-      "version": "1.1",
       "response": "Successfully deleted dnssec keys for <cdn>"
     }
 
 
 |
   
-**POST /api/1.1/deliveryservices/dnsseckeys/generate**
+**POST /api/1.2/deliveryservices/dnsseckeys/generate**
 
   Generates zsk and ksk keypairs for a cdn and all associated delivery services.
 
@@ -980,7 +946,6 @@ DNSSEC Keys
 
 
     {  
-      "version": "1.1",
       "response": "Successfully created dnssec keys for cdn1"
     }
 

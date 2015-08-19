@@ -15,10 +15,15 @@
 .. 
 
 
-.. _to-api-change-logs:
+.. _to-api-v11-change-logs:
 
 Change Logs
 ===========
+
+.. _to-api-v11-change-logs-route:
+
+/api/1.1/logs
++++++++++++++
 
 **GET /api/1.1/logs.json**
 
@@ -61,7 +66,6 @@ Change Logs
            "message": "Update server odol-atsec-nyc-23.kbaletown.net status=REPORTED"
         },
      ],
-     "version": "1.1"
     }
 
 |
@@ -115,7 +119,6 @@ Change Logs
            "message": "Update server odol-atsec-nyc-23.kabletown.net status=REPORTED"
         }
      ],
-     "version": "1.1"
     }
 
 |
@@ -137,6 +140,5 @@ Change Logs
      "response": {
         "newLogcount": 0
      },
-     "version": "1.1"
     }
 

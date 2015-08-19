@@ -14,10 +14,16 @@
 .. limitations under the License.
 .. 
 
-.. _to-api-ext:
+.. _to-api-v11-ext:
 
 TO Extensions
 =============
+
+.. _to-api-v11-ext-route:
+
+/api/1.1/to_extensions
+++++++++++++++++++++++
+
 **GET /api/1.1/to_extensions.json**
 
 Retrieves the list of extensions.
@@ -82,7 +88,6 @@ Response Content Type: application/json
                         servercheck_short_name: "10G"
                 }
          ],
-         “version”: "1.1"
   }
 
 
@@ -157,7 +162,6 @@ Response Content Type: application/json
            "text": "Check Extension loaded."
         }
      ],
-     "version": "1.1"
     }
 
 
@@ -201,7 +205,6 @@ Response Content Type: application/json
            "text": "Extension deleted."
         }
      ],
-     "version": "1.1"
       }
 
   

@@ -14,11 +14,17 @@
 .. limitations under the License.
 .. 
 
-.. _to-api-server:
+.. _to-api-v12-server:
 
 Server
 ======
-**GET /api/1.1/servers.json**
+
+.. _to-api-v12-servers-route:
+
+/api/1.2/servers
+++++++++++++++++
+
+**GET /api/1.2/servers.json**
 
   Retrieves properties of CDN servers.
 
@@ -29,7 +35,7 @@ Server
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
   |     Parameter      |  Type  |                                                Description                                                 |
   +====================+========+============================================================================================================+
-  | ``cachegroup``     | string | The cache group name (see :ref:`to-api-cachegroup`).                                                       |
+  | ``cachegroup``     | string | The cache group name (see :ref:`to-api-v12-cachegroup`).                                                   |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
   | ``domainName``     | string | The domain name part of the FQDN of the cache.                                                             |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
@@ -69,9 +75,9 @@ Server
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
   | ``mgmtIpNetmask``  | string | The IPv4 netmask of the management port (optional).                                                        |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
-  | ``physLocation``   | string | The physical location name (see :ref:`to-api-phys-loc`).                                                   |
+  | ``physLocation``   | string | The physical location name (see :ref:`to-api-v12-phys-loc`).                                               |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
-  | ``profile``        | string | The assigned profile name (see :ref:`to-api-profile`).                                                     |
+  | ``profile``        | string | The assigned profile name (see :ref:`to-api-v12-profile`).                                                 |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
   | ``rack``           | string | A string indicating rack location.                                                                         |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
@@ -79,11 +85,11 @@ Server
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
   | ``routerPortName`` | string | The human readable name of the router port.                                                                |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
-  | ``status``         | string | The Status string (See :ref:`to-api-status`).                                                              |
+  | ``status``         | string | The Status string (See :ref:`to-api-v12-status`).                                                          |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
   | ``tcpPort``        | string | The default TCP port on which the main application listens (80 for a cache in most cases).                 |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
-  | ``type``           | string | The name of the type of this server (see :ref:`to-api-type`).                                              |
+  | ``type``           | string | The name of the type of this server (see :ref:`to-api-v12-type`).                                          |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
   | ``xmppId``         | string | Deprecated.                                                                                                |
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
@@ -130,13 +136,12 @@ Server
           ... more server data
           }
         ]
-      "version": "1.1"
     }
 
 
 |
 
-**GET /api/1.1/servers/summary.json**
+**GET /api/1.2/servers/summary.json**
 
   Retrieves a count of CDN servers by type.
 
@@ -144,13 +149,13 @@ Server
 
   **Response Properties**
 
-  +-----------+--------+---------------------------------------------------------------------+
-  | Parameter |  Type  |                             Description                             |
-  +===========+========+=====================================================================+
-  | ``count`` | int    | The number of servers of this type in this instance of Traffic Ops. |
-  +-----------+--------+---------------------------------------------------------------------+
-  | ``type``  | string | The name of the type of the server count (see :ref:`to-api-type`).  |
-  +-----------+--------+---------------------------------------------------------------------+
+  +-----------+--------+------------------------------------------------------------------------+
+  | Parameter |  Type  |                             Description                                |
+  +===========+========+========================================================================+
+  | ``count`` | int    | The number of servers of this type in this instance of Traffic Ops.    |
+  +-----------+--------+------------------------------------------------------------------------+
+  | ``type``  | string | The name of the type of the server count (see :ref:`to-api-v12-type`). |
+  +-----------+--------+------------------------------------------------------------------------+
 
   **Response Example** ::
 
@@ -176,12 +181,11 @@ Server
           "count": 4,
           "type": "RASCAL"
         }
-      "version": "1.1",
     }
 
 |
 
-**GET /api/1.1/servers/hostname/:name/details.json**
+**GET /api/1.2/servers/hostname/:name/details.json**
 
   Retrieves the details of a server.
 
@@ -200,13 +204,13 @@ Server
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
   |      Parameter       |  Type  |                                                 Description                                                 |
   +======================+========+=============================================================================================================+
-  | ``cachegroup``       | string | The cache group name (see :ref:`to-api-cachegroup`).                                                        |
+  | ``cachegroup``       | string | The cache group name (see :ref:`to-api-v12-cachegroup`).                                                    |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
-  | ``deliveryservices`` | array  | Array of strings with the delivery service ids assigned (see :ref:`to-api-ds`).                             |
+  | ``deliveryservices`` | array  | Array of strings with the delivery service ids assigned (see :ref:`to-api-v12-ds`).                         |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
   | ``domainName``       | string | The domain name part of the FQDN of the cache.                                                              |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
-  | ``hardwareInfo``     | hash   | Hwinfo struct (see :ref:`to-api-hwinfo`).                                                                   |
+  | ``hardwareInfo``     | hash   | Hwinfo struct (see :ref:`to-api-v12-hwinfo`).                                                               |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
   | ``hostName``         | string | The host name part of the cache.                                                                            |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
@@ -244,9 +248,9 @@ Server
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
   | ``mgmtIpNetmask``    | string | The IPv4 netmask of the management port (optional).                                                         |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
-  | ``physLocation``     | string | The physical location name (see :ref:`to-api-phys-loc`).                                                    |
+  | ``physLocation``     | string | The physical location name (see :ref:`to-api-v12-phys-loc`).                                                |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
-  | ``profile``          | string | The assigned profile name (see :ref:`to-api-profile`).                                                      |
+  | ``profile``          | string | The assigned profile name (see :ref:`to-api-v12-profile`).                                                  |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
   | ``rack``             | string | A string indicating rack location.                                                                          |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
@@ -254,11 +258,11 @@ Server
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
   | ``routerPortName``   | string | The human readable name of the router port.                                                                 |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
-  | ``status``           | string | The Status string (See :ref:`to-api-status`).                                                               |
+  | ``status``           | string | The Status string (See :ref:`to-api-v12-status`).                                                           |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
   | ``tcpPort``          | string | The default TCP port on which the main application listens (80 for a cache in most cases).                  |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
-  | ``type``             | string | The name of the type of this server (see :ref:`to-api-type`).                                               |
+  | ``type``             | string | The name of the type of this server (see :ref:`to-api-v12-type`).                                           |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
   | ``xmppId``           | string | Deprecated.                                                                                                 |
   +----------------------+--------+-------------------------------------------------------------------------------------------------------------+
@@ -355,13 +359,12 @@ Server
         "xmppPasswd": "X"
 
       }
-      "version": "1.1",
 
     }
 
 |
 
-**POST /api/1.1/servercheck**
+**POST /api/1.2/servercheck**
 
   Post a server check result to the serverchecks table.
 
@@ -421,6 +424,5 @@ Server
             "text": "Server Check was successfully updated."
           }
         ],
-      "version": "1.1"
     }
 

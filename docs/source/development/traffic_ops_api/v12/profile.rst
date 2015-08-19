@@ -14,13 +14,18 @@
 .. limitations under the License.
 .. 
 
-.. _to-api-profile:
+.. _to-api-v12-profile:
 
 
 Profiles
 ========
 
-**GET /api/1.1/profiles**
+.. _to-api-v12-profiles-route:
+
+/api/1.2/profiles
++++++++++++++++++
+
+**GET /api/1.2/profiles**
 
 	Authentication Required: Yes
 
@@ -47,7 +52,7 @@ Profiles
 | 
 
 
-**GET /api/1.1/profiles/trimmed.json**
+**GET /api/1.2/profiles/trimmed.json**
 
 	Authentication Required: Yes
 

@@ -14,12 +14,17 @@
 .. limitations under the License.
 .. 
 
-.. _to-api-cachegroup:
+.. _to-api-v12-cachegroup:
 
 Cache Group
 ===========
 
-**GET /api/1.1/cachegroups.json**
+.. _to-api-v12-cachegroups-route:
+
+/api/1.2/cachegroups
+++++++++++++++++++++
+
+**GET /api/1.2/cachegroups.json**
 
   Authentication Required: Yes
   
@@ -76,12 +81,11 @@ Cache Group
            "shortName": "dccmc"
         }
      ],
-     "version": "1.1"
     }
 
 |
 
-**GET /api/1.1/cachegroups/trimmed.json**
+**GET /api/1.2/cachegroups/trimmed.json**
 
   Authentication Required: Yes
   
@@ -105,12 +109,11 @@ Cache Group
              "name": "dc-cmc"
           }
        ],
-       "version": "1.1"
      }
 
 |
 
-**GET /api/1.1/cachegroup/:parameter_id/parameter.json**
+**GET /api/1.2/cachegroup/:parameter_id/parameter.json**
 
   Authentication Required: Yes
   
@@ -149,11 +152,10 @@ Cache Group
            }
         ]
      },
-     "version": "1.1"
     }
 
 
-**GET /api/1.1/cachegroupparameters.json**
+**GET /api/1.2/cachegroupparameters.json**
 
   Authentication Required: Yes
   
@@ -193,13 +195,12 @@ Cache Group
            }
         ]
      },
-     "version": "1.1"
     }
 
 
 |
 
-**GET /api/1.1/cachegroups/:parameter_id/parameter/available.json**
+**GET /api/1.2/cachegroups/:parameter_id/parameter/available.json**
 
   Authentication Required: Yes
   
@@ -234,6 +235,5 @@ Cache Group
            "id": "22"
         }
      ],
-     "version": "1.1"
     }
 

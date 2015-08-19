@@ -14,10 +14,15 @@
 .. limitations under the License.
 .. 
 
-.. _to-api-dns:
+.. _to-api-v11-dns:
 
 Static DNS Entries
 ==================
+
+.. _to-api-v11-static-dns-route:
+
+/api/1.1/staticdnsentries
++++++++++++++++++++++++++
 
 **GET /api/1.1/staticdnsentries.json**
 
