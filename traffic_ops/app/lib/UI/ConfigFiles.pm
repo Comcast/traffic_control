@@ -1197,7 +1197,7 @@ sub drop_qstring_dot_config {
 
 	my $server = $self->server_data($id);
 	my $text   = $self->header_comment( $server->host_name );
-	$text .= "/([^?]+) \$s://\$t/\$1\n";
+	$text .= "/([^?]+) \$s://\$t:\$p/\$1\n";
 
 	return $text;
 }
