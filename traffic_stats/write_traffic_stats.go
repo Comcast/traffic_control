@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -27,7 +26,12 @@ const (
 	ERROR = iota
 )
 
-const defaultPollingInterval = 10
+const (
+	defaultPollingInterval    = 10
+	defaultConfigInterval     = 300
+	defaultPublishingInterval = 30
+	maxPublishSize            = 10000
+)
 
 // StartupConfig contains all fields necessary to create an InfluxDB session.
 type StartupConfig struct {
@@ -37,6 +41,8 @@ type StartupConfig struct {
 	InfluxUser           string                  `json:"influxUser"`
 	InfluxPassword       string                  `json:"influxPassword"`
 	PollingInterval      int                     `json:"pollingInterval"`
+	PublishingInterval   int                     `json:"publishingInterval"`
+	ConfigInterval       int                     `json:"configInterval"`
 	StatusToMon          string                  `json:"statusToMon"`
 	SeelogConfig         string                  `json:"seelogConfig"`
 	CacheRetentionPolicy string                  `json:"cacheRetentionPolicy"`
@@ -73,9 +79,14 @@ func main() {
 	Bps = make(map[string]*influx.BatchPoints)
 	config.BpsChan = make(chan influx.BatchPoints)
 
-	defaultPollingInterval := 10
 	if config.PollingInterval == 0 {
 		config.PollingInterval = defaultPollingInterval
+	}
+	if config.PublishingInterval == 0 {
+		config.PublishingInterval = defaultPublishingInterval
+	}
+	if config.ConfigInterval == 0 {
+		config.ConfigInterval = defaultConfigInterval
 	}
 
 	logger, err := log.LoggerFromConfigAsFile(config.SeelogConfig)
@@ -89,26 +100,27 @@ func main() {
 	}
 	log.ReplaceLogger(logger)
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	runningConfig, nil := getToData(config, true)
 
 	<-time.NewTimer(time.Now().Truncate(time.Duration(config.PollingInterval) * time.Second).Add(time.Duration(config.PollingInterval) * time.Second).Sub(time.Now())).C
 	tickerChan := time.Tick(time.Duration(config.PollingInterval) * time.Second)
+	tickerPublishChan := time.Tick(time.Duration(config.PublishingInterval) * time.Second)
+	tickerConfigChan := time.Tick(time.Duration(config.ConfigInterval) * time.Second)
+
 	for {
 		select {
-		case now := <-tickerChan:
-			if now.Second() == 30 {
-				for key, val := range Bps {
-					go sendMetrics(config, &runningConfig, *val)
-					delete(Bps, key)
-				}
-				// TODO make this async
-				trc, err := getToData(config, false)
-				if err == nil {
-					runningConfig = trc
-				}
+		case <-tickerPublishChan:
+			for key, val := range Bps {
+				go sendMetrics(config, &runningConfig, *val)
+				delete(Bps, key)
 			}
+		case <-tickerConfigChan:
+			// TODO make this async
+			trc, err := getToData(config, false)
+			if err == nil {
+				runningConfig = trc
+			}
+		case <-tickerChan:
 			for cdnName, urls := range runningConfig.HealthUrls {
 				for _, url := range urls {
 					log.Info(cdnName, " -> ", url)
@@ -116,16 +128,19 @@ func main() {
 						fmt.Println("Skipping stat write - testSummary mode is ON!")
 						continue
 					}
-					go storeMetrics(cdnName, url, runningConfig.CacheGroupMap, config, &runningConfig)
+					go calcMetrics(cdnName, url, runningConfig.CacheGroupMap, config, &runningConfig)
 				}
 			}
 		case batchPoints := <-config.BpsChan:
+			log.Info("Received ", len(batchPoints.Points), " stats")
 			key := fmt.Sprintf("%s%s", batchPoints.Database, batchPoints.RetentionPolicy)
 			b, ok := Bps[key]
 			if ok {
 				b.Points = append(b.Points, batchPoints.Points...)
+				log.Info("Aggregating ", len(b.Points), " stats to ", key)
 			} else {
 				Bps[key] = &batchPoints
+				log.Info("Created ", key)
 			}
 		}
 	}
@@ -220,7 +235,7 @@ func getToData(config *StartupConfig, init bool) (RunningConfig, error) {
 	return runningConfig, nil
 }
 
-func storeMetrics(cdnName string, url string, cacheGroupMap map[string]string, config *StartupConfig, runningConfig *RunningConfig) {
+func calcMetrics(cdnName string, url string, cacheGroupMap map[string]string, config *StartupConfig, runningConfig *RunningConfig) {
 	sampleTime := int64(time.Now().Unix())
 	// get the data from rascal
 	rascalData, err := getURL(url)
@@ -230,9 +245,9 @@ func storeMetrics(cdnName string, url string, cacheGroupMap map[string]string, c
 	}
 
 	if strings.Contains(url, "CacheStats") {
-		err = storeCacheValues(rascalData, cdnName, sampleTime, cacheGroupMap, config)
+		err = calcCacheValues(rascalData, cdnName, sampleTime, cacheGroupMap, config)
 	} else if strings.Contains(url, "DsStats") {
-		err = storeDsValues(rascalData, cdnName, sampleTime, config)
+		err = calcDsValues(rascalData, cdnName, sampleTime, config)
 	} else {
 		log.Info("Don't know what to do with ", url)
 	}
@@ -269,7 +284,7 @@ func errHndlr(err error, severity int) {
     }
  }
 */
-func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, config *StartupConfig) error {
+func calcDsValues(rascalData []byte, cdnName string, sampleTime int64, config *StartupConfig) error {
 	type DsStatsJSON struct {
 		Pp              string `json:"pp"`
 		Date            string `json:"date"`
@@ -367,7 +382,7 @@ func storeDsValues(rascalData []byte, cdnName string, sampleTime int64, config *
 }
 */
 
-func storeCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cacheGroupMap map[string]string, config *StartupConfig) error {
+func calcCacheValues(trafmonData []byte, cdnName string, sampleTime int64, cacheGroupMap map[string]string, config *StartupConfig) error {
 	/* note about the data:
 	keys are cdnName:deliveryService:cacheGroup:cacheName:statName
 	*/
@@ -502,9 +517,29 @@ func sendMetrics(config *StartupConfig, runningConfig *RunningConfig, bps influx
 		return
 	}
 
-	_, err = influxClient.Write(bps)
-	if err != nil {
-		config.BpsChan <- bps
-		errHndlr(err, ERROR)
+	pts := bps.Points
+	for len(pts) > 0 {
+		chunk_bps := influx.BatchPoints{
+			Database:        bps.Database,
+			RetentionPolicy: bps.RetentionPolicy,
+		}
+
+		chunk_bps.Points = pts[:IntMin(maxPublishSize, len(pts))]
+		pts = pts[IntMin(maxPublishSize, len(pts)):]
+
+		_, err = influxClient.Write(chunk_bps)
+		if err != nil {
+			config.BpsChan <- chunk_bps
+			errHndlr(err, ERROR)
+		} else {
+			log.Info("Sent ", len(chunk_bps.Points), " stats")
+		}
 	}
+}
+
+func IntMin(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
