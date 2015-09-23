@@ -23,6 +23,7 @@ import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 
+@SuppressWarnings("PMD.UnusedPrivateField")
 public class SignedZoneKey extends ZoneKey {
 	private static final Logger LOGGER = Logger.getLogger(SignedZoneKey.class);
 	private Calendar signatureExpiration;

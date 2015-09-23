@@ -34,6 +34,7 @@ import org.xbill.DNS.Type;
 
 import com.verisignlabs.dnssec.security.DnsKeyPair;
 
+@SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
 public class DNSKeyPairWrapper extends DnsKeyPair {
 	private static final Logger LOGGER = Logger.getLogger(DNSKeyPairWrapper.class);
 

@@ -142,6 +142,7 @@ public class Cache implements Comparable<Cache> {
 		return getIpAddresses(ttls, resolver, true);
 	}
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public List<InetRecord> getIpAddresses(final JSONObject ttls, final Resolver resolver, final boolean ip6RoutingEnabled) {
 		if(ipAddresses == null || ipAddresses.isEmpty()) {
 			ipAddresses = resolver.resolve(this.getFqdn()+".");

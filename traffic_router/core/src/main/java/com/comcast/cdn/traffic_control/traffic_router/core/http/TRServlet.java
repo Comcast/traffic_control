@@ -89,7 +89,8 @@ public class TRServlet extends HttpServlet {
 	 * javax.servlet.http.HttpServletResponse)
 	 */
 	@Override
-	protected void doGet(final HttpServletRequest request, final HttpServletResponse response) 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
+	protected void doGet(final HttpServletRequest request, final HttpServletResponse response)
 			throws ServletException, IOException {
 		Date requestDate = new Date();
 
@@ -132,7 +133,8 @@ public class TRServlet extends HttpServlet {
 		writeHttpResponse(response, request, req, track, httpAccessRecord);
 	}
 
-	private void writeHttpResponse(final HttpServletResponse response, final HttpServletRequest request, 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
+	private void writeHttpResponse(final HttpServletResponse response, final HttpServletRequest request,
 			final HTTPRequest req, final Track track, final HTTPAccessRecord httpAccessRecord) throws IOException {
 		final String format = request.getParameter("format");
 		final HTTPAccessRecord.Builder httpAccessRecordBuilder = new HTTPAccessRecord.Builder(httpAccessRecord);
@@ -173,7 +175,7 @@ public class TRServlet extends HttpServlet {
 			httpAccessRecordBuilder.responseURL(null);
 			httpAccessRecordBuilder.rerr(e.getMessage());
 		} finally {
-			HTTPAccessRecord access = httpAccessRecordBuilder.resultType(track.getResult()).build();
+			final HTTPAccessRecord access = httpAccessRecordBuilder.resultType(track.getResult()).build();
 			ACCESS.info(HTTPAccessEventBuilder.create(access));
 			statTracker.saveTrack(track);
 		}

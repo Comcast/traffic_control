@@ -34,6 +34,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.apache.wicket.ajax.json.JSONException;
 
+@SuppressWarnings("PMD.CyclomaticComplexity")
 public abstract class AbstractServiceUpdater {
 	private static final Logger LOGGER = Logger.getLogger(AbstractServiceUpdater.class);
 
@@ -80,6 +81,7 @@ public abstract class AbstractServiceUpdater {
 		scheduledService = executorService.scheduleWithFixedDelay(updater, pi, pi, TimeUnit.MILLISECONDS);
 	}
 
+	@SuppressWarnings("PMD.CyclomaticComplexity")
 	public boolean updateDatabase() {
 		final File existingDB = new File(databaseLocation);
 		File newDB = null;

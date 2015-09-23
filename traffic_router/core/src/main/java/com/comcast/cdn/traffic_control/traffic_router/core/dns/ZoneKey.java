@@ -24,6 +24,7 @@ import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 
+@SuppressWarnings("PMD.UnusedPrivateField")
 public class ZoneKey implements Comparable<ZoneKey> {
 	private static final Logger LOGGER = Logger.getLogger(ZoneKey.class);
 	private Name name;

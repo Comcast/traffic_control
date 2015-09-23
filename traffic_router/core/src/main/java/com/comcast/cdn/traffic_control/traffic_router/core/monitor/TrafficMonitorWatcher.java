@@ -40,6 +40,7 @@ import com.comcast.cdn.traffic_control.traffic_router.core.util.AbstractUpdatabl
 import com.comcast.cdn.traffic_control.traffic_router.core.util.PeriodicResourceUpdater;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.ResourceUrl;
 
+@SuppressWarnings({"PMD.TooManyFields", "PMD.CyclomaticComplexity"})
 public class TrafficMonitorWatcher  {
 	private static final Logger LOGGER = Logger.getLogger(TrafficMonitorWatcher.class);
 
@@ -77,7 +78,7 @@ public class TrafficMonitorWatcher  {
 				return trafficRouterManager.setState(new JSONObject(jsonStr));
 			} catch (JSONException e) {
 				LOGGER.warn("problem with json: ",e);
-				LOGGER.debug("problem with json: "+jsonStr);
+				LOGGER.debug("problem with json: " + jsonStr);
 			} catch (UnknownHostException e) {
 				LOGGER.warn(e,e);
 			}
@@ -104,6 +105,7 @@ public class TrafficMonitorWatcher  {
 		}
 	}
 
+	@SuppressWarnings("PMD.CyclomaticComplexity")
 	public void init() {
 		LOGGER.info("Start");
 
@@ -251,6 +253,7 @@ public class TrafficMonitorWatcher  {
 		return hosts;
 	}
 
+	@SuppressWarnings("PMD.CyclomaticComplexity")
 	public void processConfig() {
 		final long now = System.currentTimeMillis();
 

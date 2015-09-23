@@ -78,6 +78,7 @@ public class Dispersion {
 		return null;
 	}
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public List<Cache> getCacheList(final SortedMap<Double, Cache> cacheMap) {
 		if (cacheMap == null) {
 			return null;

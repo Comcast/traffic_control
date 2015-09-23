@@ -37,6 +37,7 @@ import org.w3c.dom.NodeList;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheLocation;
 
+@SuppressWarnings("PMD.CyclomaticComplexity")
 public class NetworkNode implements Comparable<NetworkNode> {
 	private static final Logger LOGGER = Logger.getLogger(NetworkNode.class);
 
@@ -54,6 +55,8 @@ public class NetworkNode implements Comparable<NetworkNode> {
 	public NetworkNode(final String str) throws NetworkNodeException {
 		this(str, null);
 	}
+
+	@SuppressWarnings("PMD.CyclomaticComplexity")
 	public NetworkNode(final String str, final String loc) throws NetworkNodeException {
 		this.source = str;
 		this.loc = loc;
@@ -211,6 +214,8 @@ public class NetworkNode implements Comparable<NetworkNode> {
 			return c.getNetwork(ipnn);
 		}
 	}
+
+	@SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.LocalVariableCouldBeFinal"})
 	private static NetworkNode generateTree(final JSONObject json) {
 		try {
 			final JSONObject coverageZones = json.getJSONObject("coverageZones");
@@ -316,6 +321,8 @@ public class NetworkNode implements Comparable<NetworkNode> {
 	public void setCacheLocation(final CacheLocation cl2) {
 		cacheLocation = cl2;
 	}
+
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public int size() {
 		if(children==null) { return 1; }
 		int size = 1;
@@ -324,6 +331,8 @@ public class NetworkNode implements Comparable<NetworkNode> {
 		}
 		return size;
 	}
+
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public void clearCacheCache() {
 		synchronized(this) {
 			cacheLocation = null;

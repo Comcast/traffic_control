@@ -94,6 +94,7 @@ public class CacheRegister implements CacheLocationManager {
 		}
 	}
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public void print(final Logger log) {
 		final Collection<CacheLocation> locs = configuredLocations.values();
 		for(CacheLocation loc : locs) {
@@ -109,6 +110,8 @@ public class CacheRegister implements CacheLocationManager {
 	public void setCacheMap(final Map<String,Cache> map) {
 		allCaches = map;
 	}
+
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public void mergeState(final CacheRegister cacheRegister) {
 		if(allCaches != null && cacheRegister.allCaches != null) {
 			for(String key : allCaches.keySet()) {

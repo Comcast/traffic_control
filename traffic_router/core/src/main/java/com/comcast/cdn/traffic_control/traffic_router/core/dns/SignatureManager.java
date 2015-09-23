@@ -47,6 +47,7 @@ import com.verisignlabs.dnssec.security.JCEDnsSecSigner;
 import com.verisignlabs.dnssec.security.SignUtils;
 
 
+@SuppressWarnings("PMD.CyclomaticComplexity")
 public final class SignatureManager {
 	private static final Logger LOGGER = Logger.getLogger(SignatureManager.class);
 	private int expirationMultiplier;
@@ -102,8 +103,10 @@ public final class SignatureManager {
 		}
 	}
 
+	@SuppressWarnings("PMD.CyclomaticComplexity")
 	private Runnable getKeyMaintenanceRunnable(final CacheRegister cacheRegister) {
 		return new Runnable() {
+			@SuppressWarnings("PMD.CyclomaticComplexity")
 			public void run() {
 				final Map<String, List<DNSKeyPairWrapper>> newKeyMap = new HashMap<String, List<DNSKeyPairWrapper>>();
 				final JSONObject keyPairData = fetchKeyPairData(cacheRegister);
@@ -188,6 +191,7 @@ public final class SignatureManager {
 		return false;
 	}
 
+	@SuppressWarnings("PMD.CyclomaticComplexity")
 	private JSONObject fetchKeyPairData(final CacheRegister cacheRegister) {
 		if (!isDnssecEnabled()) {
 			return null;
@@ -279,6 +283,7 @@ public final class SignatureManager {
 		return getKeyPairs(name, false, false);
 	}
 
+	@SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.LocalVariableCouldBeFinal"})
 	private List<DNSKeyPairWrapper> getKeyPairs(final Name name, final boolean wantKsk, final boolean wantSigningKey) throws IOException, NoSuchAlgorithmException {
 		final List<DNSKeyPairWrapper> keyPairs = keyMap.get(name.toString());
 		final Date now = new Date();
@@ -348,6 +353,7 @@ public final class SignatureManager {
 		return expiration;
 	}
 
+	@SuppressWarnings("PMD.UnusedFormalParameter")
 	private Calendar calculateSignatureExpiration(final long baseTimeInMillis, final List<Record> records, final List<? extends DnsKeyPair> kskPairs, final List<? extends DnsKeyPair> zskPairs) {
 		final Calendar expiration = Calendar.getInstance();
 		final long maxTTL = ZoneUtils.getMaximumTTL(records) * 1000; // convert TTL to millis
@@ -448,6 +454,7 @@ public final class SignatureManager {
 		return records;
 	}
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public List<Record> generateDSRecords(final Name name) throws NoSuchAlgorithmException, IOException {
 		final List<Record> records = new ArrayList<Record>();
 
@@ -471,6 +478,7 @@ public final class SignatureManager {
 		return records;
 	}
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public List<Record> generateDNSKEYRecords(final Name name) throws NoSuchAlgorithmException, IOException {
 		final List<Record> list = new ArrayList<Record>();
 

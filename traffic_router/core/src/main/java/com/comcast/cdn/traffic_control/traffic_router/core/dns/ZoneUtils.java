@@ -30,6 +30,7 @@ public class ZoneUtils {
 	private static final Logger LOGGER = Logger.getLogger(ZoneUtils.class);
 	private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHH");
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	protected static long getMaximumTTL(final List<Record> records) {
 		long maximumTTL = 0;
 

@@ -44,6 +44,7 @@ import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Tr
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Track.ResultType;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.StringProtector;
 
+@SuppressWarnings({"PMD.TooManyFields","PMD.CyclomaticComplexity"})
 public class DeliveryService {
 	protected static final Logger LOGGER = Logger.getLogger(DeliveryService.class);
 	private final String id;
@@ -125,6 +126,8 @@ public class DeliveryService {
 		}
 		return clientLocation;
 	}
+
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	private boolean isLocationBlocked(final Geolocation clientLocation) {
 		if(geoEnabled == null || geoEnabled.length() == 0) { return false; }
 
@@ -186,6 +189,8 @@ public class DeliveryService {
 		}
 		return createURIString(request, fqdn, cache.getPort(), getTransInfoStr(request));
 	}
+
+	@SuppressWarnings("PMD.AppendCharacterWithChar")
 	private String createURIString(final HTTPRequest request, final String fqdn, final int port, final String tinfo) {
 		final StringBuilder uri = new StringBuilder(SCHEME);
 
@@ -227,7 +232,10 @@ public class DeliveryService {
 		track.setResult(ResultType.DS_REDIRECT);
 		return getRedirectInetRecords(bypassDestination.optJSONObject("DNS"));
 	}
+
 	private List<InetRecord> redirectInetRecords = null;
+
+	@SuppressWarnings("PMD.CyclomaticComplexity")
 	private List<InetRecord> getRedirectInetRecords(final JSONObject dns) {
 		if (dns == null) {
 			return null;
@@ -421,6 +429,7 @@ public class DeliveryService {
 		return responseHeaders;
 	}
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	private void setResponseHeaders(final JSONObject jo) throws JSONException {
 		if (jo != null) {
 			for (String key : JSONObject.getNames(jo)) {

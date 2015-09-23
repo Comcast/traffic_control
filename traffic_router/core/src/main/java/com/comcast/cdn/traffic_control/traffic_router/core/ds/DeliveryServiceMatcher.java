@@ -99,6 +99,7 @@ public class DeliveryServiceMatcher {
 		matches .add(new Matcher(type,string,target));
 	}
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public boolean matches(final Request request) {
 		for(Matcher m : matches) {
 			if(!m.matches(request)) {

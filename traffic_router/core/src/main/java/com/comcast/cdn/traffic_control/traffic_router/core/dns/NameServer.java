@@ -40,6 +40,7 @@ import org.xbill.DNS.Zone;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouterManager;
 
+@SuppressWarnings("PMD.CyclomaticComplexity")
 public class NameServer {
 	private static final int MAX_SUPPORTED_EDNS_VERS = 0;
 	private static final int MAX_ITERATIONS = 6;
@@ -75,6 +76,7 @@ public class NameServer {
 		return response;
 	}
 
+	@SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
 	private void addAnswers(final Message request, final Message response, final InetAddress clientAddress, final DNSAccessRecord.Builder builder) {
 		final Record question = request.getQuestion();
 		final int qclass = question.getDClass();
@@ -146,7 +148,7 @@ public class NameServer {
 		response.addRecord(request.getQuestion(), Section.QUESTION);
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({"unchecked", "PMD.CyclomaticComplexity"})
 	private static void addRRset(final Name name, final Message response, final RRset rrset, final int section, final int flags) {
 		for (int s = 1; s < NUM_SECTIONS; s++) {
 			if (response.findRRset(name, rrset.getType(), s)) {
@@ -186,7 +188,7 @@ public class NameServer {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({"unchecked", "PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
 	private static void lookup(final Name qname, final int qtype, final Zone zone, final Message response, final int iteration, final int flags) {
 		if (iteration > MAX_ITERATIONS) {
 			return;

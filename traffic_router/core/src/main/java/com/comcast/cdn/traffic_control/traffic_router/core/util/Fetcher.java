@@ -70,6 +70,7 @@ public class Fetcher {
 		public X509Certificate[] getAcceptedIssuers() { return null; }
 	}
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	protected HttpURLConnection getConnection(final String url, final String data, final String requestMethod) throws IOException {
 		String method = GET_STR;
 

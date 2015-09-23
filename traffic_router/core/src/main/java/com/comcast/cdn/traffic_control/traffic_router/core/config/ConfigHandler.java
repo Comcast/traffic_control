@@ -45,6 +45,7 @@ import com.comcast.cdn.traffic_control.traffic_router.core.monitor.TrafficMonito
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouterManager;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker;
 
+@SuppressWarnings("PMD.CyclomaticComplexity")
 public class ConfigHandler {
 	private static final Logger LOGGER = Logger.getLogger(ConfigHandler.class);
 
@@ -147,6 +148,7 @@ public class ConfigHandler {
 	 *            the {@link TrafficRouterConfiguration}
 	 * @throws JSONException 
 	 */
+	@SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.LocalVariableCouldBeFinal", "PMD.AvoidDeeplyNestedIfStmts"})
 	private void parseCacheConfig(final JSONObject contentServers, final CacheRegister cacheRegister) throws JSONException {
 		final Map<String,Cache> map = new HashMap<String,Cache>();
 		final Map<String, List<String>> statMap = new HashMap<String, List<String>>();
@@ -241,6 +243,7 @@ public class ConfigHandler {
 	 *            the {@link TrafficRouterConfiguration}
 	 * @throws JSONException 
 	 */
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	private void parseDeliveryServiceConfig(final JSONObject deliveryServices, final CacheRegister cacheRegister) throws JSONException {
 		final List<DeliveryServiceMatcher> dnsServiceMatchers = new ArrayList<DeliveryServiceMatcher>();
 		final List<DeliveryServiceMatcher> httpServiceMatchers = new ArrayList<DeliveryServiceMatcher>();

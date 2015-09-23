@@ -117,6 +117,7 @@ public class DataExporter {
 		return map;
 	}
 
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	private CacheLocation getLocationFromCzm(final String ip) {
 		NetworkNode nn = null;
 

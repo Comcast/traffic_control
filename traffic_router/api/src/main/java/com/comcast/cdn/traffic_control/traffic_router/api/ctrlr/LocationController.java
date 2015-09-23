@@ -86,6 +86,7 @@ public class LocationController {
 	 * @return the {@link ModelAndView} that represents the result.
 	 */
 	@RequestMapping(value = "/caches", method = RequestMethod.GET)
+	@SuppressWarnings("PMD.LocalVariableCouldBeFinal")
 	public ModelAndView getCaches(final HttpServletRequest request) {
 		final ModelAndView result = new ModelAndView(VIEW_NAME);
 
