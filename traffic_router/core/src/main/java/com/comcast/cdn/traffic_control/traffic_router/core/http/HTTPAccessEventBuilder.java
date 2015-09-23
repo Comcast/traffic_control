@@ -25,6 +25,7 @@ public class HTTPAccessEventBuilder {
         return (o == null) ? "-" : o.toString();
     }
 
+    @SuppressWarnings("PMD.UseStringBufferForStringAppends")
     public static String create(final HTTPAccessRecord httpAccessRecord) {
         final long start = httpAccessRecord.getRequestDate().getTime();
         final String timeString = String.format("%d.%03d", start / 1000, start % 1000);
@@ -36,8 +37,12 @@ public class HTTPAccessEventBuilder {
         final String cqhm = formatObject(httpServletRequest.getMethod());
         final String cqhv = formatObject(httpServletRequest.getProtocol());
 
-        final String resultType = formatObject(httpAccessRecord.getResultType());
+        String resultType = formatObject(httpAccessRecord.getResultType());
         final String rerr = formatObject(httpAccessRecord.getRerr());
+
+        if (!"-".equals(resultType) && httpAccessRecord.getResultDetails() != null) {
+            resultType = resultType + "." + httpAccessRecord.getResultDetails();
+        }
 
         final StringBuilder stringBuilder = new StringBuilder(timeString)
             .append(" qtype=HTTP")
@@ -54,10 +59,8 @@ public class HTTPAccessEventBuilder {
             stringBuilder.append(" pssc=").append(pssc).append(" ttms=").append(ttms);
         }
 
-        if (httpAccessRecord.getResponseURL() != null) {
-            final String respurl = " rurl=\"" + formatObject(httpAccessRecord.getResponseURL()) + "\"";
-            stringBuilder.append(respurl);
-        }
+        final String respurl = " rurl=\"" + formatObject(httpAccessRecord.getResponseURL()) + "\"";
+        stringBuilder.append(respurl);
 
         return stringBuilder.toString();
     }
