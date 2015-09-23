@@ -1,6 +1,7 @@
 package com.comcast.cdn.traffic_control.traffic_router.core.dns;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Track.ResultType;
+import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Track.ResultDetails;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -142,5 +143,12 @@ public class DNSAccessEventBuilderTest {
         assertThat(dnsAccessEvent, equalTo("144140678.000 qtype=DNS chi=192.168.10.11 ttms=0" +
                 " xn=65535 fqdn=www.example.com. type=A class=IN ttl=12345" +
                 " rcode=NOERROR rtype=GEO rerr=\"-\" ans=\"foo bar baz\""));
+
+        dnsAccessRecord = builder.resultType(ResultType.MISS).resultDetails(ResultDetails.DS_NOT_FOUND).build();
+        dnsAccessEvent = DNSAccessEventBuilder.create(dnsAccessRecord);
+
+        assertThat(dnsAccessEvent, equalTo("144140678.000 qtype=DNS chi=192.168.10.11 ttms=0" +
+                " xn=65535 fqdn=www.example.com. type=A class=IN ttl=12345" +
+                " rcode=NOERROR rtype=MISS.DS_NOT_FOUND rerr=\"-\" ans=\"foo bar baz\""));
     }
 }

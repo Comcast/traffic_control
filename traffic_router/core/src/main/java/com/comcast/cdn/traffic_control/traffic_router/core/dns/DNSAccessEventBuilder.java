@@ -4,9 +4,19 @@ import org.xbill.DNS.*;
 
 public class DNSAccessEventBuilder {
 
+    @SuppressWarnings("PMD.UseStringBufferForStringAppends")
     public static String create(final DNSAccessRecord dnsAccessRecord) {
         final String event = createEvent(dnsAccessRecord);
-        final String rType = (dnsAccessRecord.getResultType() != null) ? dnsAccessRecord.getResultType().toString() : "-";
+        String rType = "-";
+
+        if (dnsAccessRecord.getResultType() != null) {
+            rType = dnsAccessRecord.getResultType().toString();
+            if (dnsAccessRecord.getResultDetails() != null) {
+                rType = rType + "." + dnsAccessRecord.getResultDetails();
+            }
+        }
+
+
         final String routingInfo = "rtype=" + rType + " rerr=\"-\"";
         String answer = "ans=\"-\"";
 
