@@ -83,13 +83,18 @@ sub readprofile {
 	my @data;
 	my $orderby = "name";
 	$orderby = $self->param('orderby') if ( defined $self->param('orderby') );
+
 	my $rs_data = $self->db->resultset("Profile")->search( undef, { prefetch => 'cdn', order_by => 'me.' . $orderby } );
+
 	while ( my $row = $rs_data->next ) {
+
+		my $cdn = defined($row->cdn) ? $row->cdn->name : "undef";
+
 		push(
 			@data, {
 				"id"           => $row->id,
 				"name"         => $row->name,
-				"cdn"          => $row->cdn->name,
+				"cdn"          => $cdn,
 				"description"  => $row->description,
 				"last_updated" => $row->last_updated,
 			}
