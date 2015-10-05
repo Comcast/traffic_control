@@ -155,14 +155,12 @@ sub aserver {
 			my $img     = "";
 
 			if ( $row->type->name eq "MID" || $row->type->name eq "EDGE" ) {
-                                my $pparam =
-                                   $self->db->resultset('ProfileParameter')
-                                   ->search( { -and => [ 'parameter.name' => 'server_graph_url', 'profile.name' => 'GLOBAL' ] }, { prefetch => [ 'parameter', 'profile' ] } )
-                                   ->single();
-                                my $srvg_url = defined($pparam) ? $pparam->parameter->value : undef;
-                                $aux_url = $srvg_url . $row->host_name;
-                                $img     = "graph.png";
-
+				my $pparam =
+					$self->db->resultset('ProfileParameter')
+					->search( { -and => [ 'parameter.name' => 'server_graph_url', 'profile.name' => 'GLOBAL' ] }, { prefetch => [ 'parameter', 'profile' ] } )
+					->single();
+				my $srvg_url = defined($pparam) ? $pparam->parameter->value : undef;
+				$aux_url = $srvg_url . $row->host_name;
 				$img     = "graph.png";
 			}
 			elsif ( $row->type->name eq "CCR" ) {
@@ -182,15 +180,15 @@ sub aserver {
 				$aux_url = "/redis/info/" . $row->host_name;
 				$img     = "info.png";
 			}
-                        elsif ( $row->type->name eq "TRAFFIC_STATS" ) {
-                                $aux_url = "https://" . $row->host_name;
-                                $img     = "info.png";
-                        }
-                        elsif ( $row->type->name eq "INFLUXDB" ) {
-                                # Assuming lots of information here... http and port 8083
-                                $aux_url = "http://" . $row->host_name . "." . $row->domain_name . ":" . "8083" . "/";
-                                $img     = "info.png";
-                        }
+			elsif ( $row->type->name eq "TRAFFIC_STATS" ) {
+				$aux_url = "https://" . $row->host_name . "." . $row->domain_name . "/";
+				$img     = "info.png";
+			}
+			elsif ( $row->type->name eq "INFLUXDB" ) {
+				# Assuming lots of information here... http and port 8083
+				$aux_url = "http://" . $row->host_name . "." . $row->domain_name . ":" . "8083" . "/";
+				$img     = "info.png";
+			}
 
 
 			@line = [
