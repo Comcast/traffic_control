@@ -1,4 +1,5 @@
 package main;
+
 #
 # Copyright 2015 Comcast Cable Communications Management, LLC
 #
@@ -61,7 +62,8 @@ Test::TestHelper->load_all_fixtures($jobs);
 ok $t->post_ok( '/api/1.1/user/login', json => { u => Test::TestHelper::PORTAL_USER, p => Test::TestHelper::PORTAL_USER_PASSWORD } )->status_is(200),
 	'Log into the portal user?';
 
-ok $schema->resultset('Parameter')->find( { name => 'CDN_name', value => 'cdn1' } ), 'cdn1 parameter exists?';
+ok $schema->resultset('Cdn')->find( { name => 'cdn1' } ), 'cdn1 parameter exists?';
+
 ok $schema->resultset('Profile')->find( { name => 'edge1' } ), 'Profile edge1 exists?';
 
 ok $schema->resultset('Deliveryservice')->find( { xml_id => 'test-ds1' } ), 'Deliveryservice test-ds1 exists?';
@@ -114,6 +116,16 @@ ok $t->post_ok(
 		startTime => $now,
 	}
 )->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'Create a second purge job?';
+
+ok $t->post_ok(
+	'/api/1.1/user/current/jobs',
+	json => {
+		dsId      => 2,
+		regex     => '/foo2/.*',
+		ttl       => 49,
+		startTime => $now,
+	}
+)->status_is(403)->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'purge job for this service not authorized for this user';
 
 ok $t->post_ok(
 	'/api/1.1/user/current/jobs',

@@ -23,7 +23,7 @@ use Time::Piece;
 use DateTime::Format::ISO8601;
 use constant ONE_DAY_IN_SECONDS          => 86400;
 use constant THREE_DAYS                  => ONE_DAY * 3;
-use constant SECONDS_IN_CAPTURE_INTERVAL => 10;
+use constant SECONDS_IN_CAPTURE_INTERVAL => 60;
 
 # constants do not interpolate
 my $delim = ":";
@@ -166,8 +166,12 @@ sub build_totals {
 	my $summary     = shift;
 	my $average     = $summary->{summary}{average};
 	my $count       = $summary->{summary}{count};
-	my $total_tps =
-		( $count * SECONDS_IN_CAPTURE_INTERVAL ) * $average;   # since each value represents 10 seconds, need to multiply by 10 to get the 'ps' (per second)
+
+	# Use intervalInSeconds to calculate total for the time period.
+	#  Default is 10s, but can be overridden by an extension.
+	my $interval_in_sec = $summary->{summary}{intervalInSeconds} // SECONDS_IN_CAPTURE_INTERVAL;
+
+	my $total_tps = ( $count * $interval_in_sec ) * $average;
 
 	if ( $metric_type =~ /kbps/ ) {
 
@@ -251,30 +255,6 @@ sub build_parameters {
 	}
 
 	return $result;
-}
-
-sub get_cdn_name_by_dsname {
-	my $self = shift;
-	my $dsname = shift || confess("Delivery Service name is required");
-
-	my $cdn_name = undef;
-	my $ds_id;
-	my $ds_profile_id;
-	my $ds = $mojo->db->resultset('Deliveryservice')->search( { xml_id => $dsname }, {} )->single();
-	if ( defined($ds) ) {
-		$ds_id         = $ds->id;
-		$ds_profile_id = $ds->profile->id;
-		my $param =
-			$mojo->db->resultset('ProfileParameter')
-			->search( { -and => [ profile => $ds_profile_id, 'parameter.name' => 'CDN_name' ] }, { prefetch => [ 'parameter', 'profile' ] } )->single();
-
-		if ( defined($param) ) {
-			$cdn_name = $param->parameter->value;
-			return $cdn_name;
-		}
-	}
-	return $cdn_name;
-
 }
 
 1;

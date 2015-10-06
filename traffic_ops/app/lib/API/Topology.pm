@@ -46,24 +46,17 @@ sub gen_crconfig_json {
 	$data_obj->{'stats'}->{'tm_host'}    = $self->req->headers->host;
 	$data_obj->{'stats'}->{'tm_user'}    = $self->current_user()->{username};
 
-	my $cdnname_param_id = $self->db->resultset('Parameter')->search( { name => 'CDN_name', value => $cdn_name } )->get_column('id')->single();
-	if ( defined($cdnname_param_id) ) {
-		@cdn_profiles = $self->db->resultset('ProfileParameter')->search( { parameter => $cdnname_param_id } )->get_column('profile')->all();
-		if ( scalar(@cdn_profiles) ) {
-			$ccr_profile_id =
-				$self->db->resultset('Profile')->search( { id => { -in => \@cdn_profiles }, name => { -like => 'CCR%' } } )->get_column('id')->single();
-			if ( !defined($ccr_profile_id) ) {
-				my $e = Mojo::Exception->throw("No CCR profile found in profile IDs: @cdn_profiles ");
-			}
-		}
-		else {
-			my $e = Mojo::Exception->throw( "No profiles found for CDN_name: " . $cdn_name );
-		}
 
-#@cache_rascal_profiles = $self->db->resultset('Profile')->search( { id => { -in => \@cdn_profiles }, name => [{ like => 'EDGE%'}, {like => 'MID%'}, {like => 'RASCAL%'}, {like => 'CDSIS%'} ] } )->get_column('id')->all();
+	@cdn_profiles = $self->db->resultset('Server')->search( { 'cdn.name' => $cdn_name }, { prefetch => 'cdn' } )->get_column('profile')->all();
+	if ( scalar(@cdn_profiles) ) {
+		$ccr_profile_id =
+			$self->db->resultset('Profile')->search( { id => { -in => \@cdn_profiles }, name => { -like => 'CCR%' } } )->get_column('id')->single();
+		if ( !defined($ccr_profile_id) ) {
+			my $e = Mojo::Exception->throw("No CCR profile found in profile IDs: @cdn_profiles ");
+		}
 	}
 	else {
-		my $e = Mojo::Exception->throw( "Parameter ID not found for CDN_name: " . $cdn_name );
+		my $e = Mojo::Exception->throw( "No profiles found for CDN_name: " . $cdn_name );
 	}
 
 	my %condition = ( 'profile_parameters.profile' => $ccr_profile_id, 'config_file' => 'CRConfig.json' );
@@ -236,6 +229,10 @@ sub gen_crconfig_json {
 		elsif ( $geo_limit == 2 ) {
 			$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'coverageZoneOnly'} = 'false';
 			$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'geoEnabled'} = [ { 'countryCode' => 'US' } ];
+		}
+		elsif ( $geo_limit == 3 ) {
+			$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'coverageZoneOnly'} = 'false';
+			$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'geoEnabled'} = [ { 'countryCode' => 'CA' } ];
 		}
 		else {
 			$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'coverageZoneOnly'} = 'false';
