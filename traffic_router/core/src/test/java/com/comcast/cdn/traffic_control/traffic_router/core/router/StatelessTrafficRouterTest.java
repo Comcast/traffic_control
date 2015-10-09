@@ -45,9 +45,6 @@ public class StatelessTrafficRouterTest {
 	public static void setUpBeforeClass() throws Exception {
 		try {
 			context = TestBase.getContext();
-			Logger root = Logger.getRootLogger();
-			boolean rootIsConfigured = root.getAllAppenders().hasMoreElements();
-			System.out.println("rootIsConfigured: "+rootIsConfigured);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -100,9 +97,6 @@ public class StatelessTrafficRouterTest {
 			HTTPRouteResult routeResult = trafficRouterManager.getTrafficRouter().route(req, track);
 			if (routeResult == null) {
 //				fail("HTTP route returned null");
-				System.out.println("HTTP route returned null");
-			} else {
-				System.out.println(routeResult.getUrl());
 			}
 		} catch (Exception e2) {
 			e2.printStackTrace();

@@ -25,6 +25,7 @@ import java.net.Socket;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Message;
+import org.xbill.DNS.WireParseException;
 
 public class TCP extends AbstractProtocol {
     private static final Logger LOGGER = Logger.getLogger(TCP.class);
@@ -99,7 +100,11 @@ public class TCP extends AbstractProtocol {
                 final byte[] response = query(client, request);
                 os.writeShort(response.length);
                 os.write(response);
-            } catch (final Exception e) {
+            }
+            catch (final WireParseException e) {
+                LOGGER.info(e.getMessage());
+            }
+            catch (final Exception e) {
                 LOGGER.error(e.getMessage(), e);
             } finally {
                 try {

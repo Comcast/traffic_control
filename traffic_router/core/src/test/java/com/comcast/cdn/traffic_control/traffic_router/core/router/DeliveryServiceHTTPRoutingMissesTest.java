@@ -5,6 +5,7 @@ import com.comcast.cdn.traffic_control.traffic_router.core.request.HTTPRequest;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Track;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Track.ResultDetails;
 
+import com.google.api.client.json.Json;
 import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,6 +25,8 @@ public class DeliveryServiceHTTPRoutingMissesTest {
     @Before
     public void before() throws Exception {
         JSONObject unusedByTest = mock(JSONObject.class);
+        JSONObject ttls = mock(JSONObject.class);
+        when(unusedByTest.optJSONObject("ttls")).thenReturn(ttls);
         deliveryService = new DeliveryService("ignoredbytest", unusedByTest);
         httpRequest = mock(HTTPRequest.class);
         track = StatTracker.getTrack();

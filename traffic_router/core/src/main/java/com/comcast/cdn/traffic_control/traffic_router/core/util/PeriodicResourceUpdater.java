@@ -136,7 +136,7 @@ public class PeriodicResourceUpdater {
 
 	public void init() {
 		putCurrent();
-		LOGGER.warn("Starting schedule with interval: "+getPollingInterval() + " : "+TimeUnit.MILLISECONDS);
+		LOGGER.info("Starting schedule with interval: "+getPollingInterval() + " : "+TimeUnit.MILLISECONDS);
 		scheduledService = executorService.scheduleWithFixedDelay(updater, 0, getPollingInterval(), TimeUnit.MILLISECONDS);
 		// wait here until something is loaded
 		final File existingDB = new File(databaseLocation);
