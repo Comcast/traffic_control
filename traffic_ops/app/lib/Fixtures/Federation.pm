@@ -1,4 +1,4 @@
-package Fixtures::Role;
+package Fixtures::Federation;
 #
 # Copyright 2015 Comcast Cable Communications Management, LLC
 #
@@ -14,73 +14,48 @@ package Fixtures::Role;
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+#
+#
 use Moose;
 extends 'DBIx::Class::EasyFixture';
 use namespace::autoclean;
 use Digest::SHA1 qw(sha1_hex);
 
 my %definition_for = (
-	disallowed => {
-		new   => 'Role',
+	name1 => {
+		new   => 'Federation',
 		using => {
 			id          => 1,
-			name        => 'disallowed',
-			description => 'block all access',
-			priv_level  => 0,
+			cname       => 'cname1.',
+			description => 'resolver4 type',
+			ttl         => 86400,
 		},
 	},
-	read_only => {
-		new   => 'Role',
+	name2 => {
+		new   => 'Federation',
 		using => {
 			id          => 2,
-			name        => 'read-only user',
-			description => 'block all access',
-			priv_level  => 10,
+			cname       => 'cname2.',
+			description => 'resolver4 type',
+			ttl         => 86400,
 		},
 	},
-	federation => {
-		new   => 'Role',
-		using => {
-			id          => 7,
-			name        => 'federation',
-			description => 'Role for Secondary CZF',
-			priv_level  => 11,
-		},
-	},
-	operations => {
-		new   => 'Role',
+	name3 => {
+		new   => 'Federation',
 		using => {
 			id          => 3,
-			name        => 'operations',
-			description => 'block all access',
-			priv_level  => 20,
+			cname       => 'cname3.',
+			description => 'resolver6 type',
+			ttl         => 86400,
 		},
 	},
-	admin => {
-		new   => 'Role',
+	name4 => {
+		new   => 'Federation',
 		using => {
 			id          => 4,
-			name        => 'admin',
-			description => 'super-user',
-			priv_level  => 30,
-		},
-	},
-	migrations => {
-		new   => 'Role',
-		using => {
-			id          => 5,
-			name        => 'migrations',
-			description => 'database migrations user - DO NOT REMOVE',
-			priv_level  => 20,
-		},
-	},
-	portal => {
-		new   => 'Role',
-		using => {
-			id          => 6,
-			name        => 'portal',
-			description => 'Portal User',
-			priv_level  => 2,
+			cname       => 'cname4.',
+			description => 'resolver6 type',
+			ttl         => 86400,
 		},
 	},
 );
