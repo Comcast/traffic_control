@@ -239,11 +239,11 @@ public class TrafficMonitorWatcher  {
 		synchronized(hostSync) {
 			if (hosts == null || hosts.length == 0) {
 				hosts = newHosts;
-				LOGGER.warn("traffic_monitor.bootstrap.hosts: " + Arrays.toString(hosts));
+				LOGGER.info("traffic_monitor.bootstrap.hosts: " + Arrays.toString(hosts));
 			} else if (!Arrays.asList(hosts).containsAll(Arrays.asList(newHosts))
 					|| !Arrays.asList(newHosts).containsAll(Arrays.asList(hosts))) {
 				hosts = newHosts;
-				LOGGER.warn("traffic_monitor.bootstrap.hosts changed to: " + Arrays.toString(hosts));
+				LOGGER.info("traffic_monitor.bootstrap.hosts changed to: " + Arrays.toString(hosts));
 			} else {
 				LOGGER.debug("traffic_monitor.bootstrap.hosts unchanged: " + Arrays.toString(hosts));
 			}

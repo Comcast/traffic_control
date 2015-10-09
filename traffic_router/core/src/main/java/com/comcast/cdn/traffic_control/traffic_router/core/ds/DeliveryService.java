@@ -69,8 +69,7 @@ public class DeliveryService {
 		this.props = dsJo;
 		this.ttls = dsJo.optJSONObject("ttls");
 		if(this.ttls == null) {
-			LOGGER.warn("ttls is null for:"+id);
-			LOGGER.warn(dsJo.toString(2));
+			LOGGER.warn("ttls is null for " + id + ": '" + dsJo.toString(2) + "'");
 		}
 		this.coverageZoneOnly = dsJo.getBoolean("coverageZoneOnly");
 		this.geoEnabled = dsJo.optJSONArray("geoEnabled");

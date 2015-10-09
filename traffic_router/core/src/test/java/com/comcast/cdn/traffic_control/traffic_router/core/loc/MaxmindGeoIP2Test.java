@@ -44,8 +44,6 @@ public class MaxmindGeoIP2Test {
 
 		long duration = System.currentTimeMillis() - start;
 		double tps = (double) total / ((double) duration / 1000);
-
-		System.out.println("MaxMind2 lookup duration: " + duration + "ms, " + tps + " tps");
 	}
 
 	@After

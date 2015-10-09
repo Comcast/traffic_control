@@ -79,7 +79,7 @@ public abstract class AbstractServiceUpdater {
 
 	public void init() {
 		final long pi = getPollingInterval();
-		LOGGER.warn(getClass().getSimpleName() + " Starting schedule with interval: " + pi + " : " + TimeUnit.MILLISECONDS);
+		LOGGER.info(getClass().getSimpleName() + " Starting schedule with interval: " + pi + " : " + TimeUnit.MILLISECONDS);
 		scheduledService = executorService.scheduleWithFixedDelay(updater, pi, pi, TimeUnit.MILLISECONDS);
 	}
 
