@@ -44,7 +44,6 @@ my $dispatch_table ||= {
 	"ip_allow.config"         => sub { ip_allow_dot_config(@_) },
 	"12M_facts"               => sub { facts(@_) },
 	"regex_revalidate.config" => sub { regex_revalidate_dot_config(@_) },
-	"drop_qstring.config"     => sub { drop_qstring_dot_config(@_) },
 	"bg_fetch.config"         => sub { bg_fetch_dot_config(@_) },
 
 	"url_sig_.config"      => sub { url_sig_config(@_) },
@@ -912,6 +911,10 @@ sub build_remap_line {
 	}
 	else {
 		$text .= "map	" . $map_from . "     " . $map_to . " \@plugin=header_rewrite.so \@pparam=dscp/set_dscp_" . $dscp . ".config";
+                # Since DSCP remap is always used (???), add the no-query-string here.
+		if ( $remap->{qstring_ignore} == 2 ) {
+			$text .= " \@pparam=no-query-string";
+		}
 	}
 	if ( defined( $remap->{edge_header_rewrite} ) ) {
 		$text .= " \@plugin=header_rewrite.so \@pparam=" . $remap->{hdr_rw_file};
@@ -919,11 +922,7 @@ sub build_remap_line {
 	if ( $remap->{signed} == 1 ) {
 		$text .= " \@plugin=url_sig.so \@pparam=url_sig_" . $remap->{ds_xml_id} . ".config";
 	}
-	if ( $remap->{qstring_ignore} == 2 ) {
-		my $dqs_file = "drop_qstring.config";
-		$text .= " \@plugin=regex_remap.so \@pparam=" . $dqs_file;
-	}
-	elsif ( $remap->{qstring_ignore} == 1 ) {
+	if ( $remap->{qstring_ignore} == 1 ) {
 		my $global_exists =
 			$self->db->resultset('ProfileParameter')
 			->search( { -and => [ profile => $server->profile->id, 'parameter.config_file' => 'cacheurl.config', 'parameter.name' => 'location' ] },
@@ -1193,28 +1192,6 @@ sub take_and_bake {
 	my $text   = $self->header_comment( $server->host_name );
 	foreach my $parameter ( sort keys %{$data} ) {
 		$text .= $data->{$parameter} . "\n";
-	}
-	return $text;
-}
-
-sub drop_qstring_dot_config {
-	my $self = shift;
-	my $id   = shift;
-	my $file = shift;
-
-	my $server = $self->server_data($id);
-	my $text   = $self->header_comment( $server->host_name );
-
-	$server = &server_data( $self, $id );
-	my $drop_qstring =
-		$self->db->resultset('ProfileParameter')
-		->search( { -and => [ profile => $server->profile->id, 'parameter.name' => 'content', 'parameter.config_file' => 'drop_qstring.config' ] },
-		{ prefetch => [ 'parameter', 'profile' ] } )->get_column('parameter.value')->single();
-	if ($drop_qstring) {
-		$text .= $drop_qstring . "\n";
-	}
-	else {
-		$text .= "/([^?]+) \$s://\$t/\$1\n";
 	}
 	return $text;
 }
