@@ -235,12 +235,8 @@ func queryDB(con *influx.Client, cmd string, database string) (res []influx.Resu
 }
 
 func influxConnect(config *StartupConfig, trafOps TrafOpsData) (*influx.Client, error) {
-	//Connect to InfluxDb
-	activeServers := len(trafOps.InfluxDbProps)
-	rand.Seed(42)
-	//if there is only 1 active, use it
-	if activeServers == 1 {
-		u, err := url.Parse(fmt.Sprintf("http://%s:%d", trafOps.InfluxDbProps[0].Fqdn, trafOps.InfluxDbProps[0].Port))
+	connect := func(props InfluxDbProps) (*influx.Client, error) {
+		u, err := url.Parse(fmt.Sprintf("http://%s:%d", props.Fqdn, props.Port))
 		if err != nil {
 			return nil, err
 		}
@@ -258,39 +254,29 @@ func influxConnect(config *StartupConfig, trafOps TrafOpsData) (*influx.Client, 
 			return nil, err
 		}
 		return con, nil
-	} else if activeServers > 1 {
+	}
+
+	//Connect to InfluxDb
+	activeServers := len(trafOps.InfluxDbProps)
+	rand.Seed(42)
+	//if there is only 1 active, use it
+	if activeServers == 1 {
+		return connect(trafOps.InfluxDbProps[0])
+	}
+	if activeServers > 1 {
 		//try to connect to all ONLINE servers until we find one that works
-		for i := 0; i < activeServers; i++ {
-			u, err := url.Parse(fmt.Sprintf("http://%s:%d", trafOps.InfluxDbProps[i].Fqdn, trafOps.InfluxDbProps[i].Port))
+		for _, props := range trafOps.InfluxDbProps {
+			con, err := connect(props)
 			if err != nil {
 				errHndlr(err, ERROR)
-			} else {
-				conf := influx.Config{
-					URL:      *u,
-					Username: config.InfluxUser,
-					Password: config.InfluxPassword,
-				}
-				con, err := influx.NewClient(conf)
-				if err != nil {
-					errHndlr(err, ERROR)
-					continue
-				} else {
-					_, _, err = con.Ping()
-					if err != nil {
-						errHndlr(err, ERROR)
-						continue
-					} else {
-						return con, nil
-					}
-				}
+				continue
 			}
+			return con, nil
 		}
-		err := errors.New("Could not connect to any of the InfluxDb servers that are ONLINE in traffic ops.")
-		return nil, err
-	} else {
-		err := errors.New("No online InfluxDb servers could be found!")
-		return nil, err
+		return nil, errors.New("Could not connect to any of the InfluxDb servers that are ONLINE in traffic ops.")
 	}
+
+	return nil, errors.New("No online InfluxDb servers could be found!")
 }
 
 func getToData(config *StartupConfig, init bool) (TrafOpsData, error) {
