@@ -93,7 +93,8 @@ sub startup {
 	my $self = shift;
 	$mode = $self->mode;
 	$self->app->types->type( iso => 'application/octet-stream' );
-	$self->log->info( "Types version: " . Dumper( $self->app->types ) . "\n" );
+
+	#$self->log->info( "Types version: " . Dumper( $self->app->types ) . "\n" );
 
 	$self->setup_logging($mode);
 	$self->validate_cdn_conf();
@@ -463,8 +464,8 @@ sub validate_cdn_conf {
 
 	my $cdn_info = $self->load_conf( $ENV{MOJO_CONFIG} );
 	my $user;
-	if ( !exists( $cdn_info->{shared_secret} ) ) {
-		print("WARNING: no shared_secret found in in $ENV{MOJO_CONFIG}.\n");
+	if ( !exists( $cdn_info->{secrets} ) ) {
+		print("WARNING: no secrets found in $ENV{MOJO_CONFIG}.\n");
 	}
 
 	if ( exists( $cdn_info->{hypnotoad}{user} ) ) {
@@ -521,8 +522,9 @@ sub set_secrets {
 	# The following commit details the change from secret to secrets in 4.63
 	# https://github.com/kraih/mojo/commit/57e5129436bf3d717a13e092dd972217938e29b5
 	my $cdn_info = $self->load_conf( $ENV{MOJO_CONFIG} );
+
 	# for backward compatability -- keep old secret if not found in cdn.conf
-	my $secrets  = $cdn_info->{secrets} // [ 'mONKEYDOmONKEYSEE.' ];
+	my $secrets = $cdn_info->{secrets} // ['mONKEYDOmONKEYSEE.'];
 	if ( ref $secrets ne 'ARRAY' ) {
 		my $e = Mojo::Exception->throw("Invalid 'secrets' entry in cdn.conf");
 	}
