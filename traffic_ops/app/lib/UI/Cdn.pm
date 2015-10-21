@@ -597,7 +597,6 @@ sub afederation {
 				$user = $u->tm_user;
 			}
 
-			$self->app->log->debug( "user #-> " . Dumper($user) );
 			my $full_name = "";
 			my $username  = "";
 			my $company   = "";

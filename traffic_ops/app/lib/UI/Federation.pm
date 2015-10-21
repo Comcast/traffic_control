@@ -48,6 +48,7 @@ sub add {
 	$self->stash(
 		tm_user     => $tm_user,
 		ds_id       => 0,
+		user_id     => 0,
 		role_name   => undef,
 		federation  => {},
 		fbox_layout => 1,
@@ -78,10 +79,8 @@ sub edit {
 	my $ftusers =
 		$self->db->resultset('FederationTmuser')->search( { federation => $fed_id }, { prefetch => [ 'federation', 'tm_user' ] } );
 	while ( my $ft = $ftusers->next ) {
-		$user_id = $ft->tm_user->id;
-		$self->app->log->debug( "user_id #-> " . $user_id );
+		$user_id   = $ft->tm_user->id;
 		$role_name = $ft->role->name;
-		$self->app->log->debug( "role_name #-> " . $role_name );
 	}
 
 	my $current_username = $self->current_user()->{username};
@@ -231,8 +230,12 @@ sub update {
 
 # Create
 sub create {
-	my $self  = shift;
-	my $ds_id = $self->param("ds_id");
+	my $self    = shift;
+	my $ds_id   = $self->param("ds_id");
+	my $user_id = $self->param("user_id");
+	my $cname   = $self->param("federation.cname");
+	my $desc    = $self->param("federation.description");
+	my $ttl     = $self->param("federation.ttl");
 	&stash_role($self);
 	$self->stash(
 		role_name            => undef,
@@ -244,7 +247,7 @@ sub create {
 		mode                 => 'add'
 	);
 	if ( $self->is_valid("add") ) {
-		my $new_id = $self->create_federation_mapping($ds_id);
+		my $new_id = $self->create_federation( $ds_id, $user_id, $cname, $desc, $ttl );
 		if ( $new_id > 0 ) {
 			$self->app->log->debug("redirecting....");
 			return $self->redirect_to('/close_fancybox.html');
@@ -255,12 +258,14 @@ sub create {
 	}
 }
 
-sub create_federation_mapping {
-	my $self          = shift;
+sub create_federation {
+	my $self = shift;
+
 	my $ds_id         = shift;
-	my $cname         = $self->param("federation.cname");
-	my $desc          = $self->param("federation.description");
-	my $ttl           = $self->param("federation.ttl");
+	my $user_id       = shift;
+	my $cname         = shift;
+	my $desc          = shift;
+	my $ttl           = shift;
 	my $federation_id = -1;
 	my $fed           = $self->db->resultset('Federation')->create(
 		{
@@ -280,6 +285,17 @@ sub create_federation_mapping {
 				deliveryservice => $ds_id,
 			}
 		);
+		$fed_ds_id = $fed_ds->insert();
+
+		if ( $fed_ds_id > 0 ) {
+			my $ft = $self->db->resultset('FederationTmuser')->create(
+				{
+					federation => $federation_id,
+					tm_user    => $user_id,
+					role       => FEDERATION_ROLE_ID,
+				}
+			);
+		}
 		$fed_ds_id = $fed_ds->insert();
 
 		my $ds = $self->db->resultset('Deliveryservice')->search( { id => $ds_id } )->single();
