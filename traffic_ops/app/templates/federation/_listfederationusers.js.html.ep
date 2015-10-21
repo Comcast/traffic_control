@@ -14,15 +14,16 @@
      limitations under the License.
  */
 
-function listDeliveryServices(selected_ds_id) {
-	$("#delivery_service").html("<select id=\"dsselect\" name=\"ds_id\"></select>");	
-	$.get("/api/1.2/deliveryservices.json?orderby=name", function(data){
-		var response = data['response'];
+function listFederationUsers(selected_user_id) {
+	$("#user").html("<select id=\"user_select\" name=\"user_id\"></select>");	
+	$.get("/federation/users.json", function(data){
+		var response = data;
 		$.each(response, function(idx, val) {
-			if (response[idx].id == selected_ds_id) {
-				$("#dsselect").append("<option selected=\"selected\" value=" + response[idx].id + ">" + response[idx].xmlId + "</option>");
+			var display_value = response[idx].fullname + " (" + response[idx].username + ") - " + response[idx].tenant;
+			if (response[idx].id == selected_user_id) {
+				$("#user_select").append("<option selected=\"selected\" value=" + response[idx].id + ">" + display_value + "</option>");
 			} else {
-				$("#dsselect").append("<option value=" + response[idx].id + ">" + response[idx].xmlId + "</option>");
+				$("#user_select").append("<option value=" + response[idx].id + ">" + display_value + "</option>");
 			}
 		});
 	}, "json");

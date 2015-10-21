@@ -74,10 +74,14 @@ sub edit {
 	}
 
 	my $role_name;
+	my $user_id;
 	my $ftusers =
 		$self->db->resultset('FederationTmuser')->search( { federation => $fed_id }, { prefetch => [ 'federation', 'tm_user' ] } );
 	while ( my $ft = $ftusers->next ) {
+		$user_id = $ft->tm_user->id;
+		$self->app->log->debug( "user_id #-> " . $user_id );
 		$role_name = $ft->role->name;
+		$self->app->log->debug( "role_name #-> " . $role_name );
 	}
 
 	my $current_username = $self->current_user()->{username};
@@ -86,10 +90,10 @@ sub edit {
 	&stash_role($self);
 
 	my $delivery_services = get_delivery_services( $self, $ds_id );
-	$self->app->log->debug( "delivery_services #-> " . Dumper($delivery_services) );
 	$self->stash(
 		tm_user           => $tm_user,
 		ds_id             => $ds_id,
+		user_id           => $user_id,              # the federation role
 		role_id           => FEDERATION_ROLE_ID,    # the federation role
 		role_name         => $role_name,
 		federation        => $federation,
@@ -98,6 +102,18 @@ sub edit {
 		delivery_services => $delivery_services
 	);
 	return $self->render('federation/edit');
+}
+
+# .json format for the jqTree widge
+sub users {
+	my $self = shift;
+	my $data;
+	my $fed_users =
+		$self->db->resultset('TmUser')->search( { role => FEDERATION_ROLE_ID }, { order_by => 'full_name' } );
+	while ( my $row = $fed_users->next ) {
+		push( @$data, { id => $row->id, username => $row->username, fullname => $row->full_name, tenant => $row->company } );
+	}
+	return $self->render( json => $data );
 }
 
 # .json format for the jqTree widge
@@ -166,9 +182,11 @@ sub get_delivery_services {
 
 # Update
 sub update {
-	my $self        = shift;
-	my $fed_id      = $self->param('federation_id');
-	my $ds_id       = $self->param('ds_id');
+	my $self    = shift;
+	my $fed_id  = $self->param('federation_id');
+	my $ds_id   = $self->param('ds_id');
+	my $user_id = $self->param('user_id');
+	$self->app->log->debug( "user_id #-> " . $user_id );
 	my $cname       = $self->param('federation.cname');
 	my $description = $self->param('federation.description');
 	my $ttl         = $self->param('federation.ttl');
@@ -181,11 +199,16 @@ sub update {
 		$dbh->ttl($ttl);
 		$dbh->update();
 
-		my $ftusers =
-			$self->db->resultset('FederationTmuser')->search( { federation => $fed_id }, { prefetch => [ 'federation', 'tm_user' ] } );
-		while ( my $ft = $ftusers->next ) {
-			my $fid    = $ft->federation->id;
-			my $fcname = $ft->federation->cname;
+		my $ft = $self->db->resultset('FederationTmuser')->find_or_create(
+			{
+				federation => $fed_id,
+				role       => FEDERATION_ROLE_ID
+			}
+		);
+
+		if ( defined($ft) ) {
+			$ft->federation($fed_id);
+			$ft->tm_user($user_id);
 			$ft->role(FEDERATION_ROLE_ID);
 			$ft->update();
 		}

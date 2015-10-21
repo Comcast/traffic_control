@@ -47,7 +47,7 @@ sub register {
 					last;
 				}
 				if ( !defined($traffic_monitor_row) ) {
-					cluck("No TrafficMonitor servers found for: $cdn");
+					$self->app->log->error("No TrafficMonitor servers found for: $cdn");
 					return;
 				}
 				$hostname = $traffic_monitor_row->host_name . "." . $traffic_monitor_row->domain_name;
