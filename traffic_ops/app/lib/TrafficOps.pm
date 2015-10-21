@@ -132,10 +132,25 @@ sub startup {
 		$self->log->info("Found $ldap_conf_path, LDAP is now enabled.\n");
 	}
 
-=cut
-    # Ask Dan about this
 	$self->hook(
 		before_render => sub {
+			my ( $self, $args ) = @_;
+
+			# Make sure we are rendering the exception template
+			return unless my $template = $args->{template};
+			return unless $template eq 'exception';
+
+			$self->app->log->error( $self->stash(" exception ") );
+
+			# Switch to JSON rendering if content negotiation allows it
+			$args->{json} = { alerts => [ { "level" => "error", "text" => "An error occurred. Please contact your administrator." } ] }
+				if $self->accepts('json');
+		}
+	);
+
+=cut
+	$self->hook(
+		before_render2 => sub {
 			my ( $self, $args ) = @_;
 
 			$self->app->log->error( $self->stash("exception") );
@@ -157,7 +172,6 @@ sub startup {
 		}
 
 	);
-
 =cut
 
 	if ( defined($access_control_allow_origin) ) {
