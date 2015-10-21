@@ -136,15 +136,22 @@ sub startup {
 		before_render => sub {
 			my ( $self, $args ) = @_;
 
-			# Make sure we are rendering the exception template
-			return unless my $template = $args->{template};
-			return unless $template eq 'exception';
+			$self->app->log->error( $self->stash("exception") );
 
-			$self->app->log->error( $self->stash(" exception ") );
+			my $m = $args->{exception};
+			if ( defined($m) ) {
+				$self->app->log->error( "Exception #-> " . $m->message );
+			}
 
 			# Switch to JSON rendering if content negotiation allows it
-			$args->{json} = { alerts => [ { "level" => "error", "text" => "An error occurred. Please contact your administrator." } ] }
-				if $self->accepts('json');
+			my $content_type = $self->req->headers->content_type;
+			if ( $content_type eq 'application/json' ) {
+				return $args->{json} = { alerts => [ { "level" => "error", "text" => "An error occurred. Please contact your administrator." } ] };
+			}
+			else {    # Make sure we are rendering the exception template
+				return unless my $template = $args->{template};
+				return unless $template eq 'exception';
+			}
 		}
 	);
 
