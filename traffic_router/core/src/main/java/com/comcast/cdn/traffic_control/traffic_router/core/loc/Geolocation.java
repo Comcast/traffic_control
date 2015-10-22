@@ -50,6 +50,16 @@ public class Geolocation {
 		this.longitude = longitude;
 	}
 
+	public Geolocation(final double latitude, final double longitude,
+			final String city, final String countryCode,
+			final String countryName, final String postalCode) {
+		this(latitude, longitude);
+		this.city = city;
+		this.countryCode = countryCode;
+		this.countryName = countryName;
+		this.postalCode = postalCode;
+	}
+
 	public Geolocation(final CityResponse response) {
 		// we will check getLocation from caller because these fields are final
 		this.latitude = response.getLocation().getLatitude();
@@ -69,8 +79,8 @@ public class Geolocation {
 		}
 	}
 
-	public Map<String,String> getProperties() {
-		final Map<String,String> map = new HashMap<String,String>();
+	public Map<String, String> getProperties() {
+		final Map<String, String> map = new HashMap<String, String>();
 		map.put("latitude", Double.toString(latitude));
 		map.put("longitude", Double.toString(longitude));
 		map.put("postalCode", postalCode);
@@ -86,28 +96,29 @@ public class Geolocation {
 			return true;
 		} else if (obj instanceof Geolocation) {
 			final Geolocation rhs = (Geolocation) obj;
-			return new EqualsBuilder()
-					.append(getLatitude(), rhs.getLatitude())
-					.append(getLongitude(), rhs.getLongitude())
-					.isEquals();
+			return new EqualsBuilder().append(getLatitude(), rhs.getLatitude())
+					.append(getLongitude(), rhs.getLongitude()).isEquals();
 		} else {
 			return false;
 		}
 	}
 
 	/**
-	 * Returns the great circle distance in kilometers between this {@link Geolocation} and the
-	 * specified location
+	 * Returns the great circle distance in kilometers between this
+	 * {@link Geolocation} and the specified location
 	 * 
 	 * @param other
 	 * @return the great circle distance in km
 	 */
 	public double getDistanceFrom(final Geolocation other) {
 		if (other != null) {
-			final double dLat = Math.toRadians(getLatitude() - other.getLatitude());
-			final double dLon = Math.toRadians(getLongitude() - other.getLongitude());
+			final double dLat = Math.toRadians(getLatitude()
+					- other.getLatitude());
+			final double dLon = Math.toRadians(getLongitude()
+					- other.getLongitude());
 			final double a = (Math.sin(dLat / 2) * Math.sin(dLat / 2))
-					+ (Math.cos(Math.toRadians(getLatitude())) * Math.cos(Math.toRadians(other.getLatitude()))
+					+ (Math.cos(Math.toRadians(getLatitude()))
+							* Math.cos(Math.toRadians(other.getLatitude()))
 							* Math.sin(dLon / 2) * Math.sin(dLon / 2));
 			final double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 			return MEAN_EARTH_RADIUS * c;
@@ -136,15 +147,14 @@ public class Geolocation {
 
 	@Override
 	public int hashCode() {
-		return new HashCodeBuilder(1, 31)
-		.append(getLatitude())
-		.append(getLongitude())
-		.toHashCode();
+		return new HashCodeBuilder(1, 31).append(getLatitude())
+				.append(getLongitude()).toHashCode();
 	}
 
 	@Override
 	public String toString() {
-		return "Geolocation [latitude=" + latitude + ", longitude=" + longitude + "]";
+		return "Geolocation [latitude=" + latitude + ", longitude=" + longitude
+				+ "]";
 	}
 
 }

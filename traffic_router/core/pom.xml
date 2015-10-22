@@ -23,7 +23,7 @@
 	<parent>
 		<groupId>com.comcast.cdn.traffic_control.traffic_router</groupId>
 		<artifactId>traffic_router</artifactId>
-		<version>1.2.1</version>
+		<version>1.1.6</version>
 	</parent>
 
 	<scm>
@@ -200,13 +200,7 @@
 					</archive>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<configuration>
-					<argLine>-DminimumTPS=80 -DnnTPS=12000</argLine>
-				</configuration>
-			</plugin>
+
 		</plugins>
 	</build>
 
@@ -370,6 +364,11 @@
 			<artifactId>geoip2</artifactId>
 			<version>2.1.0</version>
 		</dependency>
+		<dependency>
+			<groupId>com.quova.bff</groupId>
+			<artifactId>bff-reader</artifactId>
+			<version>1.0</version>
+		</dependency>		
 	</dependencies>
 
 </project>
