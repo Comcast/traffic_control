@@ -49,7 +49,17 @@ public class Geolocation {
 		this.latitude = latitude;
 		this.longitude = longitude;
 	}
-
+	
+	public Geolocation(final double latitude, final double longitude,
+			final String city, final String countryCode, 
+			final String countryName, final String postalCode) {
+		this(latitude, longitude);
+		this.city = city;
+		this.countryCode = countryCode;
+		this.countryName = countryName;
+		this.postalCode = postalCode;
+	}
+	
 	public Geolocation(final CityResponse response) {
 		// we will check getLocation from caller because these fields are final
 		this.latitude = response.getLocation().getLatitude();
