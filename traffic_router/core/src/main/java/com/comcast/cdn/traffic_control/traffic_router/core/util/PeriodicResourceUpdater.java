@@ -107,7 +107,6 @@ public class PeriodicResourceUpdater {
 		executorService.shutdownNow();
 
 		while (!asyncHttpClient.isClosed()) {
-			LOGGER.warn("closing");
 			asyncHttpClient.close();
 		}
 	}
@@ -136,13 +135,13 @@ public class PeriodicResourceUpdater {
 
 	public void init() {
 		putCurrent();
-		LOGGER.warn("Starting schedule with interval: "+getPollingInterval() + " : "+TimeUnit.MILLISECONDS);
+		LOGGER.info("Starting schedule with interval: "+getPollingInterval() + " : "+TimeUnit.MILLISECONDS);
 		scheduledService = executorService.scheduleWithFixedDelay(updater, 0, getPollingInterval(), TimeUnit.MILLISECONDS);
 		// wait here until something is loaded
 		final File existingDB = new File(databaseLocation);
 		if(pauseTilLoaded ) {
 			while(!existingDB.exists()) {
-				LOGGER.warn("Waiting for valid: "+databaseLocation );
+				LOGGER.info("Waiting for valid: " + databaseLocation);
 				try {
 					Thread.sleep(getPollingInterval());
 				} catch (InterruptedException e) {
@@ -168,8 +167,6 @@ public class PeriodicResourceUpdater {
 			if (!hasBeenLoaded || needsUpdating(existingDB)) {
 				asyncHttpClient.executeRequest(getRequest(urls.nextUrl()), new UpdateHandler()); // AsyncHandlers are NOT thread safe; one instance per request
 				return true;
-			} else {
-				LOGGER.info("Database " + existingDB.getAbsolutePath() + " does not require updating.");
 			}
 		} catch (final Exception e) {
 			LOGGER.warn(e.getMessage(), e);
@@ -181,13 +178,8 @@ public class PeriodicResourceUpdater {
 		final File existingDB = new File(databaseLocation);
 		try {
 			if (newDB != null && !filesEqual(existingDB, newDB)) {
-				LOGGER.debug("updating " + listener);
-				LOGGER.debug("existing db size: " + existingDB.length());
-				LOGGER.debug("incoming db size: " + newDB.length());
-
 				if (listener.update(newDB)) {
 					copyDatabase(existingDB, newDB);
-					LOGGER.info("updated " + existingDB.getAbsolutePath());
 					listener.setLastUpdated(System.currentTimeMillis());
 					listener.complete();
 				} else {
@@ -195,7 +187,6 @@ public class PeriodicResourceUpdater {
 				}
 			} else {
 				listener.noChange();
-				LOGGER.debug("File unchanged: " + existingDB.getAbsolutePath());
 			}
 			hasBeenLoaded = true;
 			return true;
@@ -261,13 +252,10 @@ public class PeriodicResourceUpdater {
 		final FileOutputStream out = new FileOutputStream(existingDB);
 		final FileLock lock = out.getChannel().tryLock();
 		if (lock != null) {
-			LOGGER.debug("Updating database " + existingDB.getAbsolutePath());
 			IOUtils.copy(in, out);
 			existingDB.setReadable(true, false);
 			existingDB.setWritable(true, true);
 			lock.release();
-		} else {
-			LOGGER.info("Database " + existingDB.getAbsolutePath() + " locked by another process.");
 		}
 		IOUtils.closeQuietly(in);
 		IOUtils.closeQuietly(out);
@@ -301,16 +289,11 @@ public class PeriodicResourceUpdater {
 
 		@Override
 		public void onThrowable(final Throwable t){
-			if (LOGGER.isDebugEnabled()) {
-				LOGGER.warn(t,t);
-			} else {
-				LOGGER.warn(t);
-			}
+			LOGGER.warn(t);
 		}
 	};
 
 	private Request getRequest(final String url) {
-		LOGGER.debug("Creating request for " + url);
 		return asyncHttpClient.prepareGet(url).build();
 	}
 }

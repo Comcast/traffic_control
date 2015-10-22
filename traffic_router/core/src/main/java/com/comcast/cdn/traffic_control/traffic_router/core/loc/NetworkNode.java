@@ -95,7 +95,11 @@ public class NetworkNode implements Comparable<NetworkNode> {
 	}
 	protected Boolean add(final Map<NetworkNode,NetworkNode> children, final NetworkNode nn) {
 		if(compareTo(nn)!=0) {
-			LOGGER.info("ERROR: "+nn);
+			// The string in the message says error but the level is info,
+			// Is this an unexpected situation in day to day operations?
+			// Or is this something more typical that happens in dev?
+			// Is there anything that can be done about it?
+			LOGGER.info("ERROR: " + nn);
 			return false;
 		}
 		final NetworkNode child = children.get(nn);
@@ -106,10 +110,6 @@ public class NetworkNode implements Comparable<NetworkNode> {
 
 		if (child.cidrAddress.getNetmaskLength() == nn.cidrAddress.getNetmaskLength()) {
 			// identical
-			LOGGER.debug("collision: "+nn);
-			if(this.loc != null && !this.loc.equals(child.loc)) {
-				LOGGER.debug("WARNING collision with different loc: "+nn+" v "+child);
-			}
 			return false;
 		}
 

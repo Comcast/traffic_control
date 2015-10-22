@@ -108,7 +108,6 @@ public class ZoneManager extends Resolver {
 	}
 
 	public static void destroy() {
-		LOGGER.info("Destroy called; stopping maintenance and zone executors");
 		zoneMaintenanceExecutor.shutdownNow();
 		zoneExecutor.shutdownNow();
 		signatureManager.destroy();
@@ -150,10 +149,6 @@ public class ZoneManager extends Resolver {
 				}
 			}
 
-			LOGGER.debug("Number of cores on this system: " + cores);
-			LOGGER.debug("Scale for thread pools: " + scale);
-			LOGGER.debug("Threads in thread pools: " + poolSize);
-
 			final ExecutorService initExecutor = Executors.newFixedThreadPool(poolSize);
 
 			final ExecutorService ze = Executors.newFixedThreadPool(poolSize);
@@ -167,13 +162,11 @@ public class ZoneManager extends Resolver {
 			initZoneDirectory();
 
 			try {
-				LOGGER.info("Generating zone data");
 				generateZones(cacheRegister, zc, initExecutor);
 				initExecutor.shutdown();
 				initExecutor.awaitTermination(5, TimeUnit.MINUTES);
-				LOGGER.info("Zone generation complete");
 			} catch (final InterruptedException ex) {
-				LOGGER.warn("Initialization of zone data exceeded time limit of 5 minutes; continuing", ex);
+				LOGGER.info("Initialization of zone data exceeded time limit of 5 minutes; continuing", ex);
 			} catch (IOException ex) {
 				LOGGER.fatal("Caught fatal exception while generating zone data!", ex);
 			}
@@ -234,10 +227,8 @@ public class ZoneManager extends Resolver {
 
 				final boolean deleted = zoneDir.delete();
 
-				if (deleted) {
-					LOGGER.info("Successfully deleted " + zoneDir);
-				} else {
-					LOGGER.warn("Unable to delete " + zoneDir);
+				if (!deleted) {
+					LOGGER.info("Unable to delete " + zoneDir);
 				}
 			}
 
@@ -248,7 +239,6 @@ public class ZoneManager extends Resolver {
 	private static void writeZone(final Zone zone) throws IOException {
 		synchronized(LOGGER) {
 			final String fileName = getZoneDirectory() +"/"+zone.getOrigin().toString();
-			LOGGER.info("writing: "+fileName);
 			final String file = zone.toMasterFile();
 			final FileWriter w = new FileWriter(fileName);
 			IOUtils.write(file, w);
@@ -268,11 +258,7 @@ public class ZoneManager extends Resolver {
 	private static LoadingCache<ZoneKey, Zone> createZoneCache(final ZoneCacheType cacheType, final CacheBuilderSpec spec) {
 		final RemovalListener<ZoneKey, Zone> removalListener = new RemovalListener<ZoneKey, Zone>() {
 			public void onRemoval(final RemovalNotification<ZoneKey, Zone> removal) {
-				if (removal.wasEvicted()) {
-					LOGGER.warn(cacheType + ": " + removal.getKey().getName() + " evicted from cache: " + removal.getCause());
-				} else {
-					LOGGER.warn(cacheType + ": " + removal.getKey().getName() + " evicted from cache: " + removal.getCause());
-				}
+				LOGGER.info(cacheType + ": " + removal.getKey().getName() + " evicted from cache: " + removal.getCause());
 			}
 		};
 
@@ -300,7 +286,6 @@ public class ZoneManager extends Resolver {
 	}
 
 	public static Zone loadZone(final ZoneKey zoneKey, final boolean writeZone) throws IOException, GeneralSecurityException {
-		LOGGER.debug("Attempting to load " + zoneKey.getName());
 		final Name name = zoneKey.getName();
 		List<Record> records = zoneKey.getRecords();
 		zoneKey.updateTimestamp();
@@ -347,7 +332,7 @@ public class ZoneManager extends Resolver {
 
 		for (final Record record : upstreamRecords) {
 			if (record.getType() == Type.DS) {
-				LOGGER.warn("Publish this DS record in the parent zone: " + record);
+				LOGGER.info("Publish this DS record in the parent zone: " + record);
 			}
 		}
 	}
@@ -392,7 +377,6 @@ public class ZoneManager extends Resolver {
 		}
 
 		final Name name = newName(domain);
-		LOGGER.debug("Generating zone data for " + name);
 		final List<Record> list = zoneMap.get(domain);
 		final Name admin = newName(ZoneUtils.getAdminString(soa, "admin", "traffic_ops", domain));
 		list.add(new SOARecord(name, DClass.IN, 
@@ -568,7 +552,7 @@ public class ZoneManager extends Resolver {
 						ZoneUtils.getLong(ttl, "A", 60),
 						c.getIp4()));
 				} catch (IllegalArgumentException e) {
-					LOGGER.warn(e+" : "+c.getIp4());
+					LOGGER.warn(e + " : " + c.getIp4());
 				}
 
 				final InetAddress ip6 = c.getIp6();
@@ -645,7 +629,7 @@ public class ZoneManager extends Resolver {
 		}
 
 		if (result == null) {
-			LOGGER.warn(String.format("subdomain NOT found: '%s'", name));
+			LOGGER.info(String.format("subdomain NOT found: '%s'", name));
 		}
 
 		return result;
@@ -764,15 +748,10 @@ public class ZoneManager extends Resolver {
 		final List<InetRecord> ipAddresses = new ArrayList<InetRecord>();
 		final SetResponse sr = zone.findRecords(qname, type);
 
-		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("SetResponse: " + sr);
-		}
-
 		if (sr.isSuccessful()) {
 			final RRset[] answers = sr.answers();
 
 			for (final RRset answer : answers) {
-				LOGGER.debug("addRRset: " + answer);
 				@SuppressWarnings("unchecked")
 				final Iterator<Record> it = answer.rrs();
 
@@ -785,15 +764,11 @@ public class ZoneManager extends Resolver {
 					} else if (r instanceof AAAARecord) {
 						final AAAARecord ar = (AAAARecord)r;
 						ipAddresses.add(new InetRecord(ar.getAddress(), ar.getTTL()));
-					} else {
-						LOGGER.debug("record not ARecord or AAAARecord: " + r);
 					}
 				}
 			}
 
 			return ipAddresses;
-		} else {
-			LOGGER.debug(String.format("failed: zone.findRecords(%s, %d)", qname, type));
 		}
 
 		return null;
@@ -804,7 +779,6 @@ public class ZoneManager extends Resolver {
 			final Name name = new Name(fqdn);
 			final Zone zone = getZone(name);
 			if (zone == null) {
-				LOGGER.debug("No zone - Defaulting to system resolver: "+fqdn);
 				return super.resolve(fqdn);
 			}
 			return lookup(name, zone, Type.A);
@@ -812,7 +786,6 @@ public class ZoneManager extends Resolver {
 			LOGGER.warn("TextParseException from: "+fqdn,e);
 		}
 
-		LOGGER.debug(String.format("resolved from zone: %s", fqdn));
 		return null;
 	}
 
@@ -829,7 +802,6 @@ public class ZoneManager extends Resolver {
 			}
 
 			if (zone == null) {
-				LOGGER.debug("No zone - Defaulting to system resolver: "+fqdn);
 				return super.resolve(fqdn);
 			}
 
@@ -838,7 +810,6 @@ public class ZoneManager extends Resolver {
 			LOGGER.warn("TextParseException from: "+fqdn,e);
 		}
 
-		LOGGER.debug(String.format("resolved from zone: %s", fqdn));
 		return null;
 	}
 
@@ -846,7 +817,6 @@ public class ZoneManager extends Resolver {
 		final Zone zone = getZone(qname, qtype);
 
 		if (zone == null) {
-			LOGGER.debug("Unable to find zone for " + qname);
 			return null;
 		}
 

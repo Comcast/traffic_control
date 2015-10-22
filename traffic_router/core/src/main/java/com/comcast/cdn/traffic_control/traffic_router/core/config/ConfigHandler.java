@@ -83,17 +83,13 @@ public class ConfigHandler {
 
 		synchronized(configSync) {
 			final JSONObject jo = new JSONObject(jsonStr);
-			LOGGER.info("Enter: processConfig");
 			final JSONObject config = jo.getJSONObject("config");
 			final JSONObject stats = jo.getJSONObject("stats");
 
 			final long sts = getSnapshotTimestamp(stats);
 
 			if (sts <= getLastSnapshotTimestamp()) {
-				LOGGER.warn("Incoming TrConfig snapshot timestamp (" + sts + ") is older or equal to the loaded timestamp (" + getLastSnapshotTimestamp() + "); unable to process");
 				return false;
-			} else {
-				LOGGER.debug("Incoming TrConfig snapshot timestamp (" + sts + ") is newer than the loaded timestamp (" + getLastSnapshotTimestamp() + "); processing new TrConfig");
 			}
 
 			try {
@@ -119,8 +115,6 @@ public class ConfigHandler {
 				return false;
 			}
 		}
-
-		LOGGER.info("Exit: processConfig");
 
 		return true;
 	}
