@@ -32,16 +32,35 @@ sub index {
 	my $self = shift;
 	my @data;
 	my $orderby = $self->param('orderby') || "name";
-	my $rs_data = $self->db->resultset("Cdn")
-		->search( undef, { order_by => $orderby } );
-	while ( my $row = $rs_data->next ) {
-		push(
-			@data,
-			{   "id"   => $row->id,
-				"name" => $row->name,
-			}
-		);
+	my $types 	= $self->param('types');
+
+	if ( !$types ) {
+		my $rs_data = $self->db->resultset("Cdn")->search( undef, { order_by => $orderby } );
+
+		while ( my $row = $rs_data->next ) {
+			push(
+				@data,
+				{   "id"   => $row->id,
+					"name" => $row->name,
+				}
+			);
+		}
 	}
+	else {
+		(my @types) = split(/,/, $types);
+
+		my $rs_data = $self->db->resultset('Server')->search( { 'type.name' => { -in => \@types } }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name', orderby => $orderby } );
+
+		while ( my $row = $rs_data->next ) {
+			push(
+				@data,
+				{   "id"   => $row->cdn->id,
+					"name" => $row->cdn->name,
+				}
+			);
+		}
+	}
+
 	$self->success( \@data );
 }
 
