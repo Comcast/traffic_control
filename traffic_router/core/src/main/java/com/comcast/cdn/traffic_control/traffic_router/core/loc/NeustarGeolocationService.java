@@ -22,6 +22,7 @@ public class NeustarGeolocationService implements GeolocationService {
 	private boolean initialized = false;
 
 	@Override
+	@SuppressWarnings("PMD.EmptyCatchBlock")
 	public Geolocation location(final String ip) throws GeolocationException {
 		Geolocation location = null;
 		lock.readLock().lock();
@@ -109,13 +110,13 @@ public class NeustarGeolocationService implements GeolocationService {
 	@Override
 	public void reloadDatabase() throws IOException {
 		lock.writeLock().lock();
-		long t1 = new Date().getTime();
+		final long t1 = new Date().getTime();
 		try {
 			if (databaseReader != null) {
 				databaseReader.close();
 			}
 			databaseReader = createDatabaseReader();
-			long t2 = new Date().getTime();
+			final long t2 = new Date().getTime();
 			LOGGER.info("Time taken to reload the database: " + (t2 - t1));
 		} finally {
 			lock.writeLock().unlock();
