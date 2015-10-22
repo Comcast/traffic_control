@@ -148,6 +148,32 @@ sub startup {
 		}
 	);
 
+=cut
+	$self->hook(
+		before_render2 => sub {
+			my ( $self, $args ) = @_;
+
+			$self->app->log->error( $self->stash("exception") );
+
+			my $m = $args->{exception};
+			if ( defined($m) ) {
+				$self->app->log->error( "Exception #-> " . $m->message );
+			}
+
+			# Switch to JSON rendering if content negotiation allows it
+			my $content_type = $self->req->headers->content_type;
+			if ( defined($content_type) && ( $content_type eq 'application/json' ) ) {
+				return $args->{json} = { alerts => [ { "level" => "error", "text" => "An error occurred. Please contact your administrator." } ] };
+			}
+			else {    # Make sure we are rendering the exception template
+				return unless my $template = $args->{template};
+				return unless $template eq 'exception';
+			}
+		}
+
+	);
+=cut
+
 	if ( defined($access_control_allow_origin) ) {
 
 		# Coors Light header (CORS)

@@ -47,6 +47,12 @@ sub register {
 					$port     = $row->tcp_port;
 					last;
 				}
+				if ( !defined($traffic_monitor_row) ) {
+					$self->app->log->error("No TrafficMonitor servers found for: $cdn");
+					return;
+				}
+				$hostname = $traffic_monitor_row->host_name . "." . $traffic_monitor_row->domain_name;
+				$port     = $traffic_monitor_row->tcp_port;
 			}
 			elsif ( exists $args->{hostname} ) {
 				$hostname = $args->{hostname};
