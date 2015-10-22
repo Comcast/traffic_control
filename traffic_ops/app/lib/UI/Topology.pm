@@ -80,12 +80,12 @@ sub gen_crconfig_json {
 		$cdn_id = defined($cdn_id) ? next : $row->cdn->id;
 	}
 
-	if ( scalar( @{ $profile_cache->{'CCR'} } ) == 0 ) {
+	if ( !defined( $profile_cache->{'CCR'} ) || scalar( @{ $profile_cache->{'CCR'} } ) == 0 ) {
 		my $e = Mojo::Exception->throw(
 			"No Traffic Router profile found for CDN: $cdn_name");
 	}
-	elsif (scalar( @{ $profile_cache->{'EDGE'} } ) == 0
-		&& scalar( @{ $profile_cache->{'MID'} } ) == 0 )
+	elsif ( ( !defined( $profile_cache->{'EDGE'} ) || scalar( @{ $profile_cache->{'EDGE'} } ) == 0 )
+		&& ( !defined( $profile_cache->{'MID'} ) || scalar( @{ $profile_cache->{'MID'} } ) == 0 ) )
 	{
 		my $e = Mojo::Exception->throw(
 			"No profiles found for CDN_name: " . $cdn_name );
@@ -164,15 +164,7 @@ sub gen_crconfig_json {
 
 	my %cache_tracker;
 	my $rs_caches = $self->db->resultset('Server')->search(
-		{   'profile' => {
-				-in => [
-					@{ $profile_cache->{'EDGE'} },
-					@{ $profile_cache->{'MID'} },
-					@{ $profile_cache->{'CCR'} },
-					@{ $profile_cache->{'RASCAL'} }
-				]
-			}
-		},
+		{ 'type.name' => { -in => [ 'EDGE', 'MID', 'CCR', 'RASCAL', 'TR', 'TM' ] }, 'cdn_id' => $cdn_id  },
 		{   prefetch => [ 'type', 'status', 'cachegroup', 'profile' ],
 			columns  => [
 				'host_name',  'domain_name',
@@ -334,7 +326,7 @@ sub gen_crconfig_json {
 				}
 			}
 		}
-
+		my $domains;
 		foreach my $regex ( sort keys %{$regex_to_props} ) {
 			my $set_number = $regex_to_props->{$regex}->{'set_number'};
 			my $pattern    = $regex_to_props->{$regex}->{'pattern'};
@@ -346,6 +338,12 @@ sub gen_crconfig_json {
 					},
 					{ 'match-type' => 'HOST', 'regex' => $pattern }
 				);
+				my $host = $pattern;
+				$host =~ s/\\//g;
+				$host =~ s/\.\*//g;
+				$host =~ s/\.//g;\
+				push @$domains, "$host.$ccr_domain_name";
+
 			}
 			elsif ( $type eq 'PATH_REGEXP' ) {
 				push(
@@ -364,6 +362,7 @@ sub gen_crconfig_json {
 				);
 			}
 		}
+		$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'domains'} = $domains;
 
 		if ( scalar(@server_subrows) ) {
 
