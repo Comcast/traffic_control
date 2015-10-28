@@ -19,10 +19,7 @@ package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.log4j.Logger;
-
 public class GeolocationDatabaseUpdater extends AbstractServiceUpdater {
-	private static final Logger LOGGER = Logger.getLogger(GeolocationDatabaseUpdater.class);
 
 	public GeolocationDatabaseUpdater() {
 	}
@@ -36,9 +33,7 @@ public class GeolocationDatabaseUpdater extends AbstractServiceUpdater {
 		geoLocation.verifyDatabase(dbFile);
 	}
 	public boolean loadDatabase() throws IOException {
-		LOGGER.info("Reloading location database.");
 		geoLocation.reloadDatabase();
-		LOGGER.info("Successfully reloaded location database.");
 		return true;
 	}
 

@@ -233,12 +233,10 @@ public class TrafficRouter {
 		}
 
 		if (ds.isCoverageZoneOnly()) {
-			LOGGER.warn(String.format("No Cache found in CZM (%s, ip=%s, path=%s), geo not supported", request.getType(), request.getClientIP(), request.getHostname()));
 			track.setResult(ResultType.MISS);
 			track.setResultDetails(ResultDetails.DS_CZ_ONLY);
 		}
 		else {
-			LOGGER.warn(String.format("No Cache found by CZM (%s, ip=%s, path=%s)", request.getType(), request.getClientIP(), request.getHostname()));
 			caches = selectCachesByGeo(request, ds, cacheLocation, track);
 		}
 
@@ -265,7 +263,6 @@ public class TrafficRouter {
 		final List<Cache> caches = getCachesByGeo(request, deliveryService, clientLocation, resultLocation);
 		
 		if (caches == null || caches.isEmpty()) {
-			LOGGER.warn(String.format("No Cache found by Geo (%s, ip=%s, path=%s)", request.getType(), request.getClientIP(), request.getHostname()));
 			track.setResultDetails(ResultDetails.GEO_NO_CACHE_FOUND);
 		}
 
@@ -322,7 +319,6 @@ public class TrafficRouter {
 			LOGGER.error("Bad client address: '" + request.getClientIP() + "'");
 		}
 
-		LOGGER.info(String.format("No Cache found by CZM (%s, ip=%s, path=%s)", request.getType(), request.getClientIP(), request.getHostname()));
 		caches = selectCachesByGeo(request, ds, cacheLocation, track);
 
 		if (caches != null) {
@@ -515,11 +511,7 @@ public class TrafficRouter {
 			}
 		}
 
-		final Cache result = (foundCache != null) ? foundCache : minCache;
-		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("Selected cache: " + result);
-		}
-		return result;
+		return (foundCache != null) ? foundCache : minCache;
 	}
 
 	/**

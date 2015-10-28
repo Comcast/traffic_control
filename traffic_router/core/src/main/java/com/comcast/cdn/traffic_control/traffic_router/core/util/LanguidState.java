@@ -66,7 +66,6 @@ public class LanguidState {
 			}
 		}
 
-		LOGGER.debug("Setting ready to true");
 		this.setReady(true);
 	}
 

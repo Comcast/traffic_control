@@ -90,7 +90,6 @@ public final class SignatureManager {
 
 				try {
 					while (keyMap == null) {
-						LOGGER.info("Waiting for DNSSEC keyMap initialization to complete");
 						Thread.sleep(2000);
 					}
 				} catch (final InterruptedException e) {
@@ -135,7 +134,6 @@ public final class SignatureManager {
 										keyList.add(dkpw);
 										newKeyMap.put(dkpw.getName(),  keyList);
 
-										LOGGER.debug("Added " + dkpw.toString() + " to incoming keyList");
 									} catch (JSONException ex) {
 										LOGGER.fatal(ex, ex);
 									} catch (TextParseException ex) {
@@ -152,7 +150,6 @@ public final class SignatureManager {
 							keyMap = newKeyMap;
 						} else if (hasNewKeys(keyMap, newKeyMap)) {
 							// incoming key map has new keys
-							LOGGER.debug("Found new keys in incoming keyMap; rebuilding zone caches");
 							keyMap = newKeyMap;
 							getZoneManager().rebuildZoneCache(cacheRegister);
 						} // no need to overwrite the keymap if they're the same, so no else leg
@@ -216,7 +213,6 @@ public final class SignatureManager {
 
 					if (content != null) {
 						keyPairs = new JSONObject(content);
-						LOGGER.debug(keyPairs);
 						break;
 					}
 				} catch (IOException ex) {
@@ -226,8 +222,6 @@ public final class SignatureManager {
 				try {
 					Thread.sleep(wait);
 				} catch (InterruptedException ex) {
-					LOGGER.fatal(ex, ex);
-					// break if we're interrupted
 					break;
 				}
 			}
@@ -281,15 +275,12 @@ public final class SignatureManager {
 
 				if (kn.equals(name)) {
 					if ((isKsk && !wantKsk) || (!isKsk && wantKsk)) {
-						LOGGER.debug("Skipping key: wantKsk = " + wantKsk + "; key: " + kpw.toString());
 						continue;
 					} else if (!wantSigningKey && (kpw.getExpiration().after(new Date(System.currentTimeMillis() - (maxTTL * 1000))))) {
-						LOGGER.debug("key selected: " + kpw.toString());
 						keys.add(kpw);
 					} else if (wantSigningKey) {
 						if (kpw.getEffective().after(now) || kpw.getInception().after(now) || kpw.getExpiration().before(now)) {
 							// this key is either expired or should not be used yet
-							LOGGER.debug("Skipping unusable signing key: " + kpw.toString());
 							continue;
 						}
 
@@ -308,7 +299,6 @@ public final class SignatureManager {
 			}
 
 			if (wantSigningKey && signingKey != null) {
-				LOGGER.debug("Signing key selected: " + signingKey.toString());
 				keys.clear(); // in case we have something in here for some reason (shouldn't happen)
 				keys.add(signingKey);
 			} else if (wantSigningKey && signingKey == null) {
@@ -354,7 +344,6 @@ public final class SignatureManager {
 			final long nextRefresh = now + refreshInterval;
 
 			if (nextRefresh >= szk.getRefreshHorizon()) {
-				LOGGER.info(getRefreshMessage(type, szk, true, "refresh horizon approaching"));
 				return true;
 			} else if (now >= szk.getEarliestSigningKeyExpiration()) {
 				/*
@@ -363,14 +352,11 @@ public final class SignatureManager {
 				 * don't have expiry that's tied to DNSSEC; it's administrative, so
 				 * we can be a little late on the swap.
 				 */
-				LOGGER.info(getRefreshMessage(type, szk, true, "signing key expiration"));
 				return true;
 			} else {
-				LOGGER.debug(getRefreshMessage(type, szk));
 				return false;
 			}
 		} else {
-			LOGGER.debug(type + ": " + zoneKey.getName() + " is not a signed zone; no refresh needed");
 			return false;
 		}
 	}
@@ -422,7 +408,6 @@ public final class SignatureManager {
 				start.setTimeInMillis(now);
 				start.add(Calendar.HOUR, -1);
 
-				LOGGER.info("Signing zone " + name + " with start " + start.getTime() + " and expiration " + signatureExpiration.getTime());
 				final List<Record> signedRecords = signer.signZone(name, records, (List<DnsKeyPair>) kskPairs, (List<DnsKeyPair>) zskPairs, start.getTime(), signatureExpiration.getTime(), true, DSRecord.SHA256_DIGEST_ID);
 				zoneKey.setSignatureExpiration(signatureExpiration);
 				zoneKey.setKSKExpiration(kskExpiration);
@@ -453,7 +438,6 @@ public final class SignatureManager {
 
 				for (DnsKeyPair kp : kskPairs) {
 					final DSRecord dsRecord = SignUtils.calculateDSRecord(kp.getDNSKEYRecord(), DSRecord.SHA256_DIGEST_ID, dsTtl);
-					LOGGER.debug(name + ": adding DS record " + dsRecord);
 					records.add(dsRecord);
 				}
 			}
@@ -471,13 +455,11 @@ public final class SignatureManager {
 
 			if (kskPairs != null && zskPairs != null && !kskPairs.isEmpty() && !zskPairs.isEmpty()) {
 				for (DnsKeyPair kp : kskPairs) {
-					LOGGER.debug(name + ": DNSKEY record " + kp.getDNSKEYRecord());
 					list.add(kp.getDNSKEYRecord());
 				}
 
 				for (DnsKeyPair kp : zskPairs) {
 					// TODO: make adding zsk to parent zone configurable?
-					LOGGER.debug(name + ": DNSKEY record " + kp.getDNSKEYRecord());
 					list.add(kp.getDNSKEYRecord());
 				}
 			}

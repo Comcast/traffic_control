@@ -79,7 +79,7 @@ public abstract class AbstractServiceUpdater {
 
 	public void init() {
 		final long pi = getPollingInterval();
-		LOGGER.warn(getClass().getSimpleName() + " Starting schedule with interval: " + pi + " : " + TimeUnit.MILLISECONDS);
+		LOGGER.info(getClass().getSimpleName() + " Starting schedule with interval: " + pi + " : " + TimeUnit.MILLISECONDS);
 		scheduledService = executorService.scheduleWithFixedDelay(updater, pi, pi, TimeUnit.MILLISECONDS);
 	}
 
@@ -118,7 +118,6 @@ public abstract class AbstractServiceUpdater {
 						setLoaded(true);
 						trafficRouterManager.trackEvent("last" + getClass().getSimpleName() + "Update");
 					} else if (isLoaded() && !isDifferent) {
-						LOGGER.info("Removing downloaded temp file " + newDB);
 						newDB.delete();
 					}
 
@@ -126,8 +125,6 @@ public abstract class AbstractServiceUpdater {
 				} else {
 					return false;
 				}
-			} else {
-				LOGGER.info("Location database does not require updating.");
 			}
 		} catch (final Exception e) {
 			LOGGER.error(e.getMessage(), e);
@@ -149,7 +146,6 @@ public abstract class AbstractServiceUpdater {
 			}
 
 			this.pollingInterval = refresh;
-			LOGGER.info("Restarting schedule for " + url + " with interval: "+refresh);
 			init();
 		}
 		if ((url != null) && !url.equals(dataBaseURL)
@@ -195,7 +191,6 @@ public abstract class AbstractServiceUpdater {
 	}
 	protected boolean copyDatabaseIfDifferent(final File existingDB, final File newDB) throws IOException {
 		if (!filesEqual(existingDB, newDB)) {
-			LOGGER.info("Unlinking location database and renaming " + newDB + " to " + existingDB);
 
 			if (existingDB != null && existingDB.exists()) {
 				existingDB.setReadable(true, true);
@@ -208,14 +203,12 @@ public abstract class AbstractServiceUpdater {
 			final boolean renamed = newDB.renameTo(existingDB);
 
 			if (renamed) {
-				LOGGER.info("Successfully updated location database " + existingDB);
 				return true;
 			} else {
 				LOGGER.fatal("Unable to rename " + newDB + " to " + existingDB + "; current working directory is " + System.getProperty("user.dir"));
 				return false;
 			}
 		} else {
-			LOGGER.info("Location database unchanged.");
 			return false;
 		}
 	}
@@ -224,7 +217,6 @@ public abstract class AbstractServiceUpdater {
 	protected String tmpPrefix = "loc";
 	protected String tmpSuffix = ".dat";
 	protected File downloadDatabase(final String url, final File existingDb) throws IOException {
-		LOGGER.info("[" + getClass().getSimpleName() + "] Downloading database: " + url);
 		final URL dbURL = new URL(url);
 		final HttpURLConnection conn = (HttpURLConnection) dbURL.openConnection();
 
@@ -235,7 +227,6 @@ public abstract class AbstractServiceUpdater {
 		InputStream in = conn.getInputStream();
 
 		if (conn.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
-			LOGGER.info(url + " not modified since our existing database's last update time of " + new Date(existingDb.lastModified()));
 			return existingDb;
 		}
 
@@ -249,7 +240,6 @@ public abstract class AbstractServiceUpdater {
 		IOUtils.copy(in, out);
 		IOUtils.closeQuietly(in);
 		IOUtils.closeQuietly(out);
-		LOGGER.warn("Successfully downloaded location database to temp path " + outputFile);
 
 		return outputFile;
 	}

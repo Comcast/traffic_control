@@ -77,8 +77,6 @@ public class Fetcher {
 			method = requestMethod;
 		}
 
-		LOGGER.info(method + "ing: " + url + "; timeout is " + timeout);
-
 		final URLConnection connection = new URL(url).openConnection();
 
 		connection.setIfModifiedSince(lastFetchTime);
