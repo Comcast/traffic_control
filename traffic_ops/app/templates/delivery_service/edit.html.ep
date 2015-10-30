@@ -299,26 +299,26 @@
 		<div>
 			<form method="POST" action="/ds/<%= $ds->id %>/update" id="editds_form">
 				%= include 'delivery_service/_form' 
-				<div class="block" style="color:white">
+				<div class="block">
                 	%= label_for 'last_updated' => 'Last Updated', class => 'label'
                 	%= field('ds.last_updated')
            		</div> <br>
-				<div class="block" style="color:white">
+				<div class="block">
                 	%= label_for 'server_count' => 'Number of edges assigned:', class => 'label'
                 	<div><%= $server_count %></div>
             	</div><br>
-				<div class="block" style="color:white">
+				<div class="block">
                 	%= label_for 'static_count' => 'Number of static DNS entries:', class => 'label'
                 	<div><%= $static_count %></div>
             	</div><br>
             	% foreach my $ex_url (@{ $example_urls }) {
-				<div class="block" style="color:white">
+				<div class="block">
                 	%= label_for 'ex_url' => 'Example delivery URL', class => 'label'
                 	<div><%= $ex_url %></div>
             	</div><br>
             	% }
 			<hr>
-			<h2 style="color:white;">Regular expressions for this delivery service:</h2> 
+			<h2">Regular expressions for this delivery service:</h2> 
 			 <% if ($priv_level >= 20) { %>
 			<div id ="select_re"></div><br>
 			<% } %>

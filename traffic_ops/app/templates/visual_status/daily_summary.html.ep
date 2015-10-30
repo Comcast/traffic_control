@@ -22,40 +22,7 @@
 <script type="text/javascript" src="/js/flot/jquery.flot.tooltip.js"></script>
 <script type="text/javascript" src="/js/flot/jquery.flot.selection.js"></script>
 <script type="text/javascript" src="/js/percentagebar.js"></script>
-<style type="text/css">
-.main_header { width: 1112px; }
-.flot_yaxis_label {
-  -webkit-transform: rotate(-90deg);
-  -moz-transform: rotate(-90deg);
-  -ms-transform: rotate(-90deg);
-  -o-transform: rotate(-90deg);
-  transform: rotate(-90deg);
-
-  /* also accepts left, right, top, bottom coordinates; not required, but a good idea for styling */
-  -webkit-transform-origin: 50% 50%;
-  -moz-transform-origin: 50% 50%;
-  -ms-transform-origin: 50% 50%;
-  -o-transform-origin: 50% 50%;
-  transform-origin: 50% 50%;
-
-  /* Should be unset in IE9+ I think. */
-  filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=3);
-  position: absolute;
-  top: 130px;
-  width: 35px;
-  font-size: 10pt;
-}
-.flot_xaxis_label { text-align:center; vertical-align:middle; clear:both; padding-top:10px; padding-bottom:5px; font-size:10pt; }
-.live_data_header { text-align:center; color:white; font-size:10pt; width:1112px; background-color: #898989; padding:5px; border:1px solid #c1c1c1; margin-bottom:2px; }
-.about_section { text-align:left; color:white; font-size:10pt; width:1112px; }
-.title_section { color:#ffffff; font-size:12pt; padding:5px; background-color:#252525; margin-bottom:5px; border:1px solid #656565; }
-.flot_chart_section { color:#ffffff; width:1112px; height:310px; padding:5px; background-color:#454545; border:1px solid #ffffff; margin-bottom: 1px; border:1px solid white; }
-.flot_chart_container { position:relative; width:1100px; height:250px; overflow:auto; padding:10px; overflow-y: hidden; overflow-x: hidden;}
-.flot_chart { float:right; width:1050px; height:200px; padding:0px; background-color:#454545; }
-.statistics_section { float:left; width:315px; height:195; color:white; font-size:150%; width:305px; background-color:#898989; margin-right:5px; padding:5px; border:1px solid #121212; }
-.time_select { float:left; color:white; font-size:10pt; padding:5px; }
-}
-</style>
+<link type="text/css" href="/css/dailysummary.css" rel="stylesheet" />
 <script>
 var gbps_dataset = new Array;
 var bserved_dataset = new Array;

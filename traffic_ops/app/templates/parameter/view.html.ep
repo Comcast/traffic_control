@@ -104,7 +104,7 @@ function deleteCachegroupAssignment(cachegroup) {
 		<div>
 			<form method="POST" action="/parameter/<%= $parameter->id %>/update" id="edit_form">
             %= include 'parameter/_form'
-        <div class="block" style="color:white">
+        <div class="block">
                 %= label_for 'config_file' => 'Last Updated', class => 'label'
                 %= field('parameter.last_updated')
             </div><br>
@@ -123,7 +123,7 @@ function deleteCachegroupAssignment(cachegroup) {
 			</div>
             <div>
                 <br><hr>
-                <br><font color="white" size="2">This parameter/value combination is used in the following <b>profiles</b>:</font><br><br>
+                <br><font size="2">This parameter/value combination is used in the following <b>profiles</b>:</font><br><br>
             </div>
             <form method='POST' action='/profileparameter/create' id='addProfilesForm'>
                 <input type='hidden' name='parameter' value='<%= $parameter->id %>'/>
@@ -144,7 +144,7 @@ function deleteCachegroupAssignment(cachegroup) {
             % }
             <div>
                 <br><hr>
-                <br><font color="white" size="2">This parameter/value combination is used in the following <b>Cache Groups</b>:</font><br><br>
+                <br><font size="2">This parameter/value combination is used in the following <b>Cache Groups</b>:</font><br><br>
             </div>
             <form method='POST' action='/cachegroupparameter/create' id='addCachegroupsForm'>
                 <input type='hidden' name='parameter' value='<%= $parameter->id %>'/>

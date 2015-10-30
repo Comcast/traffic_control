@@ -26,21 +26,18 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* blue = #2e7db2, orange = #ffc73d*/
-table {
-    color: white
+
+table.dataTable th:nth-child(odd), table.dataTable tr:nth-child(odd) {
+    background: #002b36;
 }
 
-th:nth-child(odd), tr:nth-child(odd) {
-    background: #222222;
+table.dataTable th:nth-child(even), table.dataTable tr:nth-child(even) {
+    background: #073642;
 }
 
-th:nth-child(even), tr:nth-child(even) {
-    background: #111111;
-}
-
-tr:hover {
-    background: #2e7db2;
-    outline: #ffc73d
+table.dataTable tr:hover {
+    background: #657b83;
+    color: #002b36;
 }
 
 /*thead { font-weight: bold; }*/
@@ -50,7 +47,7 @@ thead.bul {
 }
 
 a:link, a:visited {
-    color: #eeeeee;
+    color: #eee8d5;
     text-decoration: underline;
 }
 
@@ -62,12 +59,6 @@ div.right {
 .ui-tab-float-right-on-table {
     float: right;
     margin: 7px;
-    color: #FFFFFF;
-}
-
-h1, h2, h3 {
-    color: white;
-
 }
 
 table.dataTable td {
@@ -82,12 +73,13 @@ body {
     margin-bottom: 0;
     margin-left: 0;
     margin-left: 0;
-    background-color: #010101;
+    color: #93a1a1;
+    background-color: #002b36;
 }
 
 body#edge_health a#nav-eh {
-    background: #0972A5;
-    color: #ff00ff;
+    background: #586e75;
+    color: #b58900;
     font-size: 11px;
     width: 90px;
 }
@@ -98,8 +90,8 @@ body#parameters a#nav-p,
 body#tools a#nav-t,
 body#misc a#nav-mi,
 body#log a#nav-l {
-    background: #0972A5;
-    color: #ffffff;
+    background: #586e75;
+    color: #eee8d5;
     font-size: 11px;
     width: 90px;
 }
@@ -140,7 +132,11 @@ body#log a#nav-l {
 
 .disabled_field {
     background-color: black;
-    color: white;
+    color: #eee8d5;
+}
+
+.field {
+    background-color: #eee8d5;
 }
 
 .field, .field input textarea {
@@ -169,7 +165,6 @@ body#log a#nav-l {
 
 div.block {
     overflow: hidden;
-    background-color: #222222;
 }
 
 div.block label {
@@ -177,13 +172,17 @@ div.block label {
     display: block;
     float: left;
     text-align: left;
-    color: white;
     padding: 5px;
 }
 
 div.block .input {
     margin-left: 4px;
     float: left;
+    background: #eee8d5;
+}
+
+div.block select {
+    background-color: #eee8d5;
 }
 
 .main {
@@ -285,15 +284,11 @@ a.button, .button {
     font-size: 13px;
     line-height: normal;
     padding: 5px 14px 6px;
-    background-color: #1D7DAC;
-    background-image: -moz-linear-gradient(center top, #049CDB, #0064CD);
-    background-repeat: repeat-x;
+    background-color: #586e75;
     border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-    color: #FFFFFF;
+    color: #eee8d5;
     text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
     text-decoration: none;
-    text-align;
-    center;
 }
 
 div.disabled_button, a.disabled_button, .disabled_button:hover {
@@ -445,10 +440,10 @@ a.disabled_button, .disabled_button {
 .jMenu li {
     text-align: center !important;
     display: inline-block !important;
-    background-color: #000000 !important;
+    background-color: #073642 !important;
     font-size: 12px !important;
     margin: 0px !important;
-    border-color: #322f32 !important;
+    border-color: #002b36 !important;
     border-style: solid !important;
     border-width: 1px !important;
     border-top-left-radius: 1px !important;
@@ -458,24 +453,28 @@ a.disabled_button, .disabled_button {
     width: 120px !important;
 }
 
+.jMenu li a:hover {
+    color: #eee8d5;
+    background-color: #073642;
+}
+
 .jMenu li a {
-    color: white !important;
+    color: #93a1a1;
     text-decoration: none !important;
-    border-top-left-radius: 1px !important;
-    border-bottom-left-radius: 1px !important;
-    border-top-right-radius: 1px !important;
-    border-bottom-right-radius: 1px !important;
-    text-align: center !important;
     text-transform: none !important;
-    text-align: center !important;
     font-size: 10px !important;
-    border-color: #322f32 !important;
+    border-color: #002b36 !important;
     border-style: solid !important;
     border-width: 1px !important;
 }
 
 .jMenu li ul li a:hover {
-    background-color: #322f32 !important;
+    background-color: #93a1a1 !important;
+    color: #002b36;
+}
+
+.jMenu li:hover > a {
+    background-color: #073642;
 }
 
 .tickLabel {
@@ -484,4 +483,52 @@ a.disabled_button, .disabled_button {
 
 .ui-dialog .ui-dialog-titlebar-close span {
     display: block;
+}
+
+.ui-state-default {
+    color: #93a1a1;
+}
+
+.ui-state-active {
+    border: 1px solid #2aa198;
+    background: #446972;
+}
+
+.ui-widget-header, .ui-widget-content {
+    color: #eee8d5;
+}
+
+.flot_chart_section {
+    color: #eee8d5;
+    background-color: #586e75;
+}
+
+.ui-state-active a, .ui-state-active a:link {
+    color: #eee8d5;
+}
+
+select#regexp_selector, table#regexp_table select, table#regexp_table input {
+    background-color: #eee8d5;
+}
+
+.ui-widget-content input, .ui-widget-content select {
+    background-color: #eee8d5;
+}
+
+.ui-widget-content input.button {
+    background-color: #446972;
+}
+
+table#assignedProfilesTable select, table#assignedCachegroupsTable select {
+    background-color: #eee8d5;
+}
+
+label.field {
+    background: none;
+}
+
+.ui-widget-content {
+    border: 1px solid #555555;
+    background: #002b36;
+    color: #eee8d5;
 }

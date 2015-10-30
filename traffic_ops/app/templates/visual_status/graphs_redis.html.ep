@@ -47,14 +47,14 @@
   margin-top:100px;
 }
 .flot_xaxis_label { text-align:center; vertical-align:middle; clear:both; padding-top:10px; padding-bottom:5px; font-size:10pt; }
-.live_data_header { text-align:right; color:white; font-size:10pt; width:1112px; background-color: #898989; padding:5px; border:1px solid #c1c1c1; margin-bottom:2px; }
+.live_data_header { text-align:right; font-size:10pt; width:1112px; background-color: #898989; padding:5px; border:1px solid #c1c1c1; margin-bottom:2px; }
 .title_section { color:#ffffff; font-size:10pt; padding:5px; background-color:#252525; margin-bottom:5px; border:1px solid #656565; }
-.about_section { text-align:left; color:white; font-size:10pt; width:1112px; }
-.flot_chart_section { color:#ffffff; width:1112px; height:310px; padding:5px; background-color:#454545; border:1px solid #ffffff; margin-bottom: 1px; border:1px solid white; }
+.about_section { text-align:left; font-size:10pt; width:1112px; }
+.flot_chart_section { color:#ffffff; width:1112px; height:310px; padding:5px; background-color:#454545; border:1px solid #ffffff; margin-bottom: 1px; }
 .flot_chart_container { float:left; height:250px; overflow:auto; padding:10px; overflow-y: hidden; overflow-x: hidden;}
 .flot_chart { float:left; width:720px; height:230px; padding:0px; background-color:#454545; }
-.statistics_section { float:left; width:315px; height:240; color:white; font-size:150%; width:305px; background-color:#898989; margin-right:5px; padding:5px; border:1px solid #121212; }
-.time_select { float:left; color:white; font-size:10pt; padding:5px; }
+.statistics_section { float:left; width:315px; height:240; font-size:150%; width:305px; background-color:#898989; margin-right:5px; padding:5px; border:1px solid #121212; }
+.time_select { float:left; font-size:10pt; padding:5px; }
 #gbpsval, 
 % foreach my $cdn_name (@{ $cdn_names } ) {
   #<%= $cdn_name %>_gbps_val, #<%= $cdn_name %>_conn_val,
@@ -290,7 +290,6 @@ function updateOptions() {
     },
     colors: [ "#47CEFA", "#00FFFF", "#47CEFA" ],
     xaxis: {
-      color: "white",
 	  tickColor: "#838383",
       mode: "time",
       
@@ -306,7 +305,6 @@ function updateOptions() {
     },
     yaxis: {
       tickDecimals: 2,
-      color: "white",
 	  tickColor: "#838383",
       axisLabelUseCanvas: true,
       axisLabelFontSizePixels: 14,
@@ -333,7 +331,6 @@ function updateOptions() {
       content : "%s<br>%x -> %y",
     }
   };
-  $('.flot-x1-axis').css('color','white');
 }
 
 function createStat(statName, divBy, isCumul) {
