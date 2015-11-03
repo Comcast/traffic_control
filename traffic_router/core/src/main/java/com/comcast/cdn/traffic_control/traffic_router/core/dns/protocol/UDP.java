@@ -85,6 +85,7 @@ public class UDP extends AbstractProtocol {
     /**
      * This class is package private for unit testing purposes.
      */
+    @SuppressWarnings("PMD.EmptyCatchBlock")
     class UDPPacketHandler implements Runnable {
         private final DatagramPacket packet;
 
@@ -109,7 +110,7 @@ public class UDP extends AbstractProtocol {
                     packet.getSocketAddress());
                 getDatagramSocket().send(outPacket);
             } catch (WireParseException e) {
-                LOGGER.info(e.getMessage());
+                // Already logged in access log
             } catch (final Exception e) {
                 LOGGER.error(e.getMessage(), e);
             }

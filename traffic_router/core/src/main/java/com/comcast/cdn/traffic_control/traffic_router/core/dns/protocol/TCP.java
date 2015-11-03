@@ -86,6 +86,7 @@ public class TCP extends AbstractProtocol {
         }
 
         @Override
+        @SuppressWarnings("PMD.EmptyCatchBlock")
         public void run() {
             try {
                 final InetAddress client = socket.getInetAddress();
@@ -101,7 +102,7 @@ public class TCP extends AbstractProtocol {
                 os.writeShort(response.length);
                 os.write(response);
             } catch (final WireParseException e) {
-                LOGGER.info(e.getMessage());
+                // Already logged in access log
             } catch (final Exception e) {
                 LOGGER.error(e.getMessage(), e);
             } finally {
