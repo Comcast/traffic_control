@@ -27,11 +27,14 @@ input:focus, select:focus, textarea:focus {
 
 /* blue = #2e7db2, orange = #ffc73d*/
 
-table.dataTable th:nth-child(odd), table.dataTable tr:nth-child(odd) {
+
+
+
+table.dataTable th:nth-child(odd), table.dataTable tr:nth-child(odd), div#accordion form tr:nth-child(odd) {
     background: #002b36;
 }
 
-table.dataTable th:nth-child(even), table.dataTable tr:nth-child(even) {
+table.dataTable th:nth-child(even), table.dataTable tr:nth-child(even), div#accordion form tr:nth-child(even) {
     background: #073642;
 }
 
