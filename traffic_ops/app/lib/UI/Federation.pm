@@ -48,6 +48,7 @@ sub add {
 	$self->stash(
 		tm_user     => $tm_user,
 		ds_id       => 0,
+		user_id     => 0,
 		role_name   => undef,
 		federation  => {},
 		fbox_layout => 1,
@@ -62,42 +63,68 @@ sub edit {
 
 	my $federation;
 	my $ds_id;
-	my $feds = $self->db->resultset('Federation')->search( { 'id' => $fed_id } );
-	while ( my $f = $feds->next ) {
-		$federation = $f;
-		my $fed_id = $f->id;
-		my $federation_deliveryservices =
-			$self->db->resultset('FederationDeliveryservice')->search( { federation => $fed_id }, { prefetch => [ 'federation', 'deliveryservice' ] } );
-		while ( my $fd = $federation_deliveryservices->next ) {
-			$ds_id = $fd->deliveryservice->id;
+	my $feds =
+		$self->db->resultset('Federation')->search( { 'id' => $fed_id } );
+	my $fed_count = $feds->count();
+	if ( $fed_count > 0 ) {
+		while ( my $f = $feds->next ) {
+			$federation = $f;
+			my $fed_id = $f->id;
+			my $federation_deliveryservices =
+				$self->db->resultset('FederationDeliveryservice')->search( { federation => $fed_id }, { prefetch => [ 'federation', 'deliveryservice' ] } );
+			while ( my $fd = $federation_deliveryservices->next ) {
+				$ds_id = $fd->deliveryservice->id;
+			}
 		}
+
+		my $role_name;
+		my $user_id;
+		my $ftusers = $self->db->resultset('FederationTmuser')->search( { federation => $fed_id }, { prefetch => [ 'federation', 'tm_user' ] } );
+		while ( my $ft = $ftusers->next ) {
+			$user_id   = $ft->tm_user->id;
+			$role_name = $ft->role->name;
+		}
+
+		my $current_username = $self->current_user()->{username};
+		my $dbh              = $self->db->resultset('TmUser')->search( { username => $current_username } );
+		my $tm_user          = $dbh->single;
+		&stash_role($self);
+
+		my $delivery_services = get_delivery_services( $self, $ds_id );
+		$self->stash(
+			tm_user           => $tm_user,
+			ds_id             => $ds_id,
+			user_id           => $user_id,              # the federation role
+			role_id           => FEDERATION_ROLE_ID,    # the federation role
+			role_name         => $role_name,
+			federation        => $federation,
+			mode              => 'edit',
+			fbox_layout       => 1,
+			delivery_services => $delivery_services
+		);
+		return $self->render('federation/edit');
 	}
-
-	my $role_name;
-	my $ftusers =
-		$self->db->resultset('FederationTmuser')->search( { federation => $fed_id }, { prefetch => [ 'federation', 'tm_user' ] } );
-	while ( my $ft = $ftusers->next ) {
-		$role_name = $ft->role->name;
+	else {
+		return $self->not_found();
 	}
+}
 
-	my $current_username = $self->current_user()->{username};
-	my $dbh              = $self->db->resultset('TmUser')->search( { username => $current_username } );
-	my $tm_user          = $dbh->single;
-	&stash_role($self);
-
-	my $delivery_services = get_delivery_services( $self, $ds_id );
-	$self->app->log->debug( "delivery_services #-> " . Dumper($delivery_services) );
-	$self->stash(
-		tm_user           => $tm_user,
-		ds_id             => $ds_id,
-		role_id           => FEDERATION_ROLE_ID,    # the federation role
-		role_name         => $role_name,
-		federation        => $federation,
-		mode              => 'edit',
-		fbox_layout       => 1,
-		delivery_services => $delivery_services
-	);
-	return $self->render('federation/edit');
+# .json format for the jqTree widge
+sub users {
+	my $self = shift;
+	my $data;
+	my $fed_users = $self->db->resultset('TmUser')->search( { role => FEDERATION_ROLE_ID }, { order_by => 'full_name' } );
+	while ( my $row = $fed_users->next ) {
+		push(
+			@$data, {
+				id       => $row->id,
+				username => $row->username,
+				fullname => $row->full_name,
+				tenant   => $row->company
+			}
+		);
+	}
+	return $self->render( json => $data );
 }
 
 # .json format for the jqTree widge
@@ -116,11 +143,11 @@ sub resolvers {
 		my $ip_addresses = $resolvers->{$r};
 		foreach my $ip_addr (@$ip_addresses) {
 			my $resolver_node = { label => $ip_addr };
-			push( @$children, $resolver_node );
+			push( @{$children}, $resolver_node );
 		}
 
 		$nodes = { label => $r, children => $children };
-		push( @$data, $nodes );
+		push( @{$data}, $nodes );
 	}
 	return $self->render( json => $data );
 }
@@ -140,13 +167,10 @@ sub group_resolvers {
 		my $ip_address      = $row->federation_resolver->ip_address;
 		my $type_name       = lc $row->federation_resolver->type->name;
 
-		if ( defined $resolvers->{$type_name} ) {
-			push( $resolvers->{$type_name}, $ip_address );
+		if ( !defined $resolvers->{$type_name} ) {
+			$resolvers->{$type_name} = [];
 		}
-		else {
-			@{ $resolvers->{$type_name} } = ();
-			push( $resolvers->{$type_name}, $ip_address );
-		}
+		push( @{ $resolvers->{$type_name} }, $ip_address );
 	}
 	return $resolvers;
 }
@@ -169,23 +193,30 @@ sub update {
 	my $self        = shift;
 	my $fed_id      = $self->param('federation_id');
 	my $ds_id       = $self->param('ds_id');
+	my $user_id     = $self->param('user_id');
 	my $cname       = $self->param('federation.cname');
 	my $description = $self->param('federation.description');
 	my $ttl         = $self->param('federation.ttl');
 
-	my $is_valid = $self->is_valid("edit");
+	my $is_valid = $self->is_valid();
 	if ( $self->is_valid("edit") ) {
-		my $dbh = $self->db->resultset('Federation')->find( { id => $fed_id } );
+		my $dbh =
+			$self->db->resultset('Federation')->find( { id => $fed_id } );
 		$dbh->cname($cname);
 		$dbh->description($description);
 		$dbh->ttl($ttl);
 		$dbh->update();
 
-		my $ftusers =
-			$self->db->resultset('FederationTmuser')->search( { federation => $fed_id }, { prefetch => [ 'federation', 'tm_user' ] } );
-		while ( my $ft = $ftusers->next ) {
-			my $fid    = $ft->federation->id;
-			my $fcname = $ft->federation->cname;
+		my $ft = $self->db->resultset('FederationTmuser')->find_or_create(
+			{
+				federation => $fed_id,
+				role       => FEDERATION_ROLE_ID
+			}
+		);
+
+		if ( defined($ft) ) {
+			$ft->federation($fed_id);
+			$ft->tm_user($user_id);
 			$ft->role(FEDERATION_ROLE_ID);
 			$ft->update();
 		}
@@ -208,12 +239,17 @@ sub update {
 
 # Create
 sub create {
-	my $self  = shift;
-	my $ds_id = $self->param("ds_id");
+	my $self    = shift;
+	my $ds_id   = $self->param("ds_id");
+	my $user_id = $self->param("user_id");
+	my $cname   = $self->param("federation.cname");
+	my $desc    = $self->param("federation.description");
+	my $ttl     = $self->param("federation.ttl");
 	&stash_role($self);
 	$self->stash(
 		role_name            => undef,
 		deliveryservice_name => undef,
+		user_id              => $user_id,
 		ds_id                => $ds_id,
 		federation           => {},
 		fbox_layout          => 1,
@@ -221,10 +257,12 @@ sub create {
 		mode                 => 'add'
 	);
 	if ( $self->is_valid("add") ) {
-		my $new_id = $self->create_federation_mapping($ds_id);
+		my $new_id = $self->create_federation( $ds_id, $user_id, $cname, $desc, $ttl );
 		if ( $new_id > 0 ) {
 			$self->app->log->debug("redirecting....");
-			return $self->redirect_to('/close_fancybox.html');
+
+			$self->flash( message => "Successfully added Federation!" );
+			return $self->redirect_to("/federation/$new_id/edit");
 		}
 	}
 	else {
@@ -232,12 +270,14 @@ sub create {
 	}
 }
 
-sub create_federation_mapping {
-	my $self          = shift;
+sub create_federation {
+	my $self = shift;
+
 	my $ds_id         = shift;
-	my $cname         = $self->param("federation.cname");
-	my $desc          = $self->param("federation.description");
-	my $ttl           = $self->param("federation.ttl");
+	my $user_id       = shift;
+	my $cname         = shift;
+	my $desc          = shift;
+	my $ttl           = shift;
 	my $federation_id = -1;
 	my $fed           = $self->db->resultset('Federation')->create(
 		{
@@ -259,6 +299,17 @@ sub create_federation_mapping {
 		);
 		$fed_ds_id = $fed_ds->insert();
 
+		if ( $fed_ds_id > 0 ) {
+			my $ft = $self->db->resultset('FederationTmuser')->create(
+				{
+					federation => $federation_id,
+					tm_user    => $user_id,
+					role       => FEDERATION_ROLE_ID,
+				}
+			);
+		}
+		$fed_ds_id = $fed_ds->insert();
+
 		my $ds = $self->db->resultset('Deliveryservice')->search( { id => $ds_id } )->single();
 
 		# if the insert has failed, we don't even get here, we go to the exception page.
@@ -270,11 +321,17 @@ sub create_federation_mapping {
 
 sub is_valid {
 	my $self = shift;
-	my $mode = shift;
 
 	$self->field('federation.cname')->is_required;
 	$self->field('federation.cname')->is_like( qr/\.$/, "CNAME must end with a period." );
 	$self->field('federation.ttl')->is_required;
+	$self->field('ds_id')->is_required;
+	$self->field('user_id')->is_required;
+	my $cname = $self->param('federation.cname');
+	my $existing_fed = $self->db->resultset('Federation')->search( { cname => $cname } )->get_column('cname')->single();
+	if ($existing_fed) {
+		$self->field('federation.cname')->is_equal( "", "A Federation with name \"$cname\" already exists." );
+	}
 
 	return $self->valid;
 }
@@ -283,23 +340,27 @@ sub is_valid {
 sub delete {
 	my $self   = shift;
 	my $fed_id = $self->param('federation_id');
-	my $cname  = $self->param('federation.cname');
 
 	if ( !&is_oper($self) ) {
 		$self->flash( alertmsg => "No can do. Get more privs." );
 	}
 	else {
-		my $delete = $self->db->resultset('Federation')->search( { id => $fed_id } );
-		my $resolvers =
-			$self->db->resultset('FederationFederationResolver')
-			->search( { federation => $fed_id }, { prefetch => [ 'federation', 'federation_resolver' ] } );
-		my $ip_address;
-		my $cname;
-		while ( my $row = $resolvers->next ) {
-			my $id = $row->id;
+
+		my $fed_resolver = $self->db->resultset('FederationResolver')
+			->search( { 'federation_federation_resolvers.federation' => $fed_id }, { prefetch => 'federation_federation_resolvers' } );
+
+		if ( defined($fed_resolver) ) {
+			$fed_resolver->delete();
 		}
-		$delete->delete();
-		&log( $self, "Deleted federation: " . $fed_id . " cname: " . $cname . " ip_address: " . $ip_address, "UICHANGE" );
+
+		my $federation = $self->db->resultset('Federation')->search( { id => $fed_id } )->single();
+		if ( defined($federation) ) {
+			my $cname = $federation->cname;
+			$federation->delete();
+			my $msg = sprintf( "Deleted Federation -- cname: %s", $cname );
+			&log( $self, $msg, "UICHANGE" );
+		}
+
 	}
 	return $self->redirect_to('/close_fancybox.html');
 }

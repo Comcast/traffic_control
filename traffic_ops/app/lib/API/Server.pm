@@ -29,23 +29,74 @@ use MojoPlugins::Job;
 use Utils::Helper::ResponseHelper;
 
 sub index {
-	my $self = shift;
-	my $data = getserverdata($self);
-	$self->success($data);
+	my $self   = shift;
+	my $ds_id  = $self->param('dsId');
+	my $helper = new Utils::Helper( { mojo => $self } );
+	if ( defined $ds_id ) {
+		if ( !$helper->is_valid_delivery_service($ds_id) ) {
+			return $self->alert("Delivery Service does not exist.");
+		}
+		if ( $self->is_delivery_service_assigned($ds_id) || &is_admin($self) || &is_oper($self) ) {
+			my $data = getserverdata( $self, $ds_id );
+			$self->success($data);
+		}
+		else {
+			$self->forbidden();
+		}
+	}
+	else {
+		if ( &is_admin($self) || &is_oper($self) ) {
+			my $data = getserverdata($self);
+			$self->success($data);
+		}
+		else {
+			$self->forbidden();
+		}
+	}
 }
 
 sub getserverdata {
-	my $self = shift;
+	my $self  = shift;
+	my $ds_id = shift;
 	my @data;
 	my $isadmin = &is_admin($self);
 	my $orderby = $self->param('orderby') || "host_name";
-	my $rs_data = $self->db->resultset('Server')->search(
-		undef, {
-			prefetch => [ 'cdn', 'cachegroup', 'type', 'profile', 'status', 'phys_location' ],
-			order_by => 'me.' . $orderby,
+	my $servers;
+	if ( defined $ds_id ) {
+
+		# we want the edge cache servers and mid cache servers (but only mids if the delivery service uses mids)
+		my @deliveryservice_servers_edge = $self->db->resultset('DeliveryserviceServer')->search(
+			{
+				deliveryservice => $ds_id,
+			}
+		)->get_column('server')->all();
+
+		my $ds = $self->db->resultset('Deliveryservice')->search( { 'me.id' => $ds_id }, { prefetch => ['type'] } )->single();
+		my @criteria     = [ { 'me.id' => { -in => \@deliveryservice_servers_edge } } ];
+		my $subsel       = '(SELECT id FROM type where name = "MID")';
+		my @types_no_mid = qw( HTTP_NO_CACHE HTTP_LIVE DNS_LIVE );                         # currently these are the ds types that bypass the mids
+		if ( !grep { $_ eq $ds->type->name } @types_no_mid ) {
+			push( @criteria, { 'me.type' => { -in => \$subsel }, 'me.cdn_id' => $ds->cdn_id } );
 		}
-	);
-	while ( my $row = $rs_data->next ) {
+
+		$servers = $self->db->resultset('Server')->search(
+			[@criteria], {
+				prefetch => [ 'cdn', 'cachegroup', 'type', 'profile', 'status', 'phys_location' ],
+				order_by => 'me.' . $orderby,
+			}
+		);
+	}
+	else {
+		# get all servers
+		$servers = $self->db->resultset('Server')->search(
+			undef, {
+				prefetch => [ 'cdn', 'cachegroup', 'type', 'profile', 'status', 'phys_location' ],
+				order_by => 'me.' . $orderby,
+			}
+		);
+	}
+
+	while ( my $row = $servers->next ) {
 		my $cdn_name = defined( $row->cdn_id ) ? $row->cdn->name : "";
 
 		push(
