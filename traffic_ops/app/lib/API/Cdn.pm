@@ -398,6 +398,68 @@ sub configs_routing {
 	$self->success($json);
 }
 
+sub setup_cachegroups {
+    my $self = shift;
+    my $row  = shift;
+    my $cache_group;
+
+    my $latitude  = $row->cachegroup->latitude + 0;
+    my $longitude = $row->cachegroup->longitude + 0;
+    $cache_group->{'coordinates'}->{'latitude'}  = $latitude;
+    $cache_group->{'coordinates'}->{'longitude'} = $longitude;
+    $cache_group->{'name'}                       = $row->cachegroup->name;
+    return $cache_group;
+}
+
+sub check_cachegroups {
+    my $self                      = shift;
+    my $data_obj->{'cacheGroups'} = shift;
+    my $row                       = shift;
+    my $cachegroup;
+
+    foreach my $cache ( @{ $data_obj->{'cacheGroups'} } ) {
+        if ( $cache->{'name'} eq $row->cachegroup->name ) {
+            $cachegroup = $cache->{'name'};
+        }
+    }
+    return $cachegroup;
+}
+
+sub setup_server {
+    my $self        = shift;
+    my $row         = shift;
+    my $server_type = shift;
+    my $api_port    = shift;
+    my $server;
+
+    $server->{'hostName'} = $row->host_name;
+    $server->{'fqdn'}     = $row->host_name . "." . $row->domain_name;
+    $server->{'status'}   = $row->status->name;
+    $server->{'port'}     = int( $row->tcp_port );
+    $server->{'ip'}       = $row->ip_address;
+    $server->{'ip6'}      = $row->ip6_address;
+    $server->{'profile'}  = $row->profile->name;
+
+    if ( $server_type eq "TrafficMonitor" ) {
+        $server->{'location'} = $row->cachegroup->name;
+    }
+
+    if ( $server_type eq "TrafficRouter" ) {
+        $server->{'apiPort'}  = int($api_port);
+        $server->{'location'} = $row->cachegroup->name;
+    }
+
+    if ( $server_type eq "TrafficServer" ) {
+        $server->{'cacheGroup'}    = $row->cachegroup->name;
+        $server->{'interfaceName'} = $row->interface_name;
+        $server->{'type'}          = $row->type->name;
+        $server->{'hashId'}        = $row->xmpp_id;
+    }
+
+    return $server;
+
+}
+
 sub gen_traffic_router_config {
 	my $self     = shift;
 	my $cdn_name = shift;
@@ -427,25 +489,68 @@ sub gen_traffic_router_config {
 	$data_obj->{'stats'}->{'trafficOpsUser'}
 		= $self->current_user()->{username};
 
-	my @cdn_profiles
-		= $self->db->resultset('Server')
-		->search( { 'cdn.name' => $cdn_name }, { prefetch => ['cdn'] } )
-		->get_column('profile')->all();
-	if ( scalar(@cdn_profiles) ) {
-		$ccr_profile_id
-			= $self->db->resultset('Profile')
-			->search(
-			{ id => { -in => \@cdn_profiles }, name => { -like => 'CCR%' } } )
-			->get_column('id')->single();
-		if ( !defined($ccr_profile_id) ) {
-			my $e = Mojo::Exception->throw(
-				"No CCR profile found in profile IDs: @cdn_profiles ");
-		}
-	}
-	else {
-		my $e = Mojo::Exception->throw(
-			"No profiles found for CDN_name: " . $cdn_name );
-	}
+  my @cdn_profiles;
+  my $servers = $self->db->resultset('Server')->search(
+    { 'cdn.name' => $cdn_name },
+    {   prefetch => [ 'cdn', 'cachegroup', 'profile', 'type', 'status' ],
+      distinct => 1
+    }
+  );
+
+  my %cache_tracker;
+  if ( !defined $servers ) {
+    my $e = Mojo::Exception->throw(
+      "No profiles found for CDN_name: " . $cdn_name );
+  }
+
+  while ( my $row = $servers->next ) {
+    push( @cdn_profiles, $row->profile->id );
+
+    my $data_cachegroup
+      = $self->check_cachegroups( $data_obj->{'cacheGroups'}, $row );
+    if ( !defined $data_cachegroup ) {
+      my $cache_group = $self->setup_cachegroups($row);
+      push( @{ $data_obj->{'cacheGroups'} }, $cache_group );
+    }
+
+    if ( $row->type->name eq "RASCAL" ) {
+      my $traffic_monitor
+        = $self->setup_server( $row, "TrafficMonitor" );
+      push( @{ $data_obj->{'trafficMonitors'} }, $traffic_monitor );
+    }
+    elsif ( $row->type->name eq "CCR" ) {
+      my $rs_param = $self->db->resultset('Parameter')->search(
+        {   'profile_parameters.profile' => $row->profile->id,
+          'name'                       => 'api.port'
+        },
+        { join => 'profile_parameters' }
+      )->single;
+      my $api_port
+        = ( defined($rs_param) && defined( $rs_param->value ) )
+        ? $rs_param->value
+        : 3333;
+
+      my $traffic_router
+        = $self->setup_server( $row, "TrafficRouter", $api_port );
+      push( @{ $data_obj->{'trafficRouters'} }, $traffic_router );
+    }
+    elsif ( $row->type->name eq "EDGE" || $row->type->name eq "MID" ) {
+      if ( !exists $cache_tracker{ $row->id } ) {
+        $cache_tracker{ $row->id } = $row->host_name;
+      }
+
+      my $traffic_server = $self->setup_server( $row, "TrafficServer" );
+      push( @{ $data_obj->{'trafficServers'} }, $traffic_server );
+    }
+  }
+
+  $ccr_profile_id
+    = $servers->search( { 'type.name' => 'CCR' } )->get_column('profile')
+    ->single();
+  if ( !defined($ccr_profile_id) ) {
+    my $e = Mojo::Exception->throw(
+      "No CCR profile found in profile IDs: @cdn_profiles ");
+  }
 
 	my %condition = (
 		'profile_parameters.profile' => $ccr_profile_id,
@@ -488,106 +593,12 @@ sub gen_traffic_router_config {
 		}
 	}
 
-	my $rs_loc = $self->db->resultset('Server')->search(
-		{ 'cdn.name' => $cdn_name },
-		{   join   => [ 'cdn', 'cachegroup' ],
-			select => [
-				'cachegroup.name', 'cachegroup.latitude',
-				'cachegroup.longitude'
-			],
-			distinct => 1
-		}
-	);
-	while ( my $row = $rs_loc->next ) {
-		my $cache_group;
-		my $latitude  = $row->cachegroup->latitude + 0;
-		my $longitude = $row->cachegroup->longitude + 0;
-		$cache_group->{'coordinates'}->{'latitude'}  = $latitude;
-		$cache_group->{'coordinates'}->{'longitude'} = $longitude;
-		$cache_group->{'name'}                       = $row->cachegroup->name;
-		push( @{ $data_obj->{'cacheGroups'} }, $cache_group );
-	}
-
 	my $regex_tracker;
 	my $rs_regexes = $self->db->resultset('Regex')
 		->search( {}, { 'prefetch' => 'type' } );
 	while ( my $row = $rs_regexes->next ) {
 		$regex_tracker->{ $row->id }->{'type'}    = $row->type->name;
 		$regex_tracker->{ $row->id }->{'pattern'} = $row->pattern;
-	}
-	my %cache_tracker;
-	my $rs_caches = $self->db->resultset('Server')->search(
-		{ 'profile' => { -in => \@cdn_profiles } },
-		{   prefetch => [ 'type', 'status', 'cachegroup', 'profile' ],
-			columns  => [
-				'host_name',  'domain_name',
-				'tcp_port',   'interface_name',
-				'ip_address', 'ip6_address',
-				'id',         'xmpp_id'
-			]
-		}
-	);
-	while ( my $row = $rs_caches->next ) {
-		if ( $row->type->name eq "RASCAL" ) {
-			my $traffic_monitor;
-			$traffic_monitor->{'hostName'} = $row->host_name;
-			$traffic_monitor->{'fqdn'}
-				= $row->host_name . "." . $row->domain_name;
-			$traffic_monitor->{'status'}   = $row->status->name;
-			$traffic_monitor->{'location'} = $row->cachegroup->name;
-			$traffic_monitor->{'port'}     = int( $row->tcp_port );
-			$traffic_monitor->{'ip'}       = $row->ip_address;
-			$traffic_monitor->{'ip6'}      = $row->ip6_address;
-			$traffic_monitor->{'profile'}  = $row->profile->name;
-			push( @{ $data_obj->{'trafficMonitors'} }, $traffic_monitor );
-
-		}
-		elsif ( $row->type->name eq "CCR" ) {
-			my $rs_param = $self->db->resultset('Parameter')->search(
-				{   'profile_parameters.profile' => $row->profile->id,
-					'name'                       => 'api.port'
-				},
-				{ join => 'profile_parameters' }
-			);
-			my $r = $rs_param->single;
-			my $api_port
-				= ( defined($r) && defined( $r->value ) ) ? $r->value : 3333;
-
-			my $traffic_router;
-
-			$traffic_router->{'hostName'} = $row->host_name;
-			$traffic_router->{'fqdn'}
-				= $row->host_name . "." . $row->domain_name;
-			$traffic_router->{'status'}   = $row->status->name;
-			$traffic_router->{'location'} = $row->cachegroup->name;
-			$traffic_router->{'port'}     = int( $row->tcp_port );
-			$traffic_router->{'apiPort'}  = int($api_port);
-			$traffic_router->{'ip'}       = $row->ip_address;
-			$traffic_router->{'ip6'}      = $row->ip6_address;
-			$traffic_router->{'profile'}  = $row->profile->name;
-			push( @{ $data_obj->{'trafficRouters'} }, $traffic_router );
-		}
-		elsif ( $row->type->name eq "EDGE" || $row->type->name eq "MID" ) {
-			if ( !exists $cache_tracker{ $row->id } ) {
-				$cache_tracker{ $row->id } = $row->host_name;
-			}
-
-			my $traffic_server;
-			$traffic_server->{'cacheGroup'} = $row->cachegroup->name;
-			$traffic_server->{'hostName'}   = $row->host_name;
-			$traffic_server->{'fqdn'}
-				= $row->host_name . "." . $row->domain_name;
-			$traffic_server->{'port'}          = int( $row->tcp_port );
-			$traffic_server->{'interfaceName'} = $row->interface_name;
-			$traffic_server->{'status'}        = $row->status->name;
-			$traffic_server->{'ip'}            = $row->ip_address;
-			$traffic_server->{'ip6'}           = ( $row->ip6_address || "" );
-			$traffic_server->{'profile'}       = $row->profile->name;
-			$traffic_server->{'type'}          = $row->type->name;
-			$traffic_server->{'hashId'}        = $row->xmpp_id;
-			push( @{ $data_obj->{'trafficServers'} }, $traffic_server );
-		}
-
 	}
 
 	my $ds_regex_tracker;
