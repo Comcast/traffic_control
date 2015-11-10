@@ -34,7 +34,6 @@ import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.TrafficRouterException;
 import com.comcast.cdn.traffic_control.traffic_router.core.config.ConfigHandler;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouterManager;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.AbstractUpdatable;
@@ -111,13 +110,9 @@ public class TrafficMonitorWatcher  {
 			@Override
 			public boolean update(final String configStr) {
 				try {
-					try {
-						return configHandler.processConfig(configStr);
-					} catch (JSONException e) {
-						LOGGER.warn(e, e);
-					} catch (TrafficRouterException e) {
-						LOGGER.fatal(e, e);
-					}
+					return configHandler.processConfig(configStr);
+				} catch (JSONException e) {
+					LOGGER.warn(e, e);
 				} catch (IOException e) {
 					LOGGER.warn("error on config update", e);
 				}

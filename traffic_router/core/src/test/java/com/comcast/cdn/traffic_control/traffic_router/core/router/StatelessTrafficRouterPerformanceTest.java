@@ -31,7 +31,6 @@ import org.junit.Before;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.TrafficRouterException;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.Cache;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheLocation;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheRegister;
@@ -41,17 +40,13 @@ import com.comcast.cdn.traffic_control.traffic_router.core.loc.Geolocation;
 import com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationException;
 import com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationService;
 import com.comcast.cdn.traffic_control.traffic_router.core.request.HTTPRequest;
-import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouter;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.TrafficOpsUtils;
-import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Track;
 
 public class StatelessTrafficRouterPerformanceTest  extends TrafficRouter {
 
 
-    public StatelessTrafficRouterPerformanceTest(CacheRegister cr,
-			GeolocationService geolocationService, ObjectPool hashFunctionPool)
-			throws IOException, JSONException, TrafficRouterException {
+    public StatelessTrafficRouterPerformanceTest(CacheRegister cr, GeolocationService geolocationService, ObjectPool hashFunctionPool) throws IOException, JSONException {
 		super(cr, geolocationService, null, hashFunctionPool, null, new TrafficOpsUtils(), null);
 	}
 
@@ -81,7 +76,7 @@ public class StatelessTrafficRouterPerformanceTest  extends TrafficRouter {
 		String[] rstrs = getRandomStrings(1000000);
 		try {
 			((StatelessTrafficRouterPerformanceTest) trafficRouter).routeTest(req, rstrs);
-		} catch (TrafficRouterException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		for(String str : rstrs) {
@@ -128,7 +123,7 @@ public class StatelessTrafficRouterPerformanceTest  extends TrafficRouter {
 		return strs;
 	}
 
-	public URL routeTest(final HTTPRequest request, String[] rstrs) throws TrafficRouterException, GeolocationException {
+	public URL routeTest(final HTTPRequest request, String[] rstrs) throws GeolocationException {
 		if (LOGGER.isDebugEnabled()) {
 			LOGGER.debug("Attempting to route HTTPRequest: " + request.getRequestedUrl());
 		}
@@ -146,7 +141,7 @@ public class StatelessTrafficRouterPerformanceTest  extends TrafficRouter {
 			if(cache != null) { return new URL(ds.createURIString(request, cache)); }
 		} catch (final MalformedURLException e) {
 			LOGGER.error(e.getMessage(), e);
-			throw new TrafficRouterException(URL_ERR_STR, e);
+			throw new RuntimeException(URL_ERR_STR, e);
 		}
 		LOGGER.warn("No Cache found in CoverageZoneMap for HTTPRequest.getClientIP: "+ip);
 
@@ -211,13 +206,13 @@ public class StatelessTrafficRouterPerformanceTest  extends TrafficRouter {
 
 				} catch (final MalformedURLException e) {
 					LOGGER.error(e.getMessage(), e);
-					throw new TrafficRouterException(URL_ERR_STR, e);
+					throw new RuntimeException(URL_ERR_STR, e);
 				}
 			}
 		}
 
 		LOGGER.info(UNABLE_TO_ROUTE_REQUEST);
-		throw new TrafficRouterException(UNABLE_TO_ROUTE_REQUEST);
+		throw new RuntimeException(UNABLE_TO_ROUTE_REQUEST);
 	}
 
 }

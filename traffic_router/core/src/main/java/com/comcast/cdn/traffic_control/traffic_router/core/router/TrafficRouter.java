@@ -40,7 +40,6 @@ import org.json.JSONObject;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Zone;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.TrafficRouterException;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.Cache;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheLocation;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheRegister;
@@ -85,7 +84,7 @@ public class TrafficRouter {
 			final ObjectPool hashFunctionPool,
 			final StatTracker statTracker,
 			final TrafficOpsUtils trafficOpsUtils,
-			final FederationRegistry federationRegistry) throws IOException, JSONException, TrafficRouterException {
+			final FederationRegistry federationRegistry) throws IOException, JSONException {
 		this.cacheRegister = cr;
 		this.geolocationService = geolocationService;
 		this.geolocationService6 = geolocationService6;
