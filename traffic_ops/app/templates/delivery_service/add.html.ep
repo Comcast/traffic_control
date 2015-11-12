@@ -204,7 +204,7 @@
 	    </table>
 	    <br>
 	    <br>
-	    <h4 style="color:white">Add a new Regex:</h4>
+	    <h4>Add a new Regex:</h4>
 	    <select id="regexp_selector">
 		    <option>Select...</option>
 		    <option>Add Host Regexp</option>
