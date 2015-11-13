@@ -78,48 +78,49 @@ public class NameServer {
 	@SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
 	private void addAnswers(final Message request, final Message response, final InetAddress clientAddress, final DNSAccessRecord.Builder builder) {
 		final Record question = request.getQuestion();
-		final int qclass = question.getDClass();
-		final Name qname = question.getName();
-		final OPTRecord qopt = request.getOPT();
-		boolean dnssecRequest = false;
-		int qtype = question.getType();
-		int flags = 0;
 
-		if ((qopt != null) && (qopt.getVersion() > MAX_SUPPORTED_EDNS_VERS)) {
-			response.getHeader().setRcode(Rcode.NOTIMP);
-			final OPTRecord opt = new OPTRecord(0, Rcode.BADVERS, MAX_SUPPORTED_EDNS_VERS);
-			response.addRecord(opt, Section.ADDITIONAL);
-			return;
-		}
+		if (question != null) {
+			final int qclass = question.getDClass();
+			final Name qname = question.getName();
+			final OPTRecord qopt = request.getOPT();
+			boolean dnssecRequest = false;
+			int qtype = question.getType();
 
-		if ((qclass != DClass.IN) && (qclass != DClass.ANY)) {
-			response.getHeader().setRcode(Rcode.REFUSED);
-			return;
-		}
+			int flags = 0;
 
-		if (qopt != null && (qopt.getFlags() & ExtendedFlags.DO) != 0) {
-			flags = FLAG_DNSSECOK;
-			dnssecRequest = true;
-		}
+			if ((qopt != null) && (qopt.getVersion() > MAX_SUPPORTED_EDNS_VERS)) {
+				response.getHeader().setRcode(Rcode.NOTIMP);
+				final OPTRecord opt = new OPTRecord(0, Rcode.BADVERS, MAX_SUPPORTED_EDNS_VERS);
+				response.addRecord(opt, Section.ADDITIONAL);
+				return;
+			}
 
-		if (qtype == Type.SIG || qtype == Type.RRSIG) {
-			qtype = Type.ANY;
-			flags |= FLAG_SIGONLY;
-		}
+			if ((qclass != DClass.IN) && (qclass != DClass.ANY)) {
+				response.getHeader().setRcode(Rcode.REFUSED);
+				return;
+			}
 
-		final Zone zone = trafficRouterManager.getTrafficRouter().getZone(qname, qtype, clientAddress, dnssecRequest, builder);
+			if (qopt != null && (qopt.getFlags() & ExtendedFlags.DO) != 0) {
+				flags = FLAG_DNSSECOK;
+				dnssecRequest = true;
+			}
 
-		if (zone == null) {
-			response.getHeader().setRcode(Rcode.REFUSED);
-			return;
-		}
+			if (qtype == Type.SIG || qtype == Type.RRSIG) {
+				qtype = Type.ANY;
+				flags |= FLAG_SIGONLY;
+			}
 
-		lookup(qname, qtype, zone, response, 0, flags);
+			lookup(qname, qtype, clientAddress, response, flags, dnssecRequest, builder);
 
-		if (qopt != null && flags == FLAG_DNSSECOK) {
-			final int optflags = ExtendedFlags.DO;
-			final OPTRecord opt = new OPTRecord(1280, (byte) 0, (byte) 0, optflags);
-			response.addRecord(opt, Section.ADDITIONAL);
+			if (response.getHeader().getRcode() == Rcode.REFUSED) {
+				return;
+			}
+
+			if (qopt != null && flags == FLAG_DNSSECOK) {
+				final int optflags = ExtendedFlags.DO;
+				final OPTRecord opt = new OPTRecord(1280, (byte) 0, (byte) 0, optflags);
+				response.addRecord(opt, Section.ADDITIONAL);
+			}
 		}
 	}
 
@@ -187,9 +188,30 @@ public class NameServer {
 		}
 	}
 
+	private void lookup(final Name qname, final int qtype, final InetAddress clientAddress, final Message response, final int flags, final boolean dnssecRequest, final DNSAccessRecord.Builder builder) {
+		lookup(qname, qtype, clientAddress, null, response, 0, flags, dnssecRequest, builder);
+	}
+
 	@SuppressWarnings({"unchecked", "PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
-	private static void lookup(final Name qname, final int qtype, final Zone zone, final Message response, final int iteration, final int flags) {
+	private void lookup(final Name qname, final int qtype, final InetAddress clientAddress, final Zone incomingZone, final Message response, final int iteration, final int flags, final boolean dnssecRequest, final DNSAccessRecord.Builder builder) {
 		if (iteration > MAX_ITERATIONS) {
+			return;
+		}
+
+		Zone zone = incomingZone;
+
+		// this allows us to locate zones for which we are authoritative
+		if (zone == null || !qname.subdomain(zone.getOrigin())) {
+			zone = trafficRouterManager.getTrafficRouter().getZone(qname, qtype, clientAddress, dnssecRequest, builder);
+		}
+
+		// null means we did not find a zone for which we are authoritative
+		if (zone == null) {
+			if (iteration == 0) {
+				// refuse the query if we're not authoritative and we're not recursing
+				response.getHeader().setRcode(Rcode.REFUSED);
+			}
+
 			return;
 		}
 
@@ -201,6 +223,16 @@ public class NameServer {
 			}
 
 			addAuthority(zone, response, flags);
+		} else if (sr.isCNAME()) {
+			final CNAMERecord cname = sr.getCNAME();
+			final RRset cnameSet = new RRset(cname);
+			addRRset(qname, response, cnameSet, Section.ANSWER, flags);
+
+			/*
+			 * Allow recursive lookups for CNAME targets; the logic above allows us to
+			 * ensure that we only recurse for domains for which we are authoritative.
+			 */
+			lookup(cname.getTarget(), qtype, clientAddress, zone, response, iteration + 1, flags, dnssecRequest, builder);
 		} else if (sr.isNXDOMAIN()) {
 			response.getHeader().setRcode(Rcode.NXDOMAIN);
 
@@ -270,11 +302,6 @@ public class NameServer {
 
 			addSOA(zone, response, Section.AUTHORITY, flags);
 			response.getHeader().setFlag(Flags.AA);
-		} else if (sr.isCNAME()) {
-			final CNAMERecord cname = sr.getCNAME();
-			final RRset cnameSet = new RRset(cname);
-			addRRset(qname, response, cnameSet, Section.ANSWER, flags);
-			lookup(cname.getTarget(), qtype, zone, response, iteration + 1, flags);
 		}
 	}
 
@@ -293,7 +320,6 @@ public class NameServer {
 		 * Given that we know we're shutting down and NameServer relies on ZoneManager,
 		 * we'll call destroy while we can without hacking Spring too hard.
 		 */
-		LOGGER.info("Calling destroy on ZoneManager");
 		ZoneManager.destroy();
 	}
 }

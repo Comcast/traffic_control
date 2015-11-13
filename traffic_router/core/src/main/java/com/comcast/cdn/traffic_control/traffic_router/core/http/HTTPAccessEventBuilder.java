@@ -1,7 +1,12 @@
 package com.comcast.cdn.traffic_control.traffic_router.core.http;
 
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.Geolocation;
+
 import javax.servlet.http.HttpServletRequest;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.Date;
+import java.util.Map;
 
 public class HTTPAccessEventBuilder {
     private static String formatRequest(final HttpServletRequest request) {
@@ -25,6 +30,34 @@ public class HTTPAccessEventBuilder {
         return (o == null) ? "-" : o.toString();
     }
 
+    private static String formatRequestHeaders(final Map<String, String> requestHeaders) {
+        if (requestHeaders == null || requestHeaders.isEmpty()) {
+            return "rh=\"-\"";
+        }
+
+        final StringBuilder stringBuilder = new StringBuilder();
+        boolean first = true;
+        for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
+            if (entry.getValue() == null || entry.getValue().isEmpty()) {
+                continue;
+            }
+
+            if (!first) {
+                stringBuilder.append(' ');
+            }
+            else {
+                first = false;
+            }
+
+            stringBuilder.append("rh=\"");
+            stringBuilder.append(entry.getKey()).append(": ");
+            stringBuilder.append(entry.getValue().replaceAll("\"", "'"));
+            stringBuilder.append('"');
+        }
+
+        return stringBuilder.toString();
+    }
+
     @SuppressWarnings("PMD.UseStringBufferForStringAppends")
     public static String create(final HTTPAccessRecord httpAccessRecord) {
         final long start = httpAccessRecord.getRequestDate().getTime();
@@ -45,6 +78,15 @@ public class HTTPAccessEventBuilder {
             resultDetails = formatObject(httpAccessRecord.getResultDetails());
         }
 
+        String rloc = "-";
+        final Geolocation resultLocation = httpAccessRecord.getResultLocation();
+
+        if (resultLocation != null) {
+            final DecimalFormat decimalFormat = new DecimalFormat(".##");
+            decimalFormat.setRoundingMode(RoundingMode.DOWN);
+            rloc = decimalFormat.format(resultLocation.getLatitude()) + "," + decimalFormat.format(resultLocation.getLongitude());
+        }
+
         final StringBuilder stringBuilder = new StringBuilder(timeString)
             .append(" qtype=HTTP")
             .append(" chi=" + chi)
@@ -52,7 +94,8 @@ public class HTTPAccessEventBuilder {
             .append(" cqhm=" + cqhm)
             .append(" cqhv=" + cqhv)
             .append(" rtype=" + resultType)
-            .append(" rdetails=" + resultDetails)
+            .append(" rloc=\"" + rloc + "\"")
+            .append(" rdtl=" + resultDetails)
             .append(" rerr=\"" + rerr + "\"");
 
         if (httpAccessRecord.getResponseCode() != -1) {
@@ -61,9 +104,10 @@ public class HTTPAccessEventBuilder {
             stringBuilder.append(" pssc=").append(pssc).append(" ttms=").append(ttms);
         }
 
-        final String respurl = " rurl=\"" + formatObject(httpAccessRecord.getResponseURL()) + "\"";
+        final String respurl = " rurl=\"" + formatObject(httpAccessRecord.getResponseURL()) + "\" ";
         stringBuilder.append(respurl);
 
+        stringBuilder.append(formatRequestHeaders(httpAccessRecord.getRequestHeaders()));
         return stringBuilder.toString();
     }
 }

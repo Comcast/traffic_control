@@ -79,7 +79,7 @@ public abstract class AbstractServiceUpdater {
 
 	public void init() {
 		final long pi = getPollingInterval();
-		LOGGER.warn(getClass().getSimpleName() + " Starting schedule with interval: " + pi + " : " + TimeUnit.MILLISECONDS);
+		LOGGER.info(getClass().getSimpleName() + " Starting schedule with interval: " + pi + " : " + TimeUnit.MILLISECONDS);
 		scheduledService = executorService.scheduleWithFixedDelay(updater, pi, pi, TimeUnit.MILLISECONDS);
 	}
 
@@ -118,7 +118,6 @@ public abstract class AbstractServiceUpdater {
 						setLoaded(true);
 						trafficRouterManager.trackEvent("last" + getClass().getSimpleName() + "Update");
 					} else if (isLoaded() && !isDifferent) {
-						LOGGER.info("Removing downloaded temp file " + newDB);
 						newDB.delete();
 					}
 
@@ -195,7 +194,6 @@ public abstract class AbstractServiceUpdater {
 	}
 	protected boolean copyDatabaseIfDifferent(final File existingDB, final File newDB) throws IOException {
 		if (!filesEqual(existingDB, newDB)) {
-			LOGGER.info("Unlinking location database and renaming " + newDB + " to " + existingDB);
 
 			if (existingDB != null && existingDB.exists()) {
 				existingDB.setReadable(true, true);
@@ -224,7 +222,7 @@ public abstract class AbstractServiceUpdater {
 	protected String tmpPrefix = "loc";
 	protected String tmpSuffix = ".dat";
 	protected File downloadDatabase(final String url, final File existingDb) throws IOException {
-		LOGGER.info("Downloading database: " + url);
+		LOGGER.info("[" + getClass().getSimpleName() + "] Downloading database: " + url);
 		final URL dbURL = new URL(url);
 		final HttpURLConnection conn = (HttpURLConnection) dbURL.openConnection();
 
@@ -249,7 +247,6 @@ public abstract class AbstractServiceUpdater {
 		IOUtils.copy(in, out);
 		IOUtils.closeQuietly(in);
 		IOUtils.closeQuietly(out);
-		LOGGER.warn("Successfully downloaded location database to temp path " + outputFile);
 
 		return outputFile;
 	}

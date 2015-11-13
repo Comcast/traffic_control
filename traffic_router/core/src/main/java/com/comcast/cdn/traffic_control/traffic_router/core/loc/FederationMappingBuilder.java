@@ -1,6 +1,7 @@
 package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.util.CidrAddress;
+import com.comcast.cdn.traffic_control.traffic_router.core.util.ComparableTreeSet;
 import org.apache.wicket.ajax.json.JSONArray;
 import org.apache.wicket.ajax.json.JSONException;
 import org.apache.wicket.ajax.json.JSONObject;
@@ -9,8 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class FederationMappingBuilder {
     private static final Logger LOGGER = LoggerFactory.getLogger(FederationMappingBuilder.class);
@@ -21,7 +20,7 @@ public class FederationMappingBuilder {
         final String cname = jsonObject.getString("cname");
         final int ttl = jsonObject.getInt("ttl");
 
-        List<CidrAddress> network = null;
+        ComparableTreeSet<CidrAddress> network = null;
         if (jsonObject.has("resolve4")) {
             final JSONArray networkArray = jsonObject.getJSONArray("resolve4");
 
@@ -29,32 +28,32 @@ public class FederationMappingBuilder {
                 network = buildAddresses(networkArray);
             }
             catch (JSONException e) {
-                LOGGER.warn("Failed getting ipv4 address array");
+                LOGGER.warn("Failed getting ipv4 address array likely due to bad json data: " + e.getMessage());
             }
         }
 
 
-        List<CidrAddress> network6 = null;
+        ComparableTreeSet<CidrAddress> network6 = null;
         if (jsonObject.has("resolve6")) {
             final JSONArray network6Array = jsonObject.getJSONArray("resolve6");
             try {
                 network6 = buildAddresses(network6Array);
             }
             catch (JSONException e) {
-                LOGGER.warn("Failed getting ipv6 address array");
+                LOGGER.warn("Failed getting ipv6 address array likely due to bad json data: " + e.getMessage());
             }
         }
 
         return new FederationMapping(cname, ttl, network, network6);
     }
 
-    private List<CidrAddress> buildAddresses(final JSONArray networkArray) throws JSONException {
-        final List<CidrAddress> network = new ArrayList<CidrAddress>();
+    private ComparableTreeSet<CidrAddress> buildAddresses(final JSONArray networkArray) throws JSONException {
+        final ComparableTreeSet<CidrAddress> network = new ComparableTreeSet<CidrAddress>();
 
         for (int i = 0; i < networkArray.length(); i++) {
             final String addressString = networkArray.getString(i);
             try {
-                final CidrAddress cidrAddress = new CidrAddress(addressString);
+                final CidrAddress cidrAddress = CidrAddress.fromString(addressString);
                 network.add(cidrAddress);
             } catch (NetworkNodeException e) {
                 LOGGER.warn(e.getMessage());

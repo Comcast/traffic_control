@@ -24,8 +24,10 @@ import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
@@ -63,13 +65,14 @@ public class DeliveryService {
 	private final Dispersion dispersion;
 	private final boolean ip6RoutingEnabled;
 	private final Map<String, String> responseHeaders = new HashMap<String, String>();
+	private final Set<String> requestHeaders = new HashSet<String>();
 
 	public DeliveryService(final String id, final JSONObject dsJo) throws JSONException {
 		this.id = id;
 		this.props = dsJo;
 		this.ttls = dsJo.optJSONObject("ttls");
 		if(this.ttls == null) {
-			LOGGER.warn("ttls is null for:"+id);
+			LOGGER.warn("ttls is null for:" + id);
 			LOGGER.warn(dsJo.toString(2));
 		}
 		this.coverageZoneOnly = dsJo.getBoolean("coverageZoneOnly");
@@ -94,6 +97,7 @@ public class DeliveryService {
 		this.dispersion = new Dispersion(dsJo.optJSONObject("dispersion"));
 		this.ip6RoutingEnabled = dsJo.optBoolean("ip6RoutingEnabled", false);
 		setResponseHeaders(dsJo.optJSONObject("responseHeaders"));
+		setRequestHeaders(dsJo.optJSONArray("requestHeaders"));
 	}
 
 	public String getId() {
@@ -110,23 +114,21 @@ public class DeliveryService {
 	}
 
 	public Geolocation supportLocation(final Geolocation clientLocation, final String requestType) {
-		if(clientLocation == null) { 
-			if(missLocation == null) {
-				LOGGER.warn(String.format("[%s] no location, no substitute location ds=%s",
-						requestType, this.toString()));
-				return null; 
+		if (clientLocation == null) {
+			if (missLocation == null) {
+				return null;
 			}
-			LOGGER.warn(String.format("[%s] substitute location ds=%s",
-					requestType, this.toString()));
+
 			return missLocation;
 		}
-		if(isLocationBlocked(clientLocation)) {
-			LOGGER.warn(String.format("[%s] location rejected for ds=%s: %s",
-					requestType, this.toString(), clientLocation));
+
+		if (isLocationBlocked(clientLocation)) {
 			return null;
 		}
+
 		return clientLocation;
 	}
+
 	private boolean isLocationBlocked(final Geolocation clientLocation) {
 		if(geoEnabled == null || geoEnabled.length() == 0) { return false; }
 
@@ -436,6 +438,20 @@ public class DeliveryService {
 			for (String key : JSONObject.getNames(jo)) {
 				responseHeaders.put(key, jo.getString(key));
 			}
+		}
+	}
+
+	public Set<String> getRequestHeaders() {
+		return requestHeaders;
+	}
+
+	private void setRequestHeaders(final JSONArray jsonRequestHeaderNames) throws JSONException {
+		if (jsonRequestHeaderNames == null) {
+			return;
+		}
+
+		for (int i = 0; i < jsonRequestHeaderNames.length(); i++) {
+			requestHeaders.add(jsonRequestHeaderNames.getString(i));
 		}
 	}
 }
