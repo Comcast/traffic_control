@@ -30,6 +30,16 @@ Server
 
   Authentication Required: Yes
 
+  Role(s) Required: None
+
+  **Request Query Parameters**
+
+  +-----------+----------+---------------------------------------------+
+  |   Name    | Required |                Description                  |
+  +===========+==========+=============================================+
+  | ``dsId``  | no       | Used to filter servers by delivery service. |
+  +-----------+----------+---------------------------------------------+
+
   **Response Properties**
 
   +--------------------+--------+------------------------------------------------------------------------------------------------------------+
@@ -138,7 +148,6 @@ Server
         ]
     }
 
-
 |
 
 **GET /api/1.1/servers/summary.json**
@@ -146,6 +155,8 @@ Server
   Retrieves a count of CDN servers by type.
 
   Authentication Required: Yes
+
+  Role(s) Required: None
 
   **Response Properties**
 
@@ -190,6 +201,8 @@ Server
   Retrieves the details of a server.
 
   Authentication Required: Yes
+
+  Role(s) Required: None
 
   **Request Route Parameters**
 
@@ -359,7 +372,6 @@ Server
         "xmppPasswd": "X"
 
       }
-
     }
 
 |
@@ -369,6 +381,8 @@ Server
   Post a server check result to the serverchecks table.
 
   Authentication Required: Yes
+
+  Role(s) Required: None
 
   **Request Route Parameters**
 
@@ -386,7 +400,6 @@ Server
 
   **Request Example** ::
 
-
     {
      "id": "",
      "host_name": "",
@@ -394,7 +407,7 @@ Server
      "value": ""
     }
 
-  Response Content Type: application/json
+|
 
   **Response Properties**
 
@@ -409,7 +422,6 @@ Server
   +-------------+--------+----------------------------------+
   | ``version`` | string |                                  |
   +-------------+--------+----------------------------------+
-   
    
   **Response Example** ::
 

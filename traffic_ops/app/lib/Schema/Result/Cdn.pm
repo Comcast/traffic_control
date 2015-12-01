@@ -32,8 +32,8 @@ __PACKAGE__->table("cdn");
 =head2 name
 
   data_type: 'varchar'
-  is_nullable: 0
-  size: 1024
+  is_nullable: 1
+  size: 127
 
 =head2 last_updated
 
@@ -42,13 +42,19 @@ __PACKAGE__->table("cdn");
   default_value: current_timestamp
   is_nullable: 0
 
+=head2 dnssec_enabled
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 1
+
 =cut
 
 __PACKAGE__->add_columns(
   "id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
   "name",
-  { data_type => "varchar", is_nullable => 0, size => 1024 },
+  { data_type => "varchar", is_nullable => 1, size => 127 },
   "last_updated",
   {
     data_type => "timestamp",
@@ -56,6 +62,8 @@ __PACKAGE__->add_columns(
     default_value => \"current_timestamp",
     is_nullable => 0,
   },
+  "dnssec_enabled",
+  { data_type => "tinyint", default_value => 0, is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -69,6 +77,20 @@ __PACKAGE__->add_columns(
 =cut
 
 __PACKAGE__->set_primary_key("id");
+
+=head1 UNIQUE CONSTRAINTS
+
+=head2 C<cdn_cdn_UNIQUE>
+
+=over 4
+
+=item * L</name>
+
+=back
+
+=cut
+
+__PACKAGE__->add_unique_constraint("cdn_cdn_UNIQUE", ["name"]);
 
 =head1 RELATIONS
 
@@ -103,8 +125,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07043 @ 2015-10-05 11:50:01
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:qb0+mfREkeEhmnu1KN1YXQ
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2015-11-10 11:16:40
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:uQW1V4fQTKv/ccBtWZawTQ
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

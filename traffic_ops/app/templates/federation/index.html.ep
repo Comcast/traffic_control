@@ -83,7 +83,7 @@ $(document).ready(function () {
 });
 </script>
 
-    <body id="misc">
+    <body id="delivery_services">
     %= include 'navbar'
     <div class="ui-tab-float-right-on-table">Federation</div>
 
@@ -97,6 +97,9 @@ $(document).ready(function () {
                             <td>Delivery Service</td>
                             <td>Description</td>
                             <td>TTL</td>
+                            <td>Full Name</td>
+                            <td>Username</td>
+                            <td>Company</td>
                         </tr>
                     </thead>
                 </table>

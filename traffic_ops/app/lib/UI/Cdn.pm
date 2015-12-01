@@ -332,10 +332,9 @@ sub aserver {
 
 			if ( $row->type->name eq "MID" || $row->type->name eq "EDGE" ) {
 				my $pparam =
-					$self->db->resultset('ProfileParameter')
-					->search( { -and => [ 'parameter.name' => 'server_graph_url', 'profile.name' => 'GLOBAL' ] }, { prefetch => [ 'parameter', 'profile' ] } )
-					->single();
-				my $srvg_url = defined($pparam) ? $pparam->parameter->value : undef;
+					$self->db->resultset('ProfileParameter')->search( { -and => [ 'parameter.name' => 'server_graph_url', 'profile.name' => 'GLOBAL' ] },
+					{ prefetch => [ 'parameter', 'profile' ] } )->single();
+				my $srvg_url = defined($pparam) ? $pparam->parameter->value : '';
 				$aux_url = $srvg_url . $row->host_name;
 				$img     = "graph.png";
 			}
@@ -525,7 +524,7 @@ sub acdn {
 
 	$rs = $self->db->resultset('Cdn')->search(undef);
 	while ( my $row = $rs->next ) {
-		my @line = [ $row->id, $row->name, $row->last_updated ];
+		my @line = [ $row->id, $row->name, $yesno{ $row->dnssec_enabled }, $row->last_updated ];
 		push( @{ $data{'aaData'} }, @line );
 	}
 	$self->render( json => \%data );
@@ -582,16 +581,31 @@ sub afederation {
 
 	if ( $feds->count > 0 ) {
 		while ( my $f = $feds->next ) {
-			my $fed_id   = $f->id;
-			my $fed_dses = $f->federation_deliveryservices;
+			my $fed_id = $f->id;
 			my $xml_id;
+			my $user;
 
 			# An assumption is being made that there is currently only a 1-1 relationship of the CNAME to the DeliveryService
 			# Even though the datamodel supports multiples (at the moment)
+			my $fed_dses = $f->federation_deliveryservices;
 			while ( my $fd = $fed_dses->next ) {
 				$xml_id = $fd->deliveryservice->xml_id;
 			}
-			@line = [ $f->id, $f->cname, $xml_id, $f->description, $f->ttl ];
+
+			my $tm_users = $f->federation_tmusers;
+			while ( my $u = $tm_users->next ) {
+				$user = $u->tm_user;
+			}
+
+			my $full_name = "";
+			my $username  = "";
+			my $company   = "";
+			if ( defined($user) ) {
+				$full_name = $user->full_name;
+				$username  = $user->username;
+				$company   = $user->company;
+			}
+			@line = [ $f->id, $f->cname, $xml_id, $f->description, $f->ttl, $full_name, $username, $company ];
 			push( @{ $data{'aaData'} }, @line );
 		}
 	}

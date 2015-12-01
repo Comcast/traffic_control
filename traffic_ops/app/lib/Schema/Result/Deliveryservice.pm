@@ -106,7 +106,7 @@ __PACKAGE__->table("deliveryservice");
 
   data_type: 'integer'
   is_foreign_key: 1
-  is_nullable: 1
+  is_nullable: 0
 
 =head2 ccr_dns_ttl
 
@@ -264,6 +264,12 @@ __PACKAGE__->table("deliveryservice");
   is_nullable: 1
   size: 255
 
+=head2 tr_request_headers
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 1024
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -296,7 +302,7 @@ __PACKAGE__->add_columns(
   "profile",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "cdn_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "ccr_dns_ttl",
   { data_type => "integer", is_nullable => 1 },
   "global_max_mbps",
@@ -356,6 +362,8 @@ __PACKAGE__->add_columns(
   { data_type => "integer", default_value => 1, is_nullable => 1 },
   "dns_bypass_cname",
   { data_type => "varchar", is_nullable => 1, size => 255 },
+  "tr_request_headers",
+  { data_type => "varchar", is_nullable => 1, size => 1024 },
 );
 
 =head1 PRIMARY KEY
@@ -412,12 +420,7 @@ __PACKAGE__->belongs_to(
   "cdn",
   "Schema::Result::Cdn",
   { id => "cdn_id" },
-  {
-    is_deferrable => 1,
-    join_type     => "LEFT",
-    on_delete     => "SET NULL",
-    on_update     => "RESTRICT",
-  },
+  { is_deferrable => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
 );
 
 =head2 deliveryservice_regexes
@@ -541,8 +544,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2015-10-07 13:43:30
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:G/zQ8LHEg0T1IUmTromIuQ
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2015-11-10 11:16:40
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:2p4L0dAyERKNVw+WQu2mBw
 
 # Created by DBIx::Class::Schema::Loader v0.07043 @ 2015-10-05 11:50:01
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:AUTdFMjQ60ItRfFMfKsB1A
