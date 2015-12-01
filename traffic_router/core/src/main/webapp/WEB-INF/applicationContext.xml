@@ -98,7 +98,7 @@
 
 	<!-- Geolocation Configuration -->
 	<bean id="GeolocationService"
-		class="com.comcast.cdn.traffic_control.traffic_router.core.loc.MaxmindGeolocationService"
+		class="$[cache.geolocation.service.impl]"
 		init-method="init" destroy-method="destroy">
 		<property name="databaseName" value="$[cache.geolocation.database]" />
 	</bean>
