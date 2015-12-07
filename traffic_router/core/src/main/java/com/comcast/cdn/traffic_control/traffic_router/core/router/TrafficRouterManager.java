@@ -27,7 +27,6 @@ import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.TrafficRouterException;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheRegister;
 import com.comcast.cdn.traffic_control.traffic_router.core.dns.NameServer;
 import com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationService;
@@ -83,7 +82,7 @@ public class TrafficRouterManager {
 		return trafficRouter;
 	}
 
-	public void setCacheRegister(final CacheRegister cacheRegister) throws IOException, JSONException, TrafficRouterException {
+	public void setCacheRegister(final CacheRegister cacheRegister) throws IOException, JSONException {
 		trackEvent("lastConfigCheck");
 		if(cacheRegister == null) {
 			return;
@@ -108,6 +107,7 @@ public class TrafficRouterManager {
 		}
 		trackEvent("lastConfigChange");
 	}
+
 	public void setGeolocationService(final GeolocationService geolocationService) {
 		this.geolocationService = geolocationService;
 	}
