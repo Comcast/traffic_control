@@ -399,7 +399,12 @@
             <groupId>com.quova.bff</groupId>
             <artifactId>bff-reader</artifactId>
             <version>1.0</version>
-        </dependency>           		
+        </dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-compress</artifactId>
+			<version>1.8</version>
+		</dependency>        
 	</dependencies>
 
 </project>
