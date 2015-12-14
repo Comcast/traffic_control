@@ -50,6 +50,11 @@ sub view {
 
 	my $rs_param = $self->db->resultset('Parameter')->search( { id => $id } );
 	my $data = $rs_param->single;
+
+    if(!&is_admin($self)){ # Prevent other users to peek admin password in cron configuration
+        # replace password to '******' in '/opt/ort/traffic_ops_ort.pl syncds warn https://ops.com user:password> /tmp/ort/syncds.log 2>&1'
+        $data->{'_column_data'}{'value'} =~ s/(_ort.pl (\S+ ){3}\w+:)[^>]+>/$1******>/;
+    }
 	$self->stash( parameter => $data );
 
 	&stash_role($self);
@@ -194,6 +199,9 @@ sub is_valid {
 	if ( !&is_oper($self) ) {
 		$self->field('parameter.name')->is_equal( "", "You do not have the permissions to perform this operation!" );
 	}
+    if ( ($value =~ /(_ort.pl (\S+ ){3}\w+:)[^>]+>/) && (!&is_admin($self)) ) {
+		$self->field('parameter.name')->is_equal( "", "Only admin users have the permissions to perform this operation!" );
+    }
 
 	#Check required fields
 	$self->field('parameter.name')->is_required;
