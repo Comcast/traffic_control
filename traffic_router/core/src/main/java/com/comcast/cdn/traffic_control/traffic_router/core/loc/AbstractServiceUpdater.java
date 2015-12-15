@@ -16,6 +16,8 @@
 
 package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -24,12 +26,18 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.apache.wicket.ajax.json.JSONException;
@@ -182,35 +190,87 @@ public abstract class AbstractServiceUpdater {
 	boolean filesEqual(final File a, final File b) throws IOException {
 		if(!a.exists() && !b.exists()) { return true; }
 		if(!a.exists() || !b.exists()) { return false; }
-		if(a.length() != b.length()) { return false; }
-		FileInputStream fis = new FileInputStream(a);
-		final String md5a = org.apache.commons.codec.digest.DigestUtils.md5Hex(fis);
-		fis.close();
-		fis = new FileInputStream(b);
-		final String md5b = org.apache.commons.codec.digest.DigestUtils.md5Hex(fis);
-		fis.close();
-		if(md5a.equals(md5b)) { return true; }
-		return false;
+		if (a.isDirectory() && b.isDirectory()) {
+			return compareDirectories(a, b);
+		} else {
+			return compareFiles(a, b);
+		}
 	}
-	protected boolean copyDatabaseIfDifferent(final File existingDB, final File newDB) throws IOException {
-		if (!filesEqual(existingDB, newDB)) {
-
-			if (existingDB != null && existingDB.exists()) {
-				existingDB.setReadable(true, true);
-				existingDB.setWritable(true, false);
-				existingDB.delete();
+	
+	private boolean compareDirectories(final File a, final File b)
+			throws IOException {
+		boolean equal = true;
+		final File[] aFileList = a.listFiles();
+		final File[] bFileList = b.listFiles();
+		if (aFileList.length == bFileList.length) {
+			Arrays.sort(aFileList);
+			Arrays.sort(bFileList);
+			for (int i = 0; i < aFileList.length; i++) {
+				if (aFileList[i].length() != bFileList[i].length()) {
+					equal = false;
+				}
 			}
-
-			newDB.setReadable(true, true);
-			newDB.setWritable(true, false);
-			final boolean renamed = newDB.renameTo(existingDB);
-
-			if (renamed) {
-				LOGGER.info("Successfully updated location database " + existingDB);
+		} else {
+			equal = false;
+		}
+		return equal;
+	}
+	
+	private boolean compareFiles(final File a, final File b) throws IOException {
+		boolean equal = false;
+		if (a.length() == b.length()) {
+			FileInputStream fis = new FileInputStream(a);
+			final String md5a = org.apache.commons.codec.digest.DigestUtils
+					.md5Hex(fis);
+			fis.close();
+			fis = new FileInputStream(b);
+			final String md5b = org.apache.commons.codec.digest.DigestUtils
+					.md5Hex(fis);
+			fis.close();
+			if (md5a.equals(md5b)) {
+				equal = true;
+			}
+		}
+		return equal;
+	}
+	
+	protected boolean copyDatabaseIfDifferent(final File existingDB,
+			final File newDB) throws IOException {
+		if (!filesEqual(existingDB, newDB)) {
+			if (existingDB.isDirectory() && newDB.isDirectory()) {
+				moveDirectory(existingDB, newDB);
+				LOGGER.info("Successfully updated location database "
+						+ existingDB);
 				return true;
 			} else {
-				LOGGER.fatal("Unable to rename " + newDB + " to " + existingDB + "; current working directory is " + System.getProperty("user.dir"));
-				return false;
+				if (existingDB != null && existingDB.exists()) {
+					existingDB.setReadable(true, true);
+					existingDB.setWritable(true, false);
+					if (existingDB.isDirectory()) {
+						for (File file : existingDB.listFiles()) {
+							file.delete();
+						}
+						LOGGER.debug("Successfully deleted location database under: "
+								+ existingDB);
+					} else {
+						existingDB.delete();
+					}
+				}
+
+				newDB.setReadable(true, true);
+				newDB.setWritable(true, false);
+				final boolean renamed = newDB.renameTo(existingDB);
+
+				if (renamed) {
+					LOGGER.info("Successfully updated location database "
+							+ existingDB);
+					return true;
+				} else {
+					LOGGER.fatal("Unable to rename " + newDB + " to "
+							+ existingDB + "; current working directory is "
+							+ System.getProperty("user.dir"));
+					return false;
+				}
 			}
 		} else {
 			LOGGER.info("Location database unchanged.");
@@ -218,9 +278,22 @@ public abstract class AbstractServiceUpdater {
 		}
 	}
 
+	private void moveDirectory(final File existingDB, final File newDB)
+			throws IOException {
+		for (File f : existingDB.listFiles()) {
+			f.setReadable(true, true);
+			f.setWritable(true, false);
+			f.delete();
+		}
+		existingDB.delete();
+		Files.move(newDB.toPath(), existingDB.toPath(), StandardCopyOption.ATOMIC_MOVE);
+	}
+	
 	protected boolean sourceCompressed = true;
 	protected String tmpPrefix = "loc";
 	protected String tmpSuffix = ".dat";
+	//TODO: Make this configurable
+	protected boolean uncompressDataFile = true;
 	protected File downloadDatabase(final String url, final File existingDb) throws IOException {
 		LOGGER.info("[" + getClass().getSimpleName() + "] Downloading database: " + url);
 		final URL dbURL = new URL(url);
@@ -237,7 +310,7 @@ public abstract class AbstractServiceUpdater {
 			return existingDb;
 		}
 
-		if (sourceCompressed) {
+		if (!uncompressDataFile && sourceCompressed) {
 			in = new GZIPInputStream(in);
 		}
 
@@ -247,10 +320,49 @@ public abstract class AbstractServiceUpdater {
 		IOUtils.copy(in, out);
 		IOUtils.closeQuietly(in);
 		IOUtils.closeQuietly(out);
-
-		return outputFile;
+		if(uncompressDataFile) {
+			final File outputFolder = uncompressTarGZ(outputFile);
+			return outputFolder;
+		} else {
+			return outputFile;
+		}
 	}
+	
+	protected File uncompressTarGZ(final File tarFile) throws IOException {
+		final String destFolder = tarFile.getParentFile() + File.separator
+				+ "location_db";
+		final File dest = new File(destFolder);
+		dest.mkdir();
+		LOGGER.info("Untar: " + tarFile + " to: " + destFolder);
 
+		final TarArchiveInputStream tarIn = new TarArchiveInputStream(
+				new GzipCompressorInputStream(new BufferedInputStream(
+						new FileInputStream(tarFile))));
+		TarArchiveEntry tarEntry = tarIn.getNextTarEntry();
+		while (tarEntry != null) {
+			final File destPath = new File(dest, tarEntry.getName());
+			LOGGER.debug("extracting: " + destPath.getCanonicalPath());
+			if (tarEntry.isDirectory()) {
+				destPath.mkdirs();
+			} else {
+				destPath.createNewFile();
+				byte[] btoRead = new byte[1024];
+				final BufferedOutputStream bout = new BufferedOutputStream(
+						new FileOutputStream(destPath));
+				int len = 0;
+				while ((len = tarIn.read(btoRead)) != -1) {
+					bout.write(btoRead, 0, len);
+				}
+				bout.close();
+				btoRead = null;
+			}
+			tarEntry = tarIn.getNextTarEntry();
+		}
+		tarIn.close();
+		tarFile.delete();
+		return dest;
+	}
+	
 	protected boolean needsUpdating(final File existingDB) {
 		final long now = System.currentTimeMillis();
 		final long fileTime = existingDB.lastModified();
