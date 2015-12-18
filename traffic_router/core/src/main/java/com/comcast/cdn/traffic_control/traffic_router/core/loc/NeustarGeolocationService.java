@@ -64,7 +64,7 @@ public class NeustarGeolocationService implements GeolocationService {
 
 	protected GPDatabaseReader createDatabaseReader() throws IOException {
 		final File database = new File(getDatabaseName());
-		if (database.exists()) {
+		if (database != null && database.exists() && database.list().length > 0) {
 			LOGGER.info("Loading Neustar db: " + database);
 			final GPDatabaseReader reader = new GPDatabaseReader.Builder(
 					database).build();
@@ -126,9 +126,11 @@ public class NeustarGeolocationService implements GeolocationService {
 	@Override
 	public void verifyDatabase(final File dbFile) throws IOException {
 		LOGGER.info("Attempting to verify " + dbFile.getAbsolutePath());
-		final GPDatabaseReader dbr = new GPDatabaseReader.Builder(dbFile)
-				.build();
-		dbr.close();
+		if (dbFile.exists() && dbFile.list().length > 0) {
+			final GPDatabaseReader dbr = new GPDatabaseReader.Builder(dbFile)
+					.build();
+			dbr.close();
+		}
 	}
 
 	public String getDatabaseName() {
