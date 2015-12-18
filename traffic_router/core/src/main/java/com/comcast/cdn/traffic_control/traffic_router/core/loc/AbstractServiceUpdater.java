@@ -280,6 +280,7 @@ public abstract class AbstractServiceUpdater {
 
 	private void moveDirectory(final File existingDB, final File newDB)
 			throws IOException {
+		LOGGER.info("Moving Location database from: " + newDB + ", to: " + existingDB);
 		for (File f : existingDB.listFiles()) {
 			f.setReadable(true, true);
 			f.setWritable(true, false);
@@ -299,7 +300,7 @@ public abstract class AbstractServiceUpdater {
 		final URL dbURL = new URL(url);
 		final HttpURLConnection conn = (HttpURLConnection) dbURL.openConnection();
 
-		if (existingDb != null && existingDb.exists() && existingDb.lastModified() > 0) {
+		if (useModifiedTimestamp(existingDb)) {
 			conn.setIfModifiedSince(existingDb.lastModified());
 		}
 
@@ -326,6 +327,13 @@ public abstract class AbstractServiceUpdater {
 		} else {
 			return outputFile;
 		}
+	}
+
+	private boolean useModifiedTimestamp(final File existingDb) {
+		return existingDb != null
+				&& existingDb.exists()
+				&& existingDb.lastModified() > 0
+				&& (!existingDb.isDirectory() || existingDb.listFiles().length > 0);
 	}
 	
 	protected File uncompressTarGZ(final File tarFile) throws IOException {

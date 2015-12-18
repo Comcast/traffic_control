@@ -34,7 +34,7 @@ public class GeoTest {
 	private static final Logger LOGGER = Logger.getLogger(GeoTest.class);
 
 	private GeolocationDatabaseUpdater geolocationDatabaseUpdater;
-	private MaxmindGeolocationService geolocationService;
+	private GeolocationService geolocationService;
 	private NetworkUpdater networkUpdater;
 	private static ApplicationContext context;
 
@@ -51,7 +51,7 @@ public class GeoTest {
 	public void setUp() throws Exception {
 		geolocationDatabaseUpdater = (GeolocationDatabaseUpdater) context.getBean("geolocationDatabaseUpdater");
 		networkUpdater = (NetworkUpdater) context.getBean("networkUpdater");
-		geolocationService = (MaxmindGeolocationService) context.getBean("GeolocationService");
+		geolocationService = (GeolocationService) context.getBean("GeolocationService");
 
 		while (!networkUpdater.isLoaded()) {
 			LOGGER.info("Waiting for a valid location database before proceeding");
@@ -59,7 +59,7 @@ public class GeoTest {
 		}
 
 		while (!geolocationDatabaseUpdater.isLoaded()) {
-			LOGGER.info("Waiting for a valid Maxmind database before proceeding");
+			LOGGER.info("Waiting for a valid location database before proceeding");
 			Thread.sleep(1000);
 		}
 	}
