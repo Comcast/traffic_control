@@ -54,6 +54,7 @@ public abstract class AbstractServiceUpdater {
 	protected boolean loaded = false;
 	protected ScheduledFuture<?> scheduledService;
 	private TrafficRouterManager trafficRouterManager;
+	protected boolean uncompressDataFile;
 
 	public void destroy() {
 		executorService.shutdownNow();
@@ -293,8 +294,6 @@ public abstract class AbstractServiceUpdater {
 	protected boolean sourceCompressed = true;
 	protected String tmpPrefix = "loc";
 	protected String tmpSuffix = ".dat";
-	//TODO: Make this configurable
-	protected boolean uncompressDataFile = true;
 	protected File downloadDatabase(final String url, final File existingDb) throws IOException {
 		LOGGER.info("[" + getClass().getSimpleName() + "] Downloading database: " + url);
 		final URL dbURL = new URL(url);
@@ -388,5 +387,13 @@ public abstract class AbstractServiceUpdater {
 
 	public void setTrafficRouterManager(final TrafficRouterManager trafficRouterManager) {
 		this.trafficRouterManager = trafficRouterManager;
+	}
+
+	public boolean isUncompressDataFile() {
+		return uncompressDataFile;
+	}
+
+	public void setUncompressDataFile(final boolean uncompressDataFile) {
+		this.uncompressDataFile = uncompressDataFile;
 	}
 }
