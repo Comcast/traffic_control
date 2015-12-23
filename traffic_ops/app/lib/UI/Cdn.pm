@@ -274,7 +274,8 @@ sub aparameter {
 		);
 		while ( my $row = $rs->next ) {
             # replace password to '******' in '/opt/ort/traffic_ops_ort.pl syncds warn https://ops.com user:password> /tmp/ort/syncds.log 2>&1'
-            my $value = $row->value =~ s/(_ort.pl (\S+ ){3}\w+:)[^>]+>/$1******>/r;
+            my $value = $row->value;
+            $value =~ s/(_ort.pl (\S+ ){3}\w+:)[^>]+>/$1******>/;
 			my @line = [ $row->id, "NONE", $row->name, $row->config_file, $value, "profile" ];
 			push( @{ $data{'aaData'} }, @line );
 		}
@@ -291,7 +292,8 @@ sub aparameter {
 	if ( defined($rs) ) {
 		while ( my $row = $rs->next ) {
             # replace password to '******' in '/opt/ort/traffic_ops_ort.pl syncds warn https://ops.com user:password> /tmp/ort/syncds.log 2>&1'
-            my $value = $row->parameter->value =~ s/(_ort.pl (\S+ ){3}\w+:)[^>]+>/$1******>/r;
+            my $value = $row->parameter->value; 
+            $value =~ s/(_ort.pl (\S+ ){3}\w+:)[^>]+>/$1******>/;
 			my @line = [ $row->parameter->id, $row->profile->name, $row->parameter->name, $row->parameter->config_file, $value, "profile" ];
 			push( @{ $data{'aaData'} }, @line );
 		}
