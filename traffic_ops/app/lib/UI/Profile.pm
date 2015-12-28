@@ -155,31 +155,17 @@ sub check_profile_input {
 	}
 	if ( $mode eq 'edit' ) {
 
-		#make sure user didnt enter a name that is already used by another profile.
+		# make sure user didnt enter a name or description that is already used by another profile.
 		my $id = $self->param('id');
-
-		#get original name
 		my $profile_rs = $self->db->resultset('Profile');
-		my $orig_name = $profile_rs->search( { id => $id } )->get_column('name')->single();
-		if ( $name ne $orig_name ) {
-			my $profiles = $profile_rs->search( { id => { -not_like => $id } } )->get_column('name');
-			while ( my $db_name = $profiles->next ) {
-				if ( $db_name eq $name ) {
-					$self->field('profile.name')->is_equal( "", "Profile with name \"$name\" already exists." );
-				}
+		my $orig = $profile_rs->search( { id => $id } )->single();
+		my $profiles = $profile_rs->search( undef );
+		while ( my $dbrow = $profiles->next ) {
+			if ( $dbrow->name eq $orig->name && $dbrow->id != $id ) {
+				$self->field('profile.name')->is_equal( "", "Profile with name \"$name\" already exists." );
 			}
-		}
-
-		#get original desc
-		my $orig_desc = $profile_rs->search( { id => $id } )->get_column('description')->single();
-		if ( $description ne $orig_desc ) {
-
-			#get all other descriptions
-			my $profiles = $profile_rs->search( { id => { -not_like => $id } } )->get_column('description');
-			while ( my $db_desc = $profiles->next ) {
-				if ( $db_desc eq $description ) {
-					$self->field('profile.description')->is_equal( "", "A profile with the exact same description already exists!" );
-				}
+			if ( $dbrow->description eq $orig->description && $dbrow->id != $id ) {
+				$self->field('profile.description')->is_equal( "", "Profile with description \"$description\" already exists." );
 			}
 		}
 	}
