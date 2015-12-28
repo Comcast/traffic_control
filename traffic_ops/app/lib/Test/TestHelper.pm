@@ -145,6 +145,10 @@ sub teardown {
 sub teardown_cachegroup {
 	my $self   = shift;
 	my $schema = shift;
+	my $edges = $schema->resultset('Cachegroup')->search( { type => 1 } );
+	$edges->delete;
+	my $mids = $schema->resultset('Cachegroup')->search( { type => 2 } );
+	$mids->delete;
 	my $cachegroups =
 		$schema->resultset("Cachegroup")->search( undef, { order_by => { -desc => [qw{parent_cachegroup_id secondary_parent_cachegroup_id}] } } );
 	while ( my $row = $cachegroups->next ) {
