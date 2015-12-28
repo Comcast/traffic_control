@@ -4,9 +4,10 @@ Note: this is still very new - for now, MySQL is the safer choice!
 
 ##### To convert your existing database from MySQL
 1. Set up pg environment
-```
-blah
-```
+
+   ```
+   blah
+   ```
 2. Run FromMySqlToPostgreSql. See https://github.com/AnatolyUss/FromMySqlToPostgreSql for prereqs. The config file that worked for me:
 
 ```
