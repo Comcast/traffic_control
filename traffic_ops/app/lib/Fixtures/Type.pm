@@ -258,7 +258,7 @@ my %definition_for = (
 		new   => 'Type',
 		using => {
 			id           => 33,
-			name         => 'RESOLVE4',
+			name         => 'resolve4',
 			description  => 'federation type resolve4',
 			use_in_table => 'federation',
 		}
@@ -267,7 +267,7 @@ my %definition_for = (
 		new   => 'Type',
 		using => {
 			id           => 34,
-			name         => 'RESOLVE6',
+			name         => 'resolve6',
 			description  => 'federation type resolve6',
 			use_in_table => 'federation',
 		},
