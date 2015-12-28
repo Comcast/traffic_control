@@ -16,25 +16,37 @@
 
 package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 
+import com.comcast.cdn.traffic_control.traffic_router.core.TestBase;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationException;
 import com.comcast.cdn.traffic_control.traffic_router.core.loc.MaxmindGeolocationService;
+import org.springframework.context.ApplicationContext;
 
-public class MaxmindGeoIP2Test {
-	private MaxmindGeolocationService geoip2;
-	private final static String mmdb = "src/test/db/GeoIP2-City.mmdb";
+public class GeoLocationIP2Test {
+	private GeolocationService geoip2;
+	private static ApplicationContext context;
+
+	@BeforeClass
+	public static void setUpBeforeClass() throws Exception {
+		try {
+			context = TestBase.getContext();
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
 
 	@Before
 	public void setUp() throws Exception {
-		this.geoip2 = new MaxmindGeolocationService();
-		geoip2.setDatabaseName(mmdb);
-		geoip2.init();
+		geoip2 = (GeolocationService) context.getBean("GeolocationService");
+
 	}
 	@Test
 	public void testSerialLookupPerformance() throws GeolocationException {
+		String geoType = geoip2.getClass().getName();
 		long start = System.currentTimeMillis();
 		int total = 100000;
 
@@ -44,12 +56,11 @@ public class MaxmindGeoIP2Test {
 
 		long duration = System.currentTimeMillis() - start;
 		double tps = (double) total / ((double) duration / 1000);
-
-		System.out.println("MaxMind2 lookup duration: " + duration + "ms, " + tps + " tps");
+		System.out.println(geoType + " lookup duration: " + duration + "ms, " + tps + " tps");
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		geoip2.destroy();
+//		geoip2.destroy();
 	}
 }
