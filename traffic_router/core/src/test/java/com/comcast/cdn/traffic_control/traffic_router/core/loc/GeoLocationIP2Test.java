@@ -44,9 +44,9 @@ public class GeoLocationIP2Test {
 		geoip2 = (GeolocationService) context.getBean("GeolocationService");
 
 	}
+	
 	@Test
 	public void testSerialLookupPerformance() throws GeolocationException {
-		String geoType = geoip2.getClass().getName();
 		long start = System.currentTimeMillis();
 		int total = 100000;
 
@@ -56,11 +56,10 @@ public class GeoLocationIP2Test {
 
 		long duration = System.currentTimeMillis() - start;
 		double tps = (double) total / ((double) duration / 1000);
-		System.out.println(geoType + " lookup duration: " + duration + "ms, " + tps + " tps");
+		System.out.println(geoip2.getClass().getName() + " lookup duration: " + duration + "ms, " + tps + " tps");
 	}
 
 	@After
 	public void tearDown() throws Exception {
-//		geoip2.destroy();
 	}
 }
