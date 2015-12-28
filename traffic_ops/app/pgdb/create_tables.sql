@@ -459,7 +459,7 @@ ALTER TABLE federation_tmuser OWNER TO tm_user;
 CREATE TABLE goose_db_version (
     id numeric NOT NULL,
     version_id bigint NOT NULL,
-    is_applied smallint NOT NULL,
+    is_applied boolean,
     tstamp timestamp without time zone DEFAULT now()
 );
 
@@ -491,8 +491,8 @@ ALTER SEQUENCE goose_db_version_id_seq OWNED BY goose_db_version.id;
 
 -- The Traffic Ops starting point for goose is 20151107000000 - that was the last applied migration in the MySQL DB
 -- we migrated from 
-INSERT INTO goose_db_version (id, version_id, is_applied) VALUES (0, 0, 1);
-INSERT INTO goose_db_version (id, version_id, is_applied) VALUES (1, 20151107000000, 1);
+INSERT INTO goose_db_version (id, version_id, is_applied) VALUES (0, 0, true);
+INSERT INTO goose_db_version (id, version_id, is_applied) VALUES (1, 20151107000000, true);
 
 --
 -- TOC entry 187 (class 1259 OID 27628)
