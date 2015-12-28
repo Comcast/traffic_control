@@ -1,0 +1,16 @@
+pgdevelopment:
+        driver: postgres
+        open: user=tm_user dbname=to_development password=twelve
+
+pgtest:
+        driver: postgres
+        open: user=tm_user dbname=to_test password=twelve
+
+pgproduction:
+        driver: postgres
+        open: user=tm_user dbname=to_production password=twelve
+
+pgintegration:
+        driver: postgres
+        open: user=tm_user dbname=to_integration password=twelve
+
