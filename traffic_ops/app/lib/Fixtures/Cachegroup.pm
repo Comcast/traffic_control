@@ -40,7 +40,7 @@ my %definition_for = (
 			type                 => 2,
 			latitude             => 100,
 			longitude            => 100,
-			parent_cachegroup_id => 1,
+			parent_cachegroup_id => undef,
 		},
 	},
 );
