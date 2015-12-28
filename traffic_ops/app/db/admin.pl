@@ -144,7 +144,7 @@ exit(0);
 sub parse_dbconf_yml_mysql_driver {
 	my ($db_conf) = @_;
 
-	my @files = File::Find::Rule->file()->name('dbconf.yml')->in('.');
+	my @files = File::Find::Rule->file()->name('dbconf.yml')->in('./db');
 	my $meta  = Parse::CPAN::Meta->load_file( $files[0] );
 
 	# Mysql connection string parsing, if db changes added switch here
