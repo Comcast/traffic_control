@@ -392,8 +392,8 @@ To make the documentation easier to read, only the ``<JSON object with main resp
 Using API Endpoints
 -------------------
 1. Authenticate with your Traffic Portal or Traffic Ops user account credentials.
-2. Upon successful user authentication, note the mojolicious cookie value in the response headers. 
-3. Pass the mojolicious cookie value, along with any subsequent calls to an authenticated API endpoint.
+2. Upon successful user authentication, note the Mojolicious cookie value in the response headers. 
+3. Pass the Mojolicious cookie value, along with any subsequent calls to an authenticated API endpoint.
 
 Example: ::
   

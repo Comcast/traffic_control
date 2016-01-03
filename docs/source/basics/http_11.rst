@@ -20,7 +20,7 @@
 
 HTTP 1.1
 ========
-For a comprehensive look at Traffic Control, it is important to understand basic HTTP 1.1 protocol operations and how caches function. The example below illustrates the fulfillment of an HTTP 1.1 request in a situation without CDN or proxy, followed by viewing the changes after inserting different types of (caching) proxies. Several of the examples below are simplified for clarification of the essentials.
+For a comprehensive look at Traffic Control, it is important to understand basic HTTP 1.1 protocol operations and how caches function. The example below illustrates the fulfilment of an HTTP 1.1 request in a situation without CDN or proxy, followed by viewing the changes after inserting different types of (caching) proxies. Several of the examples below are simplified for clarification of the essentials.
 
 For complete details on HTTP 1.1 see `RFC 2616 - Hypertext Transfer Protocol -- HTTP/1.1 <https://www.ietf.org/rfc/rfc2616.txt>`_.
 
