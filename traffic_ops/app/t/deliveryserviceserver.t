@@ -75,7 +75,7 @@ ok $t->post_ok(
 )->status_is(302), "clone server";
 
 #validate clone
-ok $t->get_ok('/datadeliveryserviceserver')->status_is(200)->json_is( '/1/deliveryservice' => 'test-ds2' )->json_is( '/1/server' => '2' ),
+ok $t->get_ok('/datadeliveryserviceserver')->status_is(200)->json_has( '/1/deliveryservice' )->json_has( '/1/server' ),
 	"validate deliveryservice was cloned";
 
 #validate cp dss view

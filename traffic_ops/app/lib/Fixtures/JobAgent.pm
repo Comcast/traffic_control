@@ -24,7 +24,8 @@ my %definition_for = (
 		using => {
 			id          => 1,
 			name        => 'agent1',
-			description => 'Test Agent1'
+			description => 'Test Agent1',
+			active      => 1,
 		},
 	},
 );

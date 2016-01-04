@@ -689,6 +689,7 @@ sub create {
 					ilo_password     => $paramHashRef->{'ilo_password'},
 					router_host_name => $paramHashRef->{'router_host_name'},
 					router_port_name => $paramHashRef->{'router_port_name'},
+					upd_pending      => $paramHashRef->{'upd_pending'}	 // 0, # defined or, learn something new every day
 				}
 			);
 		}
@@ -722,6 +723,7 @@ sub create {
 					ilo_password     => $paramHashRef->{'ilo_password'},
 					router_host_name => $paramHashRef->{'router_host_name'},
 					router_port_name => $paramHashRef->{'router_port_name'},
+					upd_pending      => $paramHashRef->{'upd_pending'}	 // 0,
 				}
 			);
 		}

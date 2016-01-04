@@ -131,6 +131,7 @@ $t->post_ok(
 		ilo_password     => 'tt',
 		router_host_name => 'ur091.jvd.home.net',
 		router_port_name => 'ae99.99',
+		upd_pending      => 0,
 	}
 )->status_is(302)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 
@@ -174,6 +175,7 @@ sub upd_and_del() {
 				ilo_password     => 'tt',
 				router_host_name => '',
 				router_port_name => '',
+				upd_pending      => 0,
 			}
 		)->status_is(302)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 

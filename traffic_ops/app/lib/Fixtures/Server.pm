@@ -52,6 +52,7 @@ my %definition_for = (
 			cdn_id           => 1,
 			cachegroup       => 3,
 			phys_location    => 1,
+			upd_pending      => 1,
 		},
 	},
 	server_mid1 => {
@@ -87,6 +88,7 @@ my %definition_for = (
 			cdn_id           => 2,
 			cachegroup       => 1,
 			phys_location    => 1,
+			upd_pending      => 1,
 		},
 	},
 	redis_server => {
@@ -122,6 +124,7 @@ my %definition_for = (
 			cdn_id           => 1,
 			cachegroup       => 1,
 			phys_location    => 1,
+			upd_pending      => 1,
 		},
 	},
 	rascal_server => {
@@ -157,6 +160,7 @@ my %definition_for = (
 			cdn_id           => 1,
 			cachegroup       => 1,
 			phys_location    => 1,
+			upd_pending      => 1,
 		},
 	},
 	riak_server1 => {
@@ -192,6 +196,7 @@ my %definition_for = (
 			cdn_id           => 1,
 			cachegroup       => 1,
 			phys_location    => 1,
+			upd_pending      => 1,
 		},
 	},
 	rascal_server2 => {
@@ -227,6 +232,7 @@ my %definition_for = (
 			cdn_id           => 2,
 			cachegroup       => 1,
 			phys_location    => 1,
+			upd_pending      => 1,
 		},
 	},
 	server_edge2 => {
@@ -262,6 +268,7 @@ my %definition_for = (
 			cdn_id           => 1,
 			cachegroup       => 3,
 			phys_location    => 1,
+			upd_pending      => 1,
 		},
 	},
 	server_mid2 => {
@@ -297,6 +304,7 @@ my %definition_for = (
 			cdn_id           => 2,
 			cachegroup       => 2,
 			phys_location    => 2,
+			upd_pending      => 1,
 		},
 	},
 	riak_server2 => {
@@ -332,6 +340,7 @@ my %definition_for = (
 			cdn_id           => 1,
 			cachegroup       => 1,
 			phys_location    => 2,
+			upd_pending      => 1,
 		},
 	},
 	influxdb_server1 => {
@@ -367,6 +376,7 @@ my %definition_for = (
 			cdn_id           => 1,
 			cachegroup       => 1,
 			phys_location    => 3,
+			upd_pending      => 1,
 		},
 	},
 	influxdb_server2 => {
@@ -402,6 +412,7 @@ my %definition_for = (
 			cdn_id           => 1,
 			cachegroup       => 1,
 			phys_location    => 3,
+			upd_pending      => 1,
 		},
 	},
 );
