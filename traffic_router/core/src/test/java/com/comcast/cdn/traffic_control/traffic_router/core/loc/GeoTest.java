@@ -16,19 +16,15 @@
 
 package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 
+import static org.junit.Assert.assertNotNull;
+
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.context.ApplicationContext;
 
-import static org.junit.Assert.assertNotNull;
-
 import com.comcast.cdn.traffic_control.traffic_router.core.TestBase;
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.Geolocation;
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationDatabaseUpdater;
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.MaxmindGeolocationService;
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.NetworkUpdater;
 
 public class GeoTest {
 	private static final Logger LOGGER = Logger.getLogger(GeoTest.class);
@@ -68,13 +64,14 @@ public class GeoTest {
 	public void testIps() {
 		try {
 			final String testips[][] = {
-					{"40.40.40.40","cache-group-1"}
+					{"40.40.40.40","cache-group-1"},
+					{"2607:fcc8:a9c0:1e00:8dcd:82a8:169f:bb03", "cache-group-2"}
 			};
 			for(int i = 0; i < testips.length; i++) {
 				Geolocation location = geolocationService.location(testips[i][0]);
 				assertNotNull(location);
 				String loc = location.toString();
-				LOGGER.info(String.format("result for ip=%s: %s\n",testips[i], loc));
+				LOGGER.info(String.format("result for ip=%s: %s\n",testips[i][0], loc));
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
