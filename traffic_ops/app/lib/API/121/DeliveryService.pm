@@ -271,11 +271,10 @@ sub create{
      
         #$self->app->log->debug("response = " . Dumper($response));
 	    return $self->success($response);
-    } else {
-        $r = "Create Dilivery Service fail, insert to database failed.";
-	    return $self->alert($r);
     }
-    return $self->success("THIS IS A TEST!");
+
+    $r = "Create Dilivery Service fail, insert to database failed.";
+	return $self->alert($r);
 }
 
 sub cdef {
