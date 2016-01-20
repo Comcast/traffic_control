@@ -21,6 +21,7 @@ package API::121::Cachegroup;
 #
 
 
+use UI::Utils;
 use Mojo::Base 'Mojolicious::Controller';
 use JSON;
 use MojoPlugins::Response;
@@ -34,6 +35,10 @@ sub create{
         return $self->alert("parameters must Json format,  please check!"); 
     }
     $self->app->log->debug("create cachegroup with: " . Dumper($params) );
+
+    if ( !&is_oper($self) ) {
+        return $self->alert("You must be an ADMIN or OPER to perform this operation!");
+    }
 
     my $cachegroups = &UI::Cachegroup::get_cachegroups($self);
     my $name    = $params->{name};

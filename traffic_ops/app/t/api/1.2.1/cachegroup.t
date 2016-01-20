@@ -67,8 +67,6 @@ ok $t->post_ok('/api/1.2.1/cachegroups' => {Accept => 'application/json'} => jso
     ->json_is( "/response/parent_cachegroup" => "cache_group_mid")
             , 'Does the cache group details return?';
 
-
-=pod
 ok $t->post_ok('/api/1.2.1/servers' => {Accept => 'application/json'} => json => {
         "host_name" => "tc1_ats2",
         "domain_name" => "my.cisco.com",
@@ -85,7 +83,6 @@ ok $t->post_ok('/api/1.2.1/servers' => {Accept => 'application/json'} => json =>
     ->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } )
     ->json_is( "/response/hostName" => "tc1_ats2")
             , 'Does the server details return?';
-=cut
 
 ok $t->get_ok('/logout')->status_is(302)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 $dbh->disconnect();

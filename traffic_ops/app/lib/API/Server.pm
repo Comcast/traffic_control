@@ -463,6 +463,9 @@ sub create {
 
     my $json = $self->req->json;
     $self->app->log->debug( "Create server with: " . Data::Dumper->Dump([$json]) );
+    if ( !&is_oper($self) ) {
+        return $self->alert("You must be an ADMIN or OPER to perform this operation!");
+    }
 
     ($params, $err) = $self->check_server_params($json, 1);
     if( defined($err) ) {
@@ -586,6 +589,9 @@ sub update {
 
     my $json = $self->req->json;
     $self->app->log->debug( "update server with: " . Data::Dumper->Dump([$json]) );
+    if ( !&is_oper($self) ) {
+        return $self->alert("You must be an ADMIN or OPER to perform this operation!");
+    }
 
     my $id   = $self->param('id');
 

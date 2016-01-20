@@ -36,8 +36,11 @@ sub create{
         return $self->alert("parameters are json format, please check!");
     }
     $self->app->log->debug("create deliveryservice with: " . Dumper($params) );
-    my $profile_id;
+    if ( !&is_oper($self) ) {
+        return $self->alert("You must be an ADMIN or OPER to perform this operation!");
+    }
 
+    my $profile_id;
     my $Deliveryservices;
     my %xml_id;
     my %os_fqdn;
@@ -309,6 +312,9 @@ sub assign_servers{
         return $self->alert("parameters are json format, please check!");
     }
     $self->app->log->debug("deliveryservice assign server with: " . Dumper($params) );
+    if ( !&is_oper($self) ) {
+        return $self->alert("You must be an ADMIN or OPER to perform this operation!");
+    }
 
     if (!exists($params->{xml_id})) {
         return $self->alert("Parameter 'xml_id' is required in Jason.");
@@ -360,8 +366,11 @@ sub assign_servers{
 
 sub SnapshotCRConfig {
     my $self = shift;
+    if ( !&is_oper($self) ) {
+        return $self->alert("You must be an ADMIN or OPER to perform this operation!");
+    }
     my $cdn_name = $self->param('cdn_name');
-    $self->app->log->debug("CDN[" . $cdn_name . "]");
+    #$self->app->log->debug("CDN[" . $cdn_name . "]");
     my @cdn_names = $self->db->resultset('Server')->search({ 'type.name' => 'EDGE' }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name' } )->get_column('cdn.name')->all();
     my $num = grep /^$cdn_name$/, @cdn_names; 
     if ($num <= 0) {
