@@ -396,6 +396,7 @@ sub is_deliveryservice_request_valid {
 	else {
 		return ( 0, $result->{error} );
 	}
+}
 
 sub create{
     my $self = shift;
