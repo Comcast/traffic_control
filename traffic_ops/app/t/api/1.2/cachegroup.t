@@ -39,7 +39,7 @@ Test::TestHelper->load_core_data($schema);
 ok $t->post_ok( '/login', => form => { u => Test::TestHelper::ADMIN_USER, p => Test::TestHelper::ADMIN_USER_PASSWORD } )->status_is(302)
 	->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'Should login?';
 
-ok $t->post_ok('/api/1.2.1/cachegroups' => {Accept => 'application/json'} => json => {
+ok $t->post_ok('/api/1.2/cachegroups' => {Accept => 'application/json'} => json => {
         "name" => "cache_group_mid",
         "short_name" => "cg_mid",
         "latitude" => "123",
@@ -53,7 +53,7 @@ ok $t->post_ok('/api/1.2.1/cachegroups' => {Accept => 'application/json'} => jso
     ->json_is( "/response/parent_cachegroup" => "")
             , 'Does the cache group details return?';
 
-ok $t->post_ok('/api/1.2.1/cachegroups' => {Accept => 'application/json'} => json => {
+ok $t->post_ok('/api/1.2/cachegroups' => {Accept => 'application/json'} => json => {
         "name" => "cache_group_edge",
         "short_name" => "cg_edge",
         "latitude" => "123",
@@ -67,7 +67,7 @@ ok $t->post_ok('/api/1.2.1/cachegroups' => {Accept => 'application/json'} => jso
     ->json_is( "/response/parent_cachegroup" => "cache_group_mid")
             , 'Does the cache group details return?';
 
-ok $t->post_ok('/api/1.2.1/servers' => {Accept => 'application/json'} => json => {
+ok $t->post_ok('/api/1.2/servers' => {Accept => 'application/json'} => json => {
         "host_name" => "tc1_ats2",
         "domain_name" => "my.cisco.com",
         "cachegroup" => "mid-northeast-group",

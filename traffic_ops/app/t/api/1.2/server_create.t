@@ -39,7 +39,7 @@ Test::TestHelper->load_core_data($schema);
 ok $t->post_ok( '/login', => form => { u => Test::TestHelper::ADMIN_USER, p => Test::TestHelper::ADMIN_USER_PASSWORD } )->status_is(302)
 	->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'Should login?';
 
-ok $t->post_ok('/api/1.2.1/servers' => {Accept => 'application/json'} => json => {
+ok $t->post_ok('/api/1.2/servers' => {Accept => 'application/json'} => json => {
         "host_name" => "tc1_ats2",
         "domain_name" => "northbound.com",
         "cachegroup" => "mid-northeast-group",
@@ -66,7 +66,7 @@ ok $t->post_ok('/api/1.2.1/servers' => {Accept => 'application/json'} => json =>
     ->json_is( "/response/profile" => "MID1")
             , 'Does the server details return?';
 
-ok $t->post_ok('/api/1.2.1/servers' => {Accept => 'application/json'} => json => {
+ok $t->post_ok('/api/1.2/servers' => {Accept => 'application/json'} => json => {
         "host_name" => "tc1_ats1",
         "domain_name" => "northbound.com",
         "cachegroup" => "edge_atl_group",
@@ -95,7 +95,7 @@ ok $t->post_ok('/api/1.2.1/servers' => {Accept => 'application/json'} => json =>
 
 my $svr_id = &get_svr_id('tc1_ats1');
 
-ok $t->put_ok('/api/1.2.1/servers/' . $svr_id  => {Accept => 'application/json'} => json => {
+ok $t->put_ok('/api/1.2/servers/' . $svr_id  => {Accept => 'application/json'} => json => {
         "host_name" => "tc1_ats3",
         "domain_name" => "northbound.com",
         "ip_address" => "10.74.27.186",

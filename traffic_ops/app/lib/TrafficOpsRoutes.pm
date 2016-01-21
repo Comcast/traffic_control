@@ -46,10 +46,6 @@ sub define {
 	# Traffic Stats Extension
 	$self->traffic_stats_routes( $r, $version );
 
-    # 1.2.1 Routes
-    $version = "1.2.1";
-    $self->api_1_2_1_routes( $r, $version, $namespace );
-
     $self->catch_all( $r, $namespace );
 }
 
@@ -658,6 +654,13 @@ sub api_routes {
 	$r->get( "/api/$version/stats_summary" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'StatsSummary#index', namespace => $namespace );
 	$r->post("/api/$version/stats_summary/create")->over( authenticated => 1 )->to( 'StatsSummary#create', namespace => $namespace );
 
+	$r->post("/api/$version/servers")->over( authenticated => 1 )->to( 'Server#create',   namespace => $namespace );
+	$r->put("/api/$version/servers/:id")->over( authenticated => 1 )->to( 'Server#update',   namespace => $namespace );
+    $r->post("/api/$version/cachegroups")->over( authenticated => 1 )->to( 'Cachegroup#create', namespace => $namespace );
+    $r->post("/api/$version/deliveryservices")->over( authenticated => 1 )->to( 'DeliveryService#create', namespace => $namespace );
+    $r->post("/api/$version/deliveryservices/assigncaches")->over( authenticated => 1 )->to( 'DeliveryService#assign_servers', namespace => $namespace );
+    $r->put("/api/$version/snapshot/:cdn_name")->over( authenticated => 1 )->to( 'Topology#SnapshotCRConfig', namespace => $namespace );
+
 	# -- Ping - health check for CodeBig
 	$r->get(
 		"/api/$version/ping" => sub {
@@ -670,24 +673,6 @@ sub api_routes {
 		}
 	);
 
-}
-
-sub api_1_2_1_routes {
-	my $self      = shift;
-	my $r         = shift;
-	my $version   = shift;
-	my $namespace = shift;
-
-	$r->post("/api/$version/servers")->over( authenticated => 1 )->to( 'Server#create',   namespace => $namespace );
-	$r->put("/api/$version/servers/:id")->over( authenticated => 1 )->to( 'Server#update',   namespace => $namespace );
-
-	$namespace = "API::121";
-    $r->post("/api/$version/cachegroups")->over( authenticated => 1 )->to( 'Cachegroup#create', namespace => $namespace );
-    $r->post("/api/$version/deliveryservices")->over( authenticated => 1 )->to( 'DeliveryService#create', namespace => $namespace );
-    $r->post("/api/$version/deliveryservices/assigncaches")->over( authenticated => 1 )
-                ->to( 'DeliveryService#assign_servers', namespace => $namespace );
-    $r->put("/api/$version/snapshot/:cdn_name")->over( authenticated => 1 )
-                ->to( 'DeliveryService#SnapshotCRConfig', namespace => $namespace );
 }
 
 sub api_1_0_routes {

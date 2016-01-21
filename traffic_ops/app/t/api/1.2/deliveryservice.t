@@ -39,7 +39,7 @@ Test::TestHelper->load_core_data($schema);
 ok $t->post_ok( '/login', => form => { u => Test::TestHelper::ADMIN_USER, p => Test::TestHelper::ADMIN_USER_PASSWORD } )->status_is(302)
 	->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'Should login?';
 
-ok $t->post_ok('/api/1.2.1/deliveryservices' => {Accept => 'application/json'} => json => {
+ok $t->post_ok('/api/1.2/deliveryservices' => {Accept => 'application/json'} => json => {
         "xml_id" => "ds_1",
         "display_name" => "ds_displayname_1",
         "protocol" => "HTTPS",
@@ -72,7 +72,7 @@ ok $t->post_ok('/api/1.2.1/deliveryservices' => {Accept => 'application/json'} =
     ->json_is( "/response/matchlist/1/pattern" => ".*\\.my_vod1\\..*")
             , 'Does the deliveryservice details return?';
 
-ok $t->post_ok('/api/1.2.1/deliveryservices/assigncaches' => {Accept => 'application/json'} => json => {
+ok $t->post_ok('/api/1.2/deliveryservices/assigncaches' => {Accept => 'application/json'} => json => {
         "xml_id" => "test-ds1",
         "server_names" => [
              "atlanta-edge-01",
@@ -84,7 +84,7 @@ ok $t->post_ok('/api/1.2.1/deliveryservices/assigncaches' => {Accept => 'applica
      ->json_is( "/response/server_names/1" => "atlanta-edge-02")
             , 'Does the assigned servers return?';
 
-ok $t->put_ok('/api/1.2.1/snapshot/cdn1') 
+ok $t->put_ok('/api/1.2/snapshot/cdn1') 
      ->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );
  
 ok $t->get_ok('/logout')->status_is(302)->or( sub { diag $t->tx->res->content->asset->{content}; } );
