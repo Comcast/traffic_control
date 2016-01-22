@@ -122,7 +122,7 @@ sub delivery_services {
 		}
 	}
 
-	return defined($forbidden) ? $self->forbidden() : $self->success(\@data);
+	return defined($forbidden) ? $self->forbidden() : $self->success( \@data );
 }
 
 sub get_delivery_services {
@@ -156,7 +156,7 @@ sub get_delivery_service_by_id {
 	my $forbidden;
 	if ( &is_privileged($self) ) {
 		my @ds_ids =
-		$rs = $self->db->resultset('Deliveryservice')
+			$rs = $self->db->resultset('Deliveryservice')
 			->search( { 'me.id' => $id }, { prefetch => [ 'cdn', 'deliveryservice_regexes' ], order_by => 'xml_id' } );
 	}
 	elsif ( $self->is_delivery_service_assigned($id) ) {
@@ -164,7 +164,8 @@ sub get_delivery_service_by_id {
 		$tm_user_id = $tm_user->id;
 
 		my @ds_ids =
-			$self->db->resultset('DeliveryserviceTmuser')->search( { tm_user_id => $tm_user_id, deliveryservice => $id } )->get_column('deliveryservice')->all();
+			$self->db->resultset('DeliveryserviceTmuser')->search( { tm_user_id => $tm_user_id, deliveryservice => $id } )->get_column('deliveryservice')
+			->all();
 		$rs =
 			$self->db->resultset('Deliveryservice')
 			->search( { 'me.id' => { -in => \@ds_ids } }, { prefetch => [ 'cdn', 'deliveryservice_regexes' ], order_by => 'xml_id' } );
@@ -175,7 +176,6 @@ sub get_delivery_service_by_id {
 
 	return ( $forbidden, $rs, $tm_user_id );
 }
-
 
 sub routing {
 	my $self = shift;
@@ -341,9 +341,9 @@ sub state {
 }
 
 sub request {
-	my $self      = shift;
-	my $email_to  = $self->req->json->{emailTo};
-	my $details = $self->req->json->{details};
+	my $self     = shift;
+	my $email_to = $self->req->json->{emailTo};
+	my $details  = $self->req->json->{details};
 
 	my $is_email_valid = Email::Valid->address($email_to);
 
@@ -364,7 +364,7 @@ sub request {
 }
 
 sub is_deliveryservice_request_valid {
-	my $self      = shift;
+	my $self    = shift;
 	my $details = shift;
 
 	my $rules = {
@@ -391,6 +391,48 @@ sub is_deliveryservice_request_valid {
 	}
 	else {
 		return ( 0, $result->{error} );
+	}
+
+}
+
+sub regex {
+	my $self = shift;
+
+	$self->app->log->debug("regexes");
+	my $rs;
+	if ( &is_privileged($self) ) {
+		$self->app->log->debug("privileged");
+		$rs = $self->db->resultset('Deliveryservice')->search( undef, { prefetch => [ 'cdn', 'deliveryservice_regexes' ], order_by => 'xml_id' } );
+
+		my @regexes;
+		while ( my $row = $rs->next ) {
+			my $cdn_name = defined( $row->cdn_id ) ? $row->cdn->name : "";
+			my $xml_id   = defined( $row->xml_id ) ? $row->xml_id    : "";
+
+			#$self->app->log->debug( "cdn_name #-> " . $cdn_name );
+			#$self->app->log->debug( "xml_id #-> " . $xml_id );
+			my $re_rs = $row->deliveryservice_regexes;
+
+			my @matchlist;
+			while ( my $re_row = $re_rs->next ) {
+				push(
+					@matchlist, {
+						type      => $re_row->regex->type->name,
+						pattern   => $re_row->regex->pattern,
+						setNumber => $re_row->set_number,
+					}
+				);
+			}
+			my $delivery_service->{deliveryserviceName} = $xml_id;
+			$delivery_service->{regexes} = \@matchlist;
+			push( @regexes, $delivery_service );
+		}
+
+		return $self->success( \@regexes );
+	}
+	else {
+		$self->app->log->debug("unprivileged");
+		return $self->forbidden();
 	}
 
 }
