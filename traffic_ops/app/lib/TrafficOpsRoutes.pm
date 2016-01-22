@@ -445,7 +445,7 @@ sub api_routes {
 	$r->get( "/api/$version/riak/bucket/#bucket/key/#key/values" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'Riak#get', namespace => $namespace );
 
-	$r->get( "/api/$version/deliveryservice_regexes" => [ format => [qw(json)] ] )->over( authenticated => 1 )
+	$r->get( "/api/$version/deliveryservices_regexes" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'DeliveryServiceRegexes#index', namespace => $namespace );
 
 	# -- DELIVERY SERVICE

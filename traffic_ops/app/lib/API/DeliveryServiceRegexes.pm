@@ -48,7 +48,7 @@ sub index {
 					}
 				);
 			}
-			my $delivery_service->{deliveryserviceName} = $xml_id;
+			my $delivery_service->{deliveryServiceName} = $xml_id;
 			$delivery_service->{regexes} = \@matchlist;
 			push( @regexes, $delivery_service );
 		}
