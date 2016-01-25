@@ -395,46 +395,4 @@ sub is_deliveryservice_request_valid {
 
 }
 
-sub regex {
-	my $self = shift;
-
-	$self->app->log->debug("regexes");
-	my $rs;
-	if ( &is_privileged($self) ) {
-		$self->app->log->debug("privileged");
-		$rs = $self->db->resultset('Deliveryservice')->search( undef, { prefetch => [ 'cdn', 'deliveryservice_regexes' ], order_by => 'xml_id' } );
-
-		my @regexes;
-		while ( my $row = $rs->next ) {
-			my $cdn_name = defined( $row->cdn_id ) ? $row->cdn->name : "";
-			my $xml_id   = defined( $row->xml_id ) ? $row->xml_id    : "";
-
-			#$self->app->log->debug( "cdn_name #-> " . $cdn_name );
-			#$self->app->log->debug( "xml_id #-> " . $xml_id );
-			my $re_rs = $row->deliveryservice_regexes;
-
-			my @matchlist;
-			while ( my $re_row = $re_rs->next ) {
-				push(
-					@matchlist, {
-						type      => $re_row->regex->type->name,
-						pattern   => $re_row->regex->pattern,
-						setNumber => $re_row->set_number,
-					}
-				);
-			}
-			my $delivery_service->{deliveryserviceName} = $xml_id;
-			$delivery_service->{regexes} = \@matchlist;
-			push( @regexes, $delivery_service );
-		}
-
-		return $self->success( \@regexes );
-	}
-	else {
-		$self->app->log->debug("unprivileged");
-		return $self->forbidden();
-	}
-
-}
-
 1;
