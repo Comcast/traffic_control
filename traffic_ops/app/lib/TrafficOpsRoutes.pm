@@ -445,6 +445,9 @@ sub api_routes {
 	$r->get( "/api/$version/riak/bucket/#bucket/key/#key/values" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'Riak#get', namespace => $namespace );
 
+	$r->get( "/api/$version/deliveryservices_regexes" => [ format => [qw(json)] ] )->over( authenticated => 1 )
+		->to( 'DeliveryServiceRegexes#index', namespace => $namespace );
+
 	# -- DELIVERY SERVICE
 	# USED TO BE - GET /api/$version/services
 	$r->get( "/api/$version/deliveryservices" => [ format => [qw(json)] ] )->over( authenticated => 1 )
@@ -475,7 +478,7 @@ sub api_routes {
 		->to( 'DeliveryService#state', namespace => $namespace );
 
 	# -- DELIVERY SERVICE: Request
-	$r->post( "/api/$version/deliveryservices/request")->over( authenticated => 1 )->to( 'DeliveryService#request', namespace => $namespace );
+	$r->post("/api/$version/deliveryservices/request")->over( authenticated => 1 )->to( 'DeliveryService#request', namespace => $namespace );
 
 	## -- DELIVERY SERVICE: SSL Keys
 	## Support for SSL private keys, certs, and csrs
