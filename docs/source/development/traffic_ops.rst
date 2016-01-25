@@ -622,6 +622,7 @@ API 1.2 Reference
   traffic_ops_api/v12/to_extension
   traffic_ops_api/v12/type
   traffic_ops_api/v12/user
+  traffic_ops_api/v12/topology
 
 
 
