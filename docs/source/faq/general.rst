@@ -20,7 +20,7 @@ General
 Who is using Traffic Control?
 =============================
 	`Comcast Cable <http://www.comcast.com/>`_
-		Comcast is the original developer or Traffic Control and is using it for all it's video delivery to so-called 'second screen applications' (PCs, tablets, phones), but also for delivering images and software to it's X1 platform, and other applications. The Traffic Control CDN at Comcast serves more than a peta byte of content a day.
+		Comcast is the original developer of Traffic Control and is using it for all it's video delivery to so-called 'second screen applications' (PCs, tablets, phones), but also for delivering images and software to it's X1 platform, and other applications. The Traffic Control CDN at Comcast serves more than a petabyte of content per day.
 
 	`Cox Communications <http://www.cox.com/>`_
 		.
