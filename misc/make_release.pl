@@ -33,8 +33,8 @@ my $usage = "\n"
 	. "Flags:   \n\n"
 	. "--gpg-key          - Your gpg-key id. ie: 774ACED1\n"
 	. "--release-no       - The release_no name you want to cut. ie: 1.1.0\n"
-	. "--git-hash         - The git hash that will be used to reference the release. ie: da4aab57d \n"
-	. "--git-remote-url   - (optional) Git URL where the release will be sent (mostly for testing). ie: git\@github.com:yourrepo/traffic_control.git \n"
+	. "--git-hash         - (optional) The git hash that will be used to reference the release. ie: da4aab57d \n"
+	. "--git-remote-url   - (optional) Overrides the git repo URL where the release will be pulled and sent (mostly for testing). ie: git\@github.com:yourrepo/traffic_control.git \n"
 	. "--dry-run          - (optional) Simulation mode which will NOT apply any changes. \n"
 	. "\nArguments:   \n\n"
 	. "release    - Cut the release, tag the release then make the branch, tag public.\n"
@@ -58,8 +58,12 @@ my $next_version;
 # Example: 1.1.x
 my $new_branch;
 
+# Example: 2377
+my $build_no;
+
 # Example: 774ACED1
 my $git_hash;
+my $rc;
 my $dry_run = 0;
 my $working_dir;
 
@@ -74,17 +78,39 @@ GetOptions(
 STDERR->autoflush(1);
 my $argument = shift(@ARGV);
 
+clone_repo_to_tmp();
 if ( defined($argument) ) {
+	if ( !defined($git_hash) ) {
+		( $rc, $git_hash ) = get_git_hash();
+	}
+
 	parse_variables();
 
+	my $release_info = <<"INFO";
+\nRelease Info Summary
+Git Repo     : $git_remote_url
+Release No   : $release_no
+Version      : $version
+Build Number : $build_no
+Branch       : $new_branch
+Git Hash     : $git_hash
+Next Version : $next_version
+INFO
+	print $release_info;
+
+	my $prompt = "Continue with the release?";
+	if ( prompt_yn($prompt) ) {
+	}
+	else {
+		exit(0);
+	}
+
 	if ( $argument eq 'release' ) {
-		clone_repo_to_tmp();
 		cut_release();
 	}
 	elsif ( $argument eq 'cleanup' ) {
 		my $prompt = "Are you sure you want to cleanup release: " . $version . " this is irreversible";
 		if ( prompt_yn($prompt) ) {
-			clone_repo_to_tmp();
 			cleanup_release();
 		}
 	}
@@ -101,13 +127,23 @@ else {
 
 exit(0);
 
+sub get_git_hash {
+	my $cmd = "git log --pretty=format:'%h' -n 1";
+	chdir $working_dir;
+	my ( $rc, $git_shorthash ) = run_and_capture_command($cmd);
+	if ( $rc > 0 ) {
+		print " Failed to run : " . $cmd . " \n ";
+		exit(1);
+	}
+	return $rc, $git_shorthash;
+}
+
 sub clone_repo_to_tmp {
 	my $tmp_dir = "/tmp";
 	my $tc_dir  = "traffic_control";
 	$working_dir = sprintf( "%s/%s", $tmp_dir, $tc_dir );
 	remove_tree($working_dir);
 	chdir $tmp_dir;
-	print " Updating 'VERSION' file \n ";
 	my $cmd = "git clone " . $git_remote_url;
 	chdir $working_dir;
 
@@ -120,22 +156,28 @@ sub clone_repo_to_tmp {
 }
 
 sub parse_variables {
-	my ( $major, $minor, $patch, $build_no ) = ( $release_no =~ /RELEASE-(\d).(\d).(\d)-(.*)/ );
-	print " release_no    #-> (" . $release_no . ")\n";
-	print "major #-> (" . $major . ")\n";
-	print "minor #-> (" . $minor . ")\n";
-	print "patch #-> (" . $patch . ")\n";
-	print "build_no #-> (" . $build_no . ")\n";
-	print "git_remote_url #-> (" . $git_remote_url . ")\n";
+	my $major;
+	my $minor;
+	my $patch;
+	( $major, $minor, $patch, $build_no ) = ( $release_no =~ /RELEASE-(\d).(\d).(\d)-(.*)/ );
+
+	#print " release_no    #-> (" . $release_no . ")\n";
+	#print "major #-> (" . $major . ")\n";
+	#print "minor #-> (" . $minor . ")\n";
+	#print "patch #-> (" . $patch . ")\n";
+	#print "build_no #-> (" . $build_no . ")\n";
+	#print "git_remote_url #-> (" . $git_remote_url . ")\n";
 	$version = sprintf( "%s.%s.%s", $major, $minor, $patch );
 
 	my $next_minor = $minor + 1;
-	print "next_minor #-> (" . $next_minor . ")\n";
+
+	#print "next_minor #-> (" . $next_minor . ")\n";
 	$next_version = sprintf( "%s.%s.%s", $major, $next_minor, $patch );
 
-	print "version #-> (" . $version . ")\n";
+	#print "version #-> (" . $version . ")\n";
 	$new_branch = sprintf( "%s.%s.X", $major, $minor );
-	print "new_branch #-> (" . $new_branch . ")\n";
+
+	#print "new_branch #-> (" . $new_branch . ")\n";
 
 	#TODO: drichardson - add validation logic here for the args
 }
@@ -257,6 +299,7 @@ sub update_version_file {
 
 	my $version_no = shift;
 
+	print " Updating 'VERSION' file \n ";
 	my $version_file_name = "VERSION";
 	open my $fh, '<', $version_file_name or die "error opening $version_file_name $!";
 	my $data = do { local $/; <$fh> };
@@ -289,6 +332,19 @@ sub prompt_yn {
 	my ($query) = @_;
 	my $answer = prompt("$query (Y/N): ");
 	return lc($answer) eq 'y';
+}
+
+sub run_and_capture_command {
+	my ($cmd) = @_;
+	if ($dry_run) {
+		print "Simulating cmd:> " . $cmd . "\n\n";
+		return 0;
+	}
+	else {
+		print "Capturing COMMAND> " . $cmd . "\n\n";
+		my $cmd_output = `$cmd </dev/null`;
+		return $?, $cmd_output;
+	}
 }
 
 sub run_command {
