@@ -44,7 +44,7 @@ my $usage = "\n"
 my $git_remote_name = 'official';
 
 #my $git_remote_url = 'git@github.com:Comcast/traffic_control.git';
-my $git_remote_url = 'git@github.com:comcast/traffic_control.git';
+my $git_remote_url = 'git@github.com:Comcast/traffic_control.git';
 
 my $gpg_key;
 my $release_no;
@@ -89,10 +89,9 @@ if ( defined($argument) ) {
 	my $release_info = <<"INFO";
 \nRelease Info Summary
 Git Repo     : $git_remote_url
-Release No   : $release_no
 Version      : $version
-Build Number : $build_no
 Branch       : $new_branch
+Tag          : $release_no
 Git Hash     : $git_hash
 Next Version : $next_version
 INFO
@@ -222,14 +221,14 @@ sub cut_release {
 
 	print "Signing new tag based upon your gpg key\n";
 	my $comment = "Release " . $version;
-	$cmd = sprintf( "git tag -s -u %s -m '%s' %s", $gpg_key, $comment, $version );
+	$cmd = sprintf( "git tag -s -u %s -m '%s' %s", $gpg_key, $comment, $release_no );
 	$rc = run_command($cmd);
 	if ( $rc > 0 ) {
 		print "Failed to run:" . $cmd . "\n";
 		exit(1);
 	}
 
-	print "Making new tags and branch public available.\n";
+	print "Making new tags and branch publicly available.\n";
 	$cmd = "git push --follow-tags official " . $new_branch;
 	$rc  = run_command($cmd);
 	if ( $rc > 0 ) {
