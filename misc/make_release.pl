@@ -26,11 +26,10 @@ use File::Find::Rule;
 use File::Path qw(make_path remove_tree);
 
 my $usage = "\n"
-	. "Usage:  $PROGRAM_NAME [--gpg-key [your-signed-key-id] --release_no=[release-to-create]\t\n\n"
-	. "Example:  $PROGRAM_NAME --gpg-key=75AFDE1 --release-no=RELEASE-1.1.0 --git-hash=da4aab57d\n\n"
+	. "Usage:  $PROGRAM_NAME --gpg-key=[your-signed-key-id] --release_no=[release-to-create]\t\n\n"
+	. "Example:  $PROGRAM_NAME --gpg-key=75AFDE1 --release-no=RELEASE-1.1.0 \n\n"
 	. "Purpose:  This script automates the release process for the Traffic Control cdn.\n"
-	. "          defined in the dbconf.yml, as well as the database names.\n\n"
-	. "Flags:   \n\n"
+	. "\nFlags:   \n\n"
 	. "--gpg-key          - Your gpg-key id. ie: 774ACED1\n"
 	. "--release-no       - The release_no name you want to cut. ie: 1.1.0\n"
 	. "--git-hash         - (optional) The git hash that will be used to reference the release. ie: da4aab57d \n"
@@ -78,8 +77,34 @@ GetOptions(
 STDERR->autoflush(1);
 my $argument = shift(@ARGV);
 
-clone_repo_to_tmp();
 if ( defined($argument) ) {
+
+	if ( $argument eq 'release' ) {
+		fetch_master();
+		cut_release();
+	}
+	elsif ( $argument eq 'cleanup' ) {
+		my $prompt = "Are you sure you want to cleanup release: " . $version . " this is irreversible";
+		if ( prompt_yn($prompt) ) {
+			fetch_master();
+			cleanup_release();
+		}
+	}
+	elsif ( $argument eq 'pushdoc' ) {
+		push_documentation();
+	}
+	else {
+		print $usage;
+	}
+}
+else {
+	print $usage;
+}
+
+exit(0);
+
+sub fetch_master {
+	clone_repo_to_tmp();
 	if ( !defined($git_hash) ) {
 		( $rc, $git_hash ) = get_git_hash();
 	}
@@ -103,28 +128,7 @@ INFO
 	else {
 		exit(0);
 	}
-
-	if ( $argument eq 'release' ) {
-		cut_release();
-	}
-	elsif ( $argument eq 'cleanup' ) {
-		my $prompt = "Are you sure you want to cleanup release: " . $version . " this is irreversible";
-		if ( prompt_yn($prompt) ) {
-			cleanup_release();
-		}
-	}
-	elsif ( $argument eq 'pushdoc' ) {
-		push_documentation();
-	}
-	else {
-		print $usage;
-	}
 }
-else {
-	print $usage;
-}
-
-exit(0);
 
 sub get_git_hash {
 	my $cmd = "git log --pretty=format:'%h' -n 1";
@@ -178,7 +182,9 @@ sub parse_variables {
 
 	#print "new_branch #-> (" . $new_branch . ")\n";
 
-	#TODO: drichardson - add validation logic here for the args
+	#TODO: drichardson - Preflight check for commands 'git', 's3cmd' , '
+	#                  - add validation logic here for rquired flags
+	#                  - Upload Release
 }
 
 sub cut_release {
