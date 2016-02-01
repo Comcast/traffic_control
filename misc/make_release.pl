@@ -39,9 +39,10 @@ my $usage = "\n"
 	. "pushdoc    - Upload documentation to the public website.\n";
 
 my $git_remote_name = 'official';
-my $git_remote_url  = 'git@github.com:dewrich/traffic_control.git';
 
-#my $git_remote_url  = 'git@github.com:Comcast/traffic_control.git';
+my $official_git_remote_url = 'git@github.com:Comcast/traffic_control.git';
+my $git_remote_url          = 'git@github.com:Comcast/traffic_control.git';
+
 my $gpg_key;
 my $release_no;
 
@@ -65,6 +66,14 @@ my $argument = shift(@ARGV);
 
 if ( defined($argument) ) {
 	parse_variables();
+
+	print "Updating 'VERSION' file\n";
+	my $cmd = "git clone " . $official_git_remote_url;
+	my $rc  = run_command($cmd);
+	if ( $rc > 0 ) {
+		print "Failed to run:" . $cmd . "\n";
+		exit(1);
+	}
 
 	if ( $argument eq 'release' ) {
 		cut_release_branch();
