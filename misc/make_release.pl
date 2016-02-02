@@ -133,7 +133,7 @@ INFO
 sub get_git_hash {
 	my $cmd = "git log --pretty=format:'%h' -n 1";
 	chdir $working_dir;
-	my ( $rc, $git_shorthash ) = run_and_capture_command($cmd);
+	my ( $rc, $git_shorthash ) = run_and_capture_command( $cmd, "force" );
 	if ( $rc > 0 ) {
 		print " Failed to run : " . $cmd . " \n ";
 		exit(1);
@@ -147,10 +147,11 @@ sub clone_repo_to_tmp {
 	$working_dir = sprintf( "%s/%s", $tmp_dir, $tc_dir );
 	remove_tree($working_dir);
 	chdir $tmp_dir;
+	print "Cloning output to: " . $working_dir . "\n";
 	my $cmd = "git clone " . $git_remote_url;
 	chdir $working_dir;
 
-	my $rc = run_command($cmd);
+	my $rc = run_command( $cmd, "force" );
 	if ( $rc > 0 ) {
 		print " Failed to run : " . $cmd . " \n ";
 		exit(1);
@@ -340,8 +341,8 @@ sub prompt_yn {
 }
 
 sub run_and_capture_command {
-	my ($cmd) = @_;
-	if ($dry_run) {
+	my ( $cmd, $force ) = @_;
+	if ( $dry_run && ( !defined($force) ) ) {
 		print "Simulating cmd:> " . $cmd . "\n\n";
 		return 0;
 	}
@@ -353,8 +354,8 @@ sub run_and_capture_command {
 }
 
 sub run_command {
-	my ($cmd) = @_;
-	if ($dry_run) {
+	my ( $cmd, $force ) = @_;
+	if ( $dry_run && ( !defined($force) ) ) {
 		print "Simulating cmd:> " . $cmd . "\n\n";
 		return 0;
 	}
@@ -362,8 +363,6 @@ sub run_command {
 		print "Executing COMMAND> " . $cmd . "\n\n";
 		system($cmd);
 
-		#system($cmd) == 0
-		#or die "system $cmd failed: $?";
 		return $?;
 	}
 
