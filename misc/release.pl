@@ -36,7 +36,7 @@ my $usage = "\n"
 	. "--git-remote-url   - (optional) Overrides the git repo URL where the release will be pulled and sent (mostly for testing). ie: git\@github.com:yourrepo/traffic_control.git \n"
 	. "--dry-run          - (optional) Simulation mode which will NOT apply any changes. \n"
 	. "\nArguments:   \n\n"
-	. "release    - Cut the release, tag the release then make the branch, tag public.\n"
+	. "branch     - Cut the release branch, tag the release then make the branch, tag public.\n"
 	. "cleanup    - Reverses the release steps in case you messed up.\n"
 	. "pushdoc    - Upload documentation to the public website.\n";
 
@@ -62,6 +62,7 @@ my $build_no;
 
 # Example: 774ACED1
 my $git_hash;
+
 my $rc;
 my $dry_run = 0;
 my $working_dir;
@@ -74,19 +75,29 @@ GetOptions(
 	"dry-run!"         => \$dry_run
 );
 
+#TODO: drichardson - Preflight check for commands 'git', 's3cmd' , '
+#                  - Add validation logic here for required flags
+#                  - Upload Release (s3cmd)
+
 STDERR->autoflush(1);
 my $argument = shift(@ARGV);
 
 if ( defined($argument) ) {
 
-	if ( $argument eq 'release' ) {
-		fetch_master();
-		cut_release();
+	if ( $argument eq 'branch' ) {
+		fetch_branch();
+		my $prompt = "Continue with the creating the release branch?";
+		if ( prompt_yn($prompt) ) {
+			cut_release();
+		}
+		else {
+			exit(0);
+		}
 	}
 	elsif ( $argument eq 'cleanup' ) {
 		my $prompt = "Are you sure you want to cleanup release: " . $version . " this is irreversible";
 		if ( prompt_yn($prompt) ) {
-			fetch_master();
+			fetch_branch();
 			cleanup_release();
 		}
 	}
@@ -103,8 +114,10 @@ else {
 
 exit(0);
 
-sub fetch_master {
+sub fetch_branch {
+
 	clone_repo_to_tmp();
+
 	if ( !defined($git_hash) ) {
 		( $rc, $git_hash ) = get_git_hash();
 	}
@@ -122,12 +135,6 @@ Next Version : $next_version
 INFO
 	print $release_info;
 
-	my $prompt = "Continue with the release?";
-	if ( prompt_yn($prompt) ) {
-	}
-	else {
-		exit(0);
-	}
 }
 
 sub get_git_hash {
@@ -165,27 +172,14 @@ sub parse_variables {
 	my $patch;
 	( $major, $minor, $patch, $build_no ) = ( $release_no =~ /RELEASE-(\d).(\d).(\d)-(.*)/ );
 
-	#print " release_no    #-> (" . $release_no . ")\n";
-	#print "major #-> (" . $major . ")\n";
-	#print "minor #-> (" . $minor . ")\n";
-	#print "patch #-> (" . $patch . ")\n";
-	#print "build_no #-> (" . $build_no . ")\n";
-	#print "git_remote_url #-> (" . $git_remote_url . ")\n";
 	$version = sprintf( "%s.%s.%s", $major, $minor, $patch );
 
 	my $next_minor = $minor + 1;
 
-	#print "next_minor #-> (" . $next_minor . ")\n";
 	$next_version = sprintf( "%s.%s.%s", $major, $next_minor, $patch );
 
-	#print "version #-> (" . $version . ")\n";
 	$new_branch = sprintf( "%s.%s.X", $major, $minor );
 
-	#print "new_branch #-> (" . $new_branch . ")\n";
-
-	#TODO: drichardson - Preflight check for commands 'git', 's3cmd' , '
-	#                  - add validation logic here for rquired flags
-	#                  - Upload Release
 }
 
 sub cut_release {
