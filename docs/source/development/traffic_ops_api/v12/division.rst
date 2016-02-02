@@ -1,5 +1,5 @@
 .. 
-.. Copyright 2015 Comcast Cable Communications Management, LLC
+.. Copyright 2016 Cisco
 .. 
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
@@ -14,37 +14,56 @@
 .. limitations under the License.
 .. 
 
-.. _to-api-v12-topology:
+.. _to-api-v12-division:
 
-Snapshot CRConfig
+Divisions
 =======
 
-.. _to-api-v12-topology-route:
+.. _to-api-v12-division-route:
 
-/api/1.2/snapshot/{:cdn_name}
+/api/1.2/divisions
 ++++++++++++++++
 
-**PUT /api/1.2/snapshot/{:cdn_name}**
+**POST /api/1.2/divisions**
+  Create division
 
   Authentication Required: Yes
 
   Role(s) Required: admin or oper
 
+  **Request Properties**
 
-  {:cdn_name} -- name of the cdn to snapshot configure
+  +-----------+----------+--------------------------+
+  | Parameter | Required | Description              |
+  +===========+==========+==========================+
+  | ``name``  | yes      | The name of the division |
+  +-----------+----------+--------------------------+
+ 
+  **Request Example** ::
+
+    {
+        "name": "mydivision1"
+    }
+
+|
 
   **Response Properties**
 
   +----------------------+--------+------------------------------------------------+
   | Parameter            | Type   | Description                                    |
   +======================+========+================================================+
-  |response              | string |  "SUCCESS"                                     |
+  |``name``              | string |                                                |
+  +----------------------+--------+------------------------------------------------+
+  |``id``                | string |                                                |
   +----------------------+--------+------------------------------------------------+
 
   **Response Example** ::
 
     {
-     "response": "SUCCESS"
+      "response": {
+        'name': 'mydivision1',
+        'id': '4'
+      }
     }
 
 |

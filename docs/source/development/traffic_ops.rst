@@ -613,6 +613,7 @@ API 1.2 Reference
   traffic_ops_api/v12/phys_location
   traffic_ops_api/v12/profile
   traffic_ops_api/v12/influxdb
+  traffic_ops_api/v12/division  
   traffic_ops_api/v12/region
   traffic_ops_api/v12/role
   traffic_ops_api/v12/server
