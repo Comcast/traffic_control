@@ -35,8 +35,9 @@ my $usage = "\n"
 	. "--git-hash         - (optional) The git hash that will be used to reference the release. ie: da4aab57d \n"
 	. "--git-remote-url   - (optional) Overrides the git repo URL where the release will be pulled and sent (mostly for testing). ie: git\@github.com:yourrepo/traffic_control.git \n"
 	. "--dry-run          - (optional) Simulation mode which will NOT apply any changes. \n"
+	. "--debug            - (optional) Show debug output\n"
 	. "\nArguments:   \n\n"
-	. "branch     - Cut the release branch, tag the release then make the branch, tag public.\n"
+	. "cut        - Cut the release branch, tag the release then make the branch, tag public.\n"
 	. "cleanup    - Reverses the release steps in case you messed up.\n"
 	. "pushdoc    - Upload documentation to the public website.\n";
 
@@ -71,6 +72,7 @@ my $branch_exists;
 
 my $rc;
 my $dry_run = 0;
+my $debug   = 0;
 my $working_dir;
 
 GetOptions(
@@ -78,7 +80,8 @@ GetOptions(
 	"release-no=s"     => \$release_no,
 	"git-short-hash=s" => \$git_short_hash,
 	"git-remote-url=s" => \$git_remote_url,
-	"dry-run!"         => \$dry_run
+	"dry-run!"         => \$dry_run,
+	"debug!"           => \$debug
 );
 
 #TODO: drichardson - Preflight check for commands 'git', 's3cmd' , '
@@ -90,7 +93,7 @@ my $argument = shift(@ARGV);
 
 if ( defined($argument) ) {
 
-	if ( $argument eq 'branch' ) {
+	if ( $argument eq 'cut' ) {
 		fetch_branch();
 		my $prompt = "Continue with creating the RELEASE?";
 		if ( prompt_yn($prompt) ) {
@@ -114,7 +117,7 @@ if ( defined($argument) ) {
 		}
 	}
 	elsif ( $argument eq 'cleanup' ) {
-		my $prompt = "\n\nAre you sure you want to cleanup the RELEASE? (" . $release_no . ")" . $version;
+		my $prompt = "\n\nAre you sure you want to cleanup the RELEASE? (" . $release_no . ")";
 		if ( prompt_yn($prompt) ) {
 			fetch_branch();
 			cleanup_release();
@@ -291,9 +294,12 @@ sub tag_and_push {
 
 sub cleanup_release {
 
-	print "gpg_key #-> (" . $gpg_key . ")\n";
-	print "release_no #-> (" . $release_no . ")\n";
-	print "dry_run #-> (" . $dry_run . ")\n";
+	if ($debug) {
+		print "gpg_key #-> (" . $gpg_key . ")\n";
+		print "release_no #-> (" . $release_no . ")\n";
+		print "dry_run #-> (" . $dry_run . ")\n";
+	}
+
 	my $cmd = "git remote add official " . $git_remote_url;
 	my $rc  = run_command($cmd);
 	if ( $rc > 0 ) {
@@ -384,7 +390,9 @@ sub run_and_capture_command {
 		return 0;
 	}
 	else {
-		print "Capturing COMMAND> " . $cmd . "\n\n";
+		if ($debug) {
+			print "Capturing COMMAND> " . $cmd . "\n\n";
+		}
 		my $cmd_output = `$cmd </dev/null`;
 
 		#my $cmd_output = `$cmd >/dev/null 2>&1`;
@@ -399,7 +407,9 @@ sub run_command {
 		return 0;
 	}
 	else {
-		print "Executing COMMAND> " . $cmd . "\n\n";
+		if ($debug) {
+			print "Executing COMMAND> " . $cmd . "\n\n";
+		}
 		system($cmd);
 
 		return $?;
