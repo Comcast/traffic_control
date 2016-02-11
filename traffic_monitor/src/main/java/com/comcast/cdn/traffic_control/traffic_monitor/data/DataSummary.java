@@ -26,11 +26,11 @@ public class DataSummary implements java.io.Serializable {
 	private double start;
 	private double end;
 	private int dpCount;
-	public DataSummary() {
-	}
+
 	public void accumulate(final DataPoint dp, final long t) {
 		final double v = Double.parseDouble(dp.getValue());
-		if(dpCount == 0) {
+
+		if (dpCount == 0) {
 			startTime = t;
 			endTime = t;
 			high = v;
@@ -39,25 +39,30 @@ public class DataSummary implements java.io.Serializable {
 			end = v;
 			average = v;
 		} else {
-			if(t > endTime) {
+			if (t > endTime) {
 				endTime = t;
-			} else if(t < startTime) {
+			} else if (t < startTime) {
 				startTime = t;
 			}
-			if(v > high) {
+
+			if (v > high) {
 				high = v;
-			} else if(v < low) {
+			} else if (v < low) {
 				low = v;
 			}
+
 			// a = a' + (v-a')/(c'+1)
 			end = v;
-			average = average + (v-average)/(dpCount+1);
+			average = average + (v - average) / (dpCount + 1);
 		}
+
 		dpCount++;
 	}
+
 	public double getStart() {
 		return start;
 	}
+
 	public double getEnd() {
 		return end;
 	}
