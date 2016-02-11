@@ -18,45 +18,19 @@ package com.comcast.cdn.traffic_control.traffic_monitor.data;
 
 public class DataSummary implements java.io.Serializable {
 	private static final long serialVersionUID = 1L;
-	private long startTime;
-	private long endTime;
-	private double average;
-	private double high;
-	private double low;
 	private double start;
 	private double end;
-	private int dpCount;
+	private boolean initialized = false;
 
-	public void accumulate(final DataPoint dp, final long t) {
-		final double v = Double.parseDouble(dp.getValue());
+	public void record(final DataPoint dataPoint) {
+		final double value = Double.parseDouble(dataPoint.getValue());
 
-		if (dpCount == 0) {
-			startTime = t;
-			endTime = t;
-			high = v;
-			low = v;
-			start = v;
-			end = v;
-			average = v;
-		} else {
-			if (t > endTime) {
-				endTime = t;
-			} else if (t < startTime) {
-				startTime = t;
-			}
-
-			if (v > high) {
-				high = v;
-			} else if (v < low) {
-				low = v;
-			}
-
-			// a = a' + (v-a')/(c'+1)
-			end = v;
-			average = average + (v - average) / (dpCount + 1);
+		if (!initialized) {
+			start = value;
+			initialized = true;
 		}
 
-		dpCount++;
+		end = value;
 	}
 
 	public double getStart() {
