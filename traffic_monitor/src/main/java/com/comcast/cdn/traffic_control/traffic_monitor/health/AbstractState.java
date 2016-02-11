@@ -116,7 +116,7 @@ abstract public class AbstractState {
 					if(startTime != 0 && t < startTime) { continue; }
 					if(endTime != -1 && t > endTime) { break; }
 					try {
-						ds.accumulate(dp, t);
+						ds.record(dp);
 					} catch(Exception e) {
 						LOGGER.debug(e);
 					}
