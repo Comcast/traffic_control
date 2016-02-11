@@ -55,24 +55,6 @@ public class DataSummary implements java.io.Serializable {
 		}
 		dpCount++;
 	}
-	public long getStartTime() {
-		return startTime;
-	}
-	public long getEndTime() {
-		return endTime;
-	}
-	public double getAverage() {
-		return average;
-	}
-	public double getHigh() {
-		return high;
-	}
-	public double getLow() {
-		return low;
-	}
-	public int getDpCount() {
-		return dpCount;
-	}
 	public double getStart() {
 		return start;
 	}
