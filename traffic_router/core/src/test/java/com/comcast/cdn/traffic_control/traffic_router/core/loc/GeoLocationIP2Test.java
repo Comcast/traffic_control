@@ -16,18 +16,16 @@
 
 package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 
-import static org.junit.Assert.assertNotNull;
-
+import com.comcast.cdn.traffic_control.traffic_router.core.TestBase;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import org.springframework.context.ApplicationContext;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.TestBase;
-
-public class GeoTest {
-	private static final Logger LOGGER = Logger.getLogger(GeoTest.class);
+public class GeoLocationIP2Test {
+	private static final Logger LOGGER = Logger.getLogger(GeoLocationIP2Test.class);
 
 	private GeolocationDatabaseUpdater geolocationDatabaseUpdater;
 	private GeolocationService geolocationService;
@@ -50,31 +48,28 @@ public class GeoTest {
 		geolocationService = (GeolocationService) context.getBean("GeolocationService");
 
 		while (!networkUpdater.isLoaded()) {
-			LOGGER.info("Waiting for a valid location database before proceeding");
+			LOGGER.info("Network Updater is not loaded, waiting for a valid location database before proceeding");
 			Thread.sleep(1000);
 		}
 
 		while (!geolocationDatabaseUpdater.isLoaded()) {
-			LOGGER.info("Waiting for a valid location database before proceeding");
+			LOGGER.info("GeoLocationDatabaseUpdater is not loaded, waiting for a valid location database before proceeding");
 			Thread.sleep(1000);
 		}
 	}
 
 	@Test
-	public void testIps() {
-		try {
-			final String testips[][] = {
-					{"40.40.40.40","cache-group-1"},
-					{"2607:fcc8:a9c0:1e00:8dcd:82a8:169f:bb03", "cache-group-2"}
-			};
-			for(int i = 0; i < testips.length; i++) {
-				Geolocation location = geolocationService.location(testips[i][0]);
-				assertNotNull(location);
-				String loc = location.toString();
-				LOGGER.info(String.format("result for ip=%s: %s\n",testips[i][0], loc));
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
+	public void testGeoLookupPerformance() throws GeolocationException {
+		long start = System.currentTimeMillis();
+		int total = 100000;
+
+		for (int i = 0; i <= total; i++) {
+			geolocationService.location("10.0.0.1");
 		}
+
+		long duration = System.currentTimeMillis() - start;
+		double tps = (double) total / ((double) duration / 1000);
+
+		System.out.println(geolocationService.getClass().getName() + " lookup duration: " + duration + "ms, " + tps + " tps");
 	}
 }
