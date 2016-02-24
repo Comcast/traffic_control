@@ -20,6 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
 
+import com.comcast.cdn.traffic_control.traffic_monitor.health.AbstractState;
+import com.comcast.cdn.traffic_control.traffic_monitor.health.CacheState;
+import com.comcast.cdn.traffic_control.traffic_monitor.health.CacheStateRegistry;
+import com.comcast.cdn.traffic_control.traffic_monitor.wicket.models.CacheStateModel;
 import org.apache.wicket.Component;
 import org.apache.wicket.Page;
 import org.apache.wicket.ajax.AbstractAjaxTimerBehavior;
@@ -35,14 +39,10 @@ import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.util.time.Duration;
 
-import com.comcast.cdn.traffic_control.traffic_monitor.health.CacheState;
-import com.comcast.cdn.traffic_control.traffic_monitor.health.HealthDeterminer;
 import com.comcast.cdn.traffic_control.traffic_monitor.wicket.behaviors.UpdatingAttributeAppender;
 
 public class CacheListPanel extends Panel {
-	//	private static final Logger LOGGER = Logger.getLogger(ServerListPanel.class);
 	private static final long serialVersionUID = 1L;
-
 	ListView<String> servers;
 	Component[] updateList;
 	String hostname;
@@ -53,14 +53,12 @@ public class CacheListPanel extends Panel {
 		final ModalWindow modal1;
 		add(modal1 = new ModalWindow("modal1"));
 		modal1.setInitialWidth(1000);
-		//      modal1.setCookieName("modal-1");
 		modal1.setPageCreator(new ModalWindow.PageCreator() {
 			private static final long serialVersionUID = 1L;
 			public Page createPage() {
 				return new CacheDetailsPage(hostname);
 			}
 		});
-
 
 		this.updateList = updateList;
 		final WebMarkupContainer container = new WebMarkupContainer("listpanel");
@@ -76,8 +74,7 @@ public class CacheListPanel extends Panel {
 			int serverCount = 0;
 			@Override
 			protected final void onTimer(final AjaxRequestTarget target) {
-				//				target.add(getComponent());
-				final int size = CacheState.getCacheStates().size();
+				final int size = CacheStateRegistry.getInstance().size();
 				if(serverCount != size) {
 					serverCount = size;
 					servers.setList(getServerList());
@@ -87,7 +84,6 @@ public class CacheListPanel extends Panel {
 							target.add(c);
 						}
 					}
-					//					target.add(graph);
 				}
 			}
 		});
@@ -100,37 +96,21 @@ public class CacheListPanel extends Panel {
 			@Override
 			protected void populateItem(final ListItem<String> item) {
 				final String cacheName = item.getModelObject();
+				final CacheState cacheState = CacheStateRegistry.getInstance().get(cacheName);
 
 				item.add(new UpdatingAttributeAppender("class", new Model<String>("") {
-					private static final long serialVersionUID = 1L;
-
 					@Override
 					public String getObject() {
-						final CacheState cs = CacheState.getState(cacheName);
-
-						if (cs != null && !cs.isAvailable())  {
-							final String status = cs.getLastValue(HealthDeterminer.STATUS);
-
-							if (status != null) {
-								switch(HealthDeterminer.AdminStatus.valueOf(status)) {
-									case ADMIN_DOWN:
-									case OFFLINE:
-										return "warning";
-									default:
-										return "error";
-								}
-							} else {
-								return "error";
-							}
-						} else {
-							return " ";
-						}
+						return CacheStateRegistry.getInstance().getStatusString(cacheName);
 					}
 				}, " "));
+
 				item.add(updater);
 
-
-				Label label = new Label("status", new CacheStateModel(cacheName, "_status_string_"));
+				Label label = new Label("type", cacheState.getCache().getType());
+				label.add(updater);
+				item.add(label);
+				label = new Label("status", new CacheStateModel(cacheName, "_status_string_"));
 				label.add(updater);
 				item.add(label);
 				label = new Label("loadavg", new CacheStateModel(cacheName, "loadavg"));
@@ -149,10 +129,6 @@ public class CacheListPanel extends Panel {
 				label.add(updater);
 				item.add(label);
 
-				//				final PageParameters pars = new PageParameters();
-				//				pars.add("hostname", cacheName);
-				//				final BookmarkablePageLink<Object> link 
-				//					= new BookmarkablePageLink<Object>("fulldetails", FullDetailsPage.class, pars);
 				final AjaxLink<Void> link = new AjaxLink<Void>("fulldetails") {
 					private static final long serialVersionUID = 1L;
 					@Override
@@ -167,31 +143,9 @@ public class CacheListPanel extends Panel {
 		};
 	}
 
-	static class CacheStateModel extends Model<String> {
-		private static final long serialVersionUID = 1L;
-		String csName;
-		String key;
-		public CacheStateModel(final String cs, final String key) {
-			this.csName = cs;
-			this.key = key;
-		}
-		@Override
-		public String getObject( ) {
-			final CacheState cs = CacheState.getState(csName);
-			if(cs == null) { return "err"; }
-			if("_status_string_".equals(key)) {
-				return cs.getStatusString();
-			}
-			final boolean clearData = cs.getBool("clearData");
-			if(clearData) { return "-"; }
-			return cs.getLastValue(key);
-		}
-	}
-
 	public final List<String> getServerList() {
-		final List<CacheState> list = CacheState.getCacheStates();
-		final TreeMap<String, CacheState> tmap = new TreeMap<String, CacheState>();
-		for(CacheState cs : list) {
+		final TreeMap<String, AbstractState> tmap = new TreeMap<String, AbstractState>();
+		for(AbstractState cs : CacheStateRegistry.getInstance().getAll()) {
 			tmap.put(cs.getId(), cs);
 		}
 		return new ArrayList<String>(tmap.keySet());

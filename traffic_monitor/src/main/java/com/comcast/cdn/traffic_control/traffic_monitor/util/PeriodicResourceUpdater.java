@@ -60,11 +60,13 @@ public class PeriodicResourceUpdater {
 		private boolean hasBeenLoaded = false;
 
 		private void putCurrent() {
-			final File existingDB = new File(ConfigHandler.getDbDir() + databaseLocation);
-			if(existingDB.exists()) {
-				LOGGER.warn("loading: "+existingDB.getAbsolutePath());
+			final File existingDB = ConfigHandler.getInstance().getDbFile(databaseLocation);
+
+			if (existingDB.exists()) {
+				LOGGER.warn("loading: " + existingDB.getAbsolutePath());
 				listener.update(existingDB);
 			}
+
 			hasBeenLoaded = true;
 		}
 	}
@@ -88,7 +90,6 @@ public class PeriodicResourceUpdater {
 	}
 	
 	private void add(final UpdateModel um) {
-		LOGGER.info(um.urlList.get(0));
 		um.putCurrent();
 		synchronized(umList) {
 			umList.add(um);
@@ -153,7 +154,7 @@ public class PeriodicResourceUpdater {
 	}
 
 	public boolean updateDatabase(final UpdateModel um) {
-		final File existingDB = new File(ConfigHandler.getDbDir() + um.databaseLocation);
+		final File existingDB = ConfigHandler.getInstance().getDbFile(um.databaseLocation);
 		File newDB = null;
 		try {
 			if (um.hasBeenLoaded) {
@@ -161,10 +162,9 @@ public class PeriodicResourceUpdater {
 				for(int i = 0; i < um.urlList.size(); i++) {
 					final String url = um.urlList.get(urlIndex).getObject();
 					try {
-						LOGGER.warn("testing '"+url+"'");
 						newDB = fetchFile(url);
 					} catch(Exception e) {
-						LOGGER.error("Error with '"+url+"' : " + e, e);
+						LOGGER.error("Error with '" + url + "' : " + e);
 						urlIndex = (urlIndex+1)%um.urlList.size();
 						continue;
 					}

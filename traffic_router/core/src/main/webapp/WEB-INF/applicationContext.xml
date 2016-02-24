@@ -85,6 +85,7 @@
 		<property name="trafficRouterManager" ref="trafficRouterManager" />
 		<property name="geolocationDatabaseUpdater" ref="geolocationDatabaseUpdater" />
 		<property name="networkUpdater" ref="networkUpdater" />
+		<property name="regionalGeoUpdater" ref="regionalGeoUpdater" />
 		<property name="statTracker" ref="statTracker" />
 		<property name="configDir" value="/opt/traffic_router/conf" />
 		<property name="federationsWatcher" ref="federationsWatcher" />
@@ -100,7 +101,6 @@
 	<bean id="GeolocationService"
 		class="com.comcast.cdn.traffic_control.traffic_router.core.loc.MaxmindGeolocationService"
 		init-method="init" destroy-method="destroy">
-		<property name="databaseName" value="$[cache.geolocation.database]" />
 	</bean>
 
 	<bean id="geolocationDatabaseUpdater" class="com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationDatabaseUpdater"
@@ -117,6 +117,14 @@
 		<property name="executorService" ref="ScheduledExecutorService" />
 		<property name="databaseLocation" value="$[cache.czmap.database]" />
 		<property name="pollingInterval" value="$[cache.czmap.database.refresh.period]" />
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+	</bean>
+
+	<bean id="regionalGeoUpdater" class="com.comcast.cdn.traffic_control.traffic_router.core.loc.RegionalGeoUpdater"
+		init-method="init">
+		<property name="executorService" ref="ScheduledExecutorService" />
+		<property name="databaseLocation" value="$[cache.regionalgeo.database]" />
+		<property name="pollingInterval" value="$[cache.regionalgeo.database.refresh.period]" />
 		<property name="trafficRouterManager" ref="trafficRouterManager" />
 	</bean>
 
@@ -147,7 +155,7 @@
 	</bean>
 
 	<bean id="languidState" class="com.comcast.cdn.traffic_control.traffic_router.core.util.LanguidState" init-method="init"
-		depends-on="geolocationDatabaseUpdater, networkUpdater, MonitorWatcher, trafficRouterManager, ConfigHandler">
+		depends-on="geolocationDatabaseUpdater, networkUpdater, regionalGeoUpdater, MonitorWatcher, trafficRouterManager, ConfigHandler">
 		<!-- todo: add bean refs that can be validated inside the method called -->
 		<property name="trafficRouterManager" ref="trafficRouterManager" />
 	</bean>

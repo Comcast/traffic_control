@@ -88,10 +88,8 @@ sub gen_crconfig_json {
 			push @profile_caches, @{$r};
 		}
 		else {
-			if ( $cachetype eq 'CCR' ) {
-				$cachetype = 'Traffic Router';
-			}
-			my $e = Mojo::Exception->throw( "No $cachetype profiles found for CDN: " . $cdn_name );
+			my $t = ( $cachetype eq 'CCR' ) ? 'Traffic Router' : $cachetype;
+			my $e = Mojo::Exception->throw( "No $t profiles found for CDN: " . $cdn_name );
 		}
 	}
 	my %condition = (
@@ -453,6 +451,8 @@ sub gen_crconfig_json {
 				$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'bypassDestination'}->{'HTTP'}->{'fqdn'} = $fqdn;
 				$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'bypassDestination'}->{'HTTP'}->{'port'} = $port;
 			}
+
+			$data_obj->{'deliveryServices'}->{ $row->xml_id }->{'regionalGeoBlocking'} = $row->regional_geo_blocking ? 'true' : 'false';
 		}
 
 		if ( defined( $row->tr_response_headers )
@@ -735,6 +735,9 @@ sub stringify_ds {
 	}
 	if ( defined( $ds->{'initial_dispersion'} ) ) {
 		$string .= "|initial_dispersion: " . $ds->{'initial_dispersion'};
+	}
+	if ( defined( $ds->{'regionalGeoBlocking'} ) ) {
+		$string .= "|Regional_Geoblocking:" . $ds->{'regionalGeoBlocking'};
 	}
 	$string .= "|<br>&emsp;DNS TTLs: A:" . $ds->{'ttls'}->{'A'} . " AAAA:" . $ds->{'ttls'}->{'AAAA'} . "|";
 	foreach my $dns ( @{ $ds->{'staticDnsEntries'} } ) {

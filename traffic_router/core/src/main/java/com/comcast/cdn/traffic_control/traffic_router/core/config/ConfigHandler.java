@@ -26,7 +26,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.*;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.FederationsWatcher;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationDatabaseUpdater;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.NetworkNode;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.NetworkUpdater;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.RegionalGeoUpdater;
+
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -44,6 +49,8 @@ import com.comcast.cdn.traffic_control.traffic_router.core.monitor.TrafficMonito
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouterManager;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.TrafficOpsUtils;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker;
+import com.comcast.cdn.traffic_control.traffic_router.geolocation.Geolocation;
+
 
 public class ConfigHandler {
 	private static final Logger LOGGER = Logger.getLogger(ConfigHandler.class);
@@ -60,6 +67,7 @@ public class ConfigHandler {
 
 	private NetworkUpdater networkUpdater;
 	private FederationsWatcher federationsWatcher;
+	private RegionalGeoUpdater regionalGeoUpdater;
 
 	public String getConfigDir() {
 		return configDir;
@@ -74,6 +82,10 @@ public class ConfigHandler {
 	}
 	public NetworkUpdater getNetworkUpdater () {
 		return networkUpdater;
+	}
+
+	public RegionalGeoUpdater getRegionalGeoUpdater() {
+		return regionalGeoUpdater;
 	}
 
 	public boolean processConfig(final String jsonStr) throws JSONException, IOException, TrafficRouterException  {
@@ -98,6 +110,7 @@ public class ConfigHandler {
 			try {
 				parseGeolocationConfig(config);
 				parseCoverageZoneNetworkConfig(config);
+				parseRegionalGeoConfig(config);
 
 				final CacheRegister cacheRegister = new CacheRegister();
 				cacheRegister.setTrafficRouters(jo.getJSONObject("contentRouters"));
@@ -142,6 +155,10 @@ public class ConfigHandler {
 	}
 	public void setNetworkUpdater(final NetworkUpdater nu) {
 		this.networkUpdater = nu;
+	}
+
+	public void setRegionalGeoUpdater(final RegionalGeoUpdater regionalGeoUpdater) {
+		this.regionalGeoUpdater = regionalGeoUpdater;
 	}
 
 	/**
@@ -343,6 +360,17 @@ public class ConfigHandler {
 				config.getString("coveragezone.polling.url"),
 				config.optLong("coveragezone.polling.interval")
 			);
+	}
+
+	private void parseRegionalGeoConfig(final JSONObject config) {
+		final String url = config.optString("regional_geoblock.polling.url", null);
+		if (url == null) {
+			LOGGER.info("regional_geoblock.polling.url not configured");
+			return;
+		}
+
+		final long interval = config.optLong("regional_geoblock.polling.interval");
+		getRegionalGeoUpdater().setDataBaseURL(url, interval);
 	}
 
 	/**

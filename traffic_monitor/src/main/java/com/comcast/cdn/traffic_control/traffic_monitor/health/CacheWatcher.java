@@ -17,16 +17,21 @@
 package com.comcast.cdn.traffic_control.traffic_monitor.health;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.comcast.cdn.traffic_control.traffic_monitor.wicket.models.CacheDataModel;
 import org.apache.log4j.Logger;
-import org.apache.wicket.model.Model;
 
 import com.comcast.cdn.traffic_control.traffic_monitor.config.Cache;
 import com.comcast.cdn.traffic_control.traffic_monitor.config.ConfigHandler;
 import com.comcast.cdn.traffic_control.traffic_monitor.config.RouterConfig;
 import com.comcast.cdn.traffic_control.traffic_monitor.config.MonitorConfig;
+
+import static com.comcast.cdn.traffic_control.traffic_monitor.health.HealthDeterminer.AdminStatus.OFFLINE;
+import static com.comcast.cdn.traffic_control.traffic_monitor.health.HealthDeterminer.AdminStatus.ONLINE;
 
 public class CacheWatcher {
 	private static final Logger LOGGER = Logger.getLogger(CacheWatcher.class);
@@ -44,12 +49,15 @@ public class CacheWatcher {
 	private static final CacheDataModel freeMem = new CacheDataModel("Free Memory (MB)");
 	private static final CacheDataModel totalMem = new CacheDataModel("Total Memory (MB)");
 	private static final CacheDataModel maxMemory = new CacheDataModel("Max Memory (MB)");
-
-	final MonitorConfig config = ConfigHandler.getConfig();
+	final MonitorConfig config = ConfigHandler.getInstance().getConfig();
+	private final Map<Cache, CacheStateUpdater> cacheUpdaterMap = new HashMap<Cache, CacheStateUpdater>();
 
 	boolean isActive = true;
 
 	private FetchService mainThread;
+
+	private final CacheStateRegistry cacheStateRegistry = CacheStateRegistry.getInstance();
+	private final CacheStatisticsClient cacheStatisticsClient = new CacheStatisticsClient();
 
 	public static List<CacheDataModel> getProps() {
 		return list;
@@ -84,30 +92,52 @@ public class CacheWatcher {
 			totalMem.set(runtime.totalMemory() / (1024 * 1024));
 			freeMem.set(runtime.freeMemory() / (1024 * 1024));
 
-			//					List<AtsServer> servers = new ArrayList<AtsServer>(config.getAtsServer());
-			final List<CacheState> retList = new ArrayList<CacheState>();
-//			DsState.startUpdateAll();
+			final List<CacheState> cacheStates = new ArrayList<CacheState>();
 
-			final List<Cache> myList = crConfig.getCacheList();
-			for (Cache cache : myList) {
+			for (Cache cache : crConfig.getCacheList()) {
 
 				if (!isActive) {
-					return retList;
+					// destroy was called, do stop fetching
+					return cacheStates;
 				}
 
 				if (!myHealthDeterminer.shouldMonitor(cache)) {
 					continue;
 				}
 
-				final CacheState state = CacheState.getOrCreate(cache);
-				state.fetchAndUpdate(myHealthDeterminer, fetchCount, errorCount, failCount);
-				retList.add(state);
+				final CacheState state = cacheStateRegistry.update(cache);
+
+				if (!shouldFetchStats(cache)) {
+					cache.setState(state, myHealthDeterminer);
+					continue;
+				}
+
+				state.prepareStatisticsForUpdate();
+
+				fetchCount.inc();
+				state.putDataPoint("_queryUrl_", cache.getStatisticsUrl());
+				state.setHistoryTime(cache.getHistoryTime());
+
+				if (!cacheUpdaterMap.containsKey(cache)) {
+					cacheUpdaterMap.put(cache, new CacheStateUpdater(state, errorCount));
+				}
+
+				final long requestTimeout = System.currentTimeMillis() + myHealthDeterminer.getConnectionTimeout(cache, 2000);
+
+				final CacheStateUpdater updater = cacheUpdaterMap.get(cache).update(myHealthDeterminer,failCount, requestTimeout);
+				cacheStatisticsClient.fetchCacheStatistics(cache, updater);
+
+				cacheStates.add(state);
 				cacheTimePad();
 			}
-			return retList;
+			return cacheStates;
 		}
 
 		private void cacheTimePad() {
+			if (config == null) {
+				return;
+			}
+
 			final int t = config.getCacheTimePad();
 
 			if (t == 0) {
@@ -117,7 +147,7 @@ public class CacheWatcher {
 			try {
 				Thread.sleep(t);
 			} catch (InterruptedException e) {
-				return;
+				// Ignore
 			}
 		}
 
@@ -127,10 +157,11 @@ public class CacheWatcher {
 					final long time = System.currentTimeMillis();
 					final RouterConfig crConfig = RouterConfig.getCrConfig();
 
-					if (crConfig == null) {
+					if (crConfig == null && config != null) {
 						try {
 							Thread.sleep(config.getHealthPollingInterval());
 						} catch (InterruptedException e) {
+							// Ignore
 						}
 
 						LOGGER.warn("No router config available, skipping health check");
@@ -141,22 +172,23 @@ public class CacheWatcher {
 					final List<CacheState> states = checkCaches(crConfig, failCount);
 
 					boolean waitForFinish = true;
-
 					final AtomicInteger cancelCount = new AtomicInteger(0);
+
 					while (waitForFinish) {
 						waitForFinish = false;
 
-						for (CacheState cs : states) {
-							waitForFinish |= !cs.completeFetch(myHealthDeterminer, errorCount, cancelCount, failCount);
+						for (CacheStateUpdater updater : cacheUpdaterMap.values()) {
+							waitForFinish |= !updater.completeFetchStatistics(cancelCount);
 						}
 					}
 
-					CacheState.removeAllBut(states);
+					cacheStateRegistry.removeAllBut(states);
 					final long completedTime = System.currentTimeMillis();
 
 					try {
 						Thread.sleep(Math.max(config.getHealthPollingInterval() - (completedTime - time), 0));
 					} catch (InterruptedException e) {
+						// Ignore
 					}
 
 					itercount.inc();
@@ -168,13 +200,14 @@ public class CacheWatcher {
 					queryIntervalActual.set(completedTime - time);
 					queryIntervalDelta.set((completedTime - time) - config.getHealthPollingInterval());
 
-					LOGGER.warn("Check time of " + states.size() + " caches elapsed: " + mytime + " msec, (Active time was " + (completedTime - time) + ") msec, " + cancelCount.get() + " checks were cancelled, " + failCount.get() + " failed");
+					LOGGER.debug("Check time of " + states.size() + " caches elapsed: " + mytime + " msec, (Active time was " + (completedTime - time) + ") msec, " + cancelCount.get() + " checks were cancelled, " + failCount.get() + " failed");
 				} catch (Exception e) {
 					LOGGER.warn(e, e);
 
 					try {
 						Thread.sleep(100);
 					} catch (InterruptedException ex) {
+						// Ignore
 					}
 				}
 
@@ -184,54 +217,8 @@ public class CacheWatcher {
 				}
 			}
 		}
-
 	}
 
-	public static class CacheDataModel extends Model<String> {
-		private static final long serialVersionUID = 1L;
-		private final String label;
-		long i = 0;
-
-		public CacheDataModel(final String label) {
-			this.label = label;
-
-			if (label == null) {
-				super.setObject(null);
-			} else {
-				super.setObject(label + ": ");
-			}
-		}
-
-		public String getKey() {
-			return label;
-		}
-
-		public String getValue() {
-			return String.valueOf(i);
-		}
-
-		public void inc() {
-			synchronized (this) {
-				i++;
-				this.set(i);
-			}
-		}
-
-		public void setObject(final String o) {
-			if (label == null) {
-				super.setObject(o);
-			} else {
-				super.setObject(label + ": " + o);
-			}
-		}
-
-		public void set(final long arg) {
-			synchronized (this) {
-				i = arg;
-				this.setObject(String.valueOf(arg));
-			}
-		}
-	}
 
 	public void destroy() {
 		LOGGER.warn("CacheWatcher: shutting down ");
@@ -240,20 +227,24 @@ public class CacheWatcher {
 		final long time = System.currentTimeMillis();
 
 		mainThread.interrupt();
-		CacheState.shutdown();
+		cacheStatisticsClient.shutdown();
 
 		while (mainThread.isAlive()) {
 			try {
 				Thread.sleep(10);
 			} catch (InterruptedException e) {
+				// Ignore
 			}
 		}
 		LOGGER.warn("Stopped: Termination time: " + (System.currentTimeMillis() - time));
 	}
 
 	public long getCycleCount() {
-		// TODO Auto-generated method stub
-		return itercount.i;
+		return itercount.getRawValue();
 	}
 
+	private boolean shouldFetchStats(final Cache cache) {
+		HealthDeterminer.AdminStatus adminStatus = HealthDeterminer.AdminStatus.valueOf(cache.getStatus());
+		return (adminStatus != OFFLINE || adminStatus == ONLINE);
+	}
 }
