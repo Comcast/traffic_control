@@ -87,7 +87,7 @@ Profiles
 |
 
 **POST /api/1.2/profiles**
-    Copy profile to a new profile. If no 'profile_copy_from' property in the API payload, only create empty profile.
+    Create a new empty  profile. 
 
 	Authentication Required: Yes
 
@@ -102,15 +102,12 @@ Profiles
 	+-----------------------+--------+----------------------------------------------------+
 	| ``description``       | string | new profile description                            |
 	+-----------------------+--------+----------------------------------------------------+
-	| ``profile_copy_from`` | string | The name of profile to copy                        |
-	+-----------------------+--------+----------------------------------------------------+
 
   **Request Example** ::
 
     {
       "name": "CCR_COPY",
       "description": "CCR_COPY description",
-      "profile_copy_from": "CCR1"
     }
 
 |
@@ -126,6 +123,39 @@ Profiles
 	+-----------------------+--------+----------------------------------------------------+
 	| ``description``       | string | new profile description                            |
 	+-----------------------+--------+----------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+     "response": [
+        {
+            "id": "66",
+            "name": "CCR_COPY",
+            "description": "CCR_COPY description",
+        }
+     ]
+    }
+
+|
+
+**POST /api/1.2/profiles/name/:profile_name/copy/:profile_copy_from**
+    Copy profile to an exist profile. 
+
+	Authentication Required: Yes
+
+	Role(s) Required: admin or oper
+
+	No Request Properties
+
+	**Response Properties**
+
+	+-----------------------+--------+----------------------------------------------------+
+	|    Parameter          |  Type  |                    Description                     |
+	+=======================+========+====================================================+
+	| ``id``                | string | Id of the new profile                              |
+	+-----------------------+--------+----------------------------------------------------+
+	| ``name``              | string | The name of the new profile                        |
+	+-----------------------+--------+----------------------------------------------------+
 	| ``profile_copy_from`` | string | The name of profile to copy                        |
 	+-----------------------+--------+----------------------------------------------------+
 	| ``id_copy_from``      | string | The id of profile to copy                          |
@@ -138,7 +168,6 @@ Profiles
         {
             "id": "66",
             "name": "CCR_COPY",
-            "description": "CCR_COPY description",
             "profile_copy_from": "CCR1",
             "id_copy_from": "3"
         }

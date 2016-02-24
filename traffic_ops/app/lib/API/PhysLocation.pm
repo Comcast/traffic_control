@@ -75,6 +75,7 @@ sub index_trimmed {
 
 sub create{
     my $self = shift;
+    my $region_name = $self->param('region_name');
     my $params = $self->req->json;
     if (!defined($params)) {
         return $self->alert("parameters must Json format,  please check!");
@@ -91,9 +92,9 @@ sub create{
     if (defined($existing_physlocation)){
         return $self->alert("physical locatiion with short_name[". $params->{short_name} . "] is already exist.");
     }
-    my $region_id = $self->db->resultset('Region')->search( { name => $params->{region_name} } )->get_column('id')->single();
+    my $region_id = $self->db->resultset('Region')->search( { name => $region_name } )->get_column('id')->single();
     if (!defined($region_id)) {
-        return $self->alert("region[". $params->{region_name} . "] is not exist.");
+        return $self->alert("region[". $region_name . "] is not exist.");
     }
 
     my $insert = $self->db->resultset('PhysLocation')->create(
@@ -118,7 +119,7 @@ sub create{
         $response->{id}     = $rs->id;
         $response->{name}   = $rs->name;
         $response->{short_name}   = $rs->short_name;
-        $response->{region_name}   = $params->{region_name};
+        $response->{region_name}   = $region_name;
         $response->{region_id}   = $rs->region->id;
         $response->{address}   = $rs->address;
         $response->{city}   = $rs->city;

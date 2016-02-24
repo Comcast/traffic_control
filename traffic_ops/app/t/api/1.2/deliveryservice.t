@@ -48,6 +48,7 @@ ok $t->post_ok('/api/1.2/deliveryservices' => {Accept => 'application/json'} => 
         "profile_name" => "CCR1",
         "type" => "HTTP",
         "multi_site_origin" => "0",
+        "regional_geo_blocking" => "1",
         "matchlist" => [
             {
                 "type" =>  "HOST_REGEXP",
@@ -66,14 +67,14 @@ ok $t->post_ok('/api/1.2/deliveryservices' => {Accept => 'application/json'} => 
     ->json_is( "/response/profile_name" => "CCR1")
     ->json_is( "/response/protocol_name" => "HTTPS")
     ->json_is( "/response/multi_site_origin" => "0")
+    ->json_is( "/response/regional_geo_blocking" => "1")
     ->json_is( "/response/matchlist/0/type" => "HOST_REGEXP")
     ->json_is( "/response/matchlist/0/pattern" => ".*\\.ds_1\\..*")
     ->json_is( "/response/matchlist/1/type" => "HOST_REGEXP")
     ->json_is( "/response/matchlist/1/pattern" => ".*\\.my_vod1\\..*")
             , 'Does the deliveryservice details return?';
 
-ok $t->post_ok('/api/1.2/deliveryservices/assigncaches' => {Accept => 'application/json'} => json => {
-        "xml_id" => "test-ds1",
+ok $t->post_ok('/api/1.2/deliveryservices/xmlId/test-ds1/servers' => {Accept => 'application/json'} => json => {
         "server_names" => [
              "atlanta-edge-01",
              "atlanta-edge-02"

@@ -57,12 +57,14 @@ Regions
 
 |
 
-**POST /api/1.2/regions**
+**POST /api/1.2/divisions/:division_name/regions**
   Create Region
 
   Authentication Required: Yes
 
   Role(s) Required: admin or oper
+
+  division_name - The name of division to create new region into.
 
   **Request Properties**
 
@@ -71,14 +73,11 @@ Regions
   +===================+==========+==========================================+
   | ``name``          | yes      | The name of the region                   |
   +-------------------+----------+------------------------------------------+
-  | ``division_name`` | yes      | The division name the region belongs to. |
-  +-------------------+----------+------------------------------------------+
 
   **Request Example** ::
 
     {
         "name": "myregion1",
-        "divison_name": "mydivision1"
     }
 
 |

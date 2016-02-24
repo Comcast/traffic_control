@@ -126,12 +126,14 @@ Physical Location
 
 |
 
-**POST /api/1.2/phys_locations**
+**POST /api/1.2/regions/:region_name/phys_locations**
   Create physical location.
 
   Authentication Required: Yes
 
   Role(s) Required: admin or oper
+
+  region_name: the name of the region to create physical location into.
 
   **Request Properties**
   
@@ -141,8 +143,6 @@ Physical Location
   | ``name``        | yes      | The name of the location                          |
   +-----------------+----------+---------------------------------------------------+
   | ``short_name``  | yes      | The short name of the location                    |
-  +-----------------+----------+---------------------------------------------------+
-  | ``region_name`` | yes      | The region name the physical location belongs to. |
   +-----------------+----------+---------------------------------------------------+
   | ``address``     | yes      |                                                   |
   +-----------------+----------+---------------------------------------------------+
@@ -166,7 +166,6 @@ Physical Location
     {
         "name" : "my physical location1",
         "short_name" : "myphylocation1",
-        "region_name" : "myregion1",
         "address" : "",
         "city" : "Shanghai",
         "state": "SH",

@@ -442,8 +442,6 @@ sub check_server_params {
         return (\%params, "'phys_location' not specified!");
     }
 
-    $self->app->log->debug( "params: " . Data::Dumper->Dump([\%params]) );
-
     return (\%params, $err);
 }
 
@@ -499,10 +497,8 @@ sub get_server_by_id {
 sub create {
     my ($params, $data, $err) = (undef, undef, undef);
     my $self = shift;
-    return $self->forbidden() if !&is_oper($self);
 
     my $json = $self->req->json;
-    $self->app->log->debug( "Create server with: " . Data::Dumper->Dump([$json]) );
     if ( !&is_oper($self) ) {
         return $self->alert("You must be an ADMIN or OPER to perform this operation!");
     }
@@ -625,10 +621,8 @@ sub create {
 sub update {
     my ($params, $data, $err) = (undef, undef, undef);
     my $self = shift;
-    return $self->forbidden() if !&is_oper($self);
 
     my $json = $self->req->json;
-    $self->app->log->debug( "update server with: " . Data::Dumper->Dump([$json]) );
     if ( !&is_oper($self) ) {
         return $self->alert("You must be an ADMIN or OPER to perform this operation!");
     }

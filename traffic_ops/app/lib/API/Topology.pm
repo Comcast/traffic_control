@@ -34,7 +34,6 @@ sub SnapshotCRConfig {
         return $self->alert("You must be an ADMIN or OPER to perform this operation!");
     }
     my $cdn_name = $self->param('cdn_name');
-    #$self->app->log->debug("CDN[" . $cdn_name . "]");
     my @cdn_names = $self->db->resultset('Server')->search({ 'type.name' => 'EDGE' }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name' } )->get_column('cdn.name')->all();
     my $num = grep /^$cdn_name$/, @cdn_names; 
     if ($num <= 0) {

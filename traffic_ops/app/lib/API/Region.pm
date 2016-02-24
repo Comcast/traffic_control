@@ -44,6 +44,7 @@ sub index {
 
 sub create{
     my $self = shift;
+    my $division_name = $self->param('division_name');
     my $params = $self->req->json;
     if (!defined($params)) {
         return $self->alert("parameters must Json format,  please check!"); 
@@ -57,9 +58,9 @@ sub create{
         return $self->alert("region[". $params->{name} . "] is already exist."); 
     }
 
-    my $divsion_id = $self->db->resultset('Division')->search( { name => $params->{division_name} } )->get_column('id')->single();
+    my $divsion_id = $self->db->resultset('Division')->search( { name => $division_name } )->get_column('id')->single();
     if (!defined($divsion_id)) {
-        return $self->alert("division[". $params->{division_name} . "] is not exist."); 
+        return $self->alert("division[". $division_name . "] is not exist."); 
     }
 
     my $insert = $self->db->resultset('Region')->create(
@@ -74,7 +75,7 @@ sub create{
     if (defined($rs)) {
         $response->{id}     = $rs->id;
         $response->{name}   = $rs->name;
-        $response->{division_name}  = $params->{division_name};
+        $response->{division_name}  = $division_name;
         $response->{divsion_id}    = $rs->division->id;
         return $self->success($response);
     }

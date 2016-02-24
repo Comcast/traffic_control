@@ -423,20 +423,12 @@ sub create {
 	if ( exists $delivery_services->{xml_id}{ $params->{xml_id} } ) {
 		return $self->alert( "xml_id[" . $params->{xml_id} . "] is already exist." );
 	}
-	if ( exists $delivery_services->{'os_fqdn'}->{ $params->{org_server_fqdn} } ) {
-		return $self->alert( "org_server_fqdn["
-				. $params->{org_server_fqdn}
-				. "] is already used in deliveryservice ["
-				. $delivery_services->{os_fqdn}->{ $params->{org_server_fqdn} }
-				. "]" );
-	}
 	$rs = $self->get_types("deliveryservice");
 	if ( !exists $rs->{ $params->{type} } ) {
 		return $self->alert( "type[" . $params->{type} . "] must be deliveryservice type." );
 	}
 	else {
 		$params->{type} = $rs->{ $params->{type} };
-		$self->app->log->debug( "Deliveryservice type = " . $params->{type} );
 	}
 	if ( !( ( $params->{protocol} eq "HTTP" ) || ( $params->{protocol} eq "HTTPS" ) || ( $params->{protocol} eq "HTTP+HTTPS" ) ) ) {
 		return $self->alert( "protocol[" . $params->{protocol} . "] must be HTTP|HTTPS|HTTP+HTTPS." );
@@ -456,7 +448,6 @@ sub create {
 	}
 	else {
 		$profile_id = $ccr_profiles->{ $params->{profile_name} };
-		$self->app->log->debug( "Deliveryservice profile_id = " . $profile_id );
 	}
 
 	my $cdn_id = $self->db->resultset('Cdn')->search( { name => $params->{cdn_name} } )->get_column('id')->single();
@@ -514,6 +505,9 @@ sub create {
 			cacheurl               => $params->{cacheurl},
 			remap_text             => $params->{remap_text},
 			initial_dispersion     => $params->{initial_dispersion},
+            regional_geo_blocking  => $self->nodef_to_default($params->{regional_geo_blocking}, 0),
+			ssl_key_version        => $self->{ssl_key_version},
+            tr_request_headers     => $self->{tr_request_headers},
 		}
 	);
 	$insert->insert();
@@ -523,7 +517,6 @@ sub create {
 	my $r;
 	if ( $new_id > 0 ) {
 
-		$self->app->log->debug( "deliveryservice created, id=" . $new_id );
 		my $order = 0;
 		foreach my $re (@$patterns) {
 			my $type = $self->db->resultset('Type')->search( { name => $re->{type} } )->get_column('id')->single();
@@ -601,8 +594,9 @@ sub create {
 			$response->{tr_response_headers}    = $rs->tr_response_headers;
 			$response->{initial_dispersion}     = $rs->initial_dispersion;
 			$response->{dns_bypass_cname}       = $rs->dns_bypass_cname;
+            $response->{regional_geo_blocking}  = $rs->regional_geo_blocking;
+            $response->{tr_request_headers}     = $rs->tr_request_headers;
 		}
-		$self->app->log->debug( "type = " . $rs->type->id . " profile = " . $rs->profile->id );
 
 		my $patterns1;
 		$rs = $self->db->resultset('DeliveryserviceRegex')->search( { deliveryservice => $new_id } );
@@ -657,7 +651,9 @@ sub get_types {
 
 sub assign_servers {
 	my $self   = shift;
+    my $ds_xml_Id = $self->param('xml_id');
 	my $params = $self->req->json;
+
 	if ( !defined($params) ) {
 		return $self->alert("parameters are json format, please check!");
 	}
@@ -665,25 +661,19 @@ sub assign_servers {
 		return $self->alert("You must be an ADMIN or OPER to perform this operation!");
 	}
 
-	if ( !exists( $params->{xml_id} ) ) {
-		return $self->alert("Parameter 'xml_id' is required in JSON.");
-	}
 	if ( !exists( $params->{server_names} ) ) {
 		return $self->alert("Parameter 'server_names' is required JSON.");
 	}
 
-	my $dsid = $self->db->resultset('Deliveryservice')->search( { xml_id => $params->{xml_id} } )->get_column('id')->single();
-	$self->app->log->debug( "DeliveryService[" . $params->{xml_id} . "] id is [" . $dsid . "]" );
+	my $dsid = $self->db->resultset('Deliveryservice')->search( { xml_id => $ds_xml_Id } )->get_column('id')->single();
 	if ( !defined($dsid) ) {
-		return $self->alert( "DeliveryService[" . $params->{xml_id} . "] is not found." );
+		return $self->alert( "DeliveryService[" . $ds_xml_Id . "] is not found." );
 	}
 
 	my @server_ids;
 	my $svrs = $params->{server_names};
 	foreach my $svr (@$svrs) {
-		$self->app->log->debug( "Server[" . $svr . "]" );
 		my $svr_id = $self->db->resultset('Server')->search( { host_name => $svr } )->get_column('id')->single();
-		$self->app->log->debug( "Server[" . $svr . "] id is [" . $svr_id . "]" );
 		if ( !defined($svr_id) ) {
 			return $self->alert( "Server[" . $svr . "] is not found in database." );
 		}

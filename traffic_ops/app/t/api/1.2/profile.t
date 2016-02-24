@@ -40,45 +40,35 @@ ok $t->post_ok( '/login', => form => { u => Test::TestHelper::ADMIN_USER, p => T
 	->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'Should login?';
 
 ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
-	"name" => "CCR_COPY", "description" => "CCR_COPY description", "profile_copy_from" => "CCR1" })->status_is(200)
-	->or( sub { diag $t->tx->res->content->asset->{content}; } )
-	->json_is( "/response/name" => "CCR_COPY" )
-	->json_is( "/response/description" => "CCR_COPY description" )
-	->json_is( "/response/profile_copy_from" => "CCR1" )
-		, 'Does the profile details return?';
-
-ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
 	"name" => "CCR_CREATE", "description" => "CCR_CREATE description" })->status_is(200)
 	->or( sub { diag $t->tx->res->content->asset->{content}; } )
 	->json_is( "/response/name" => "CCR_CREATE" )
 	->json_is( "/response/description" => "CCR_CREATE description" )
 		, 'Does the profile details return?';
 
-ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
-	"description" => "description", "profile_copy_from" => "CCR1" })->status_is(400);
+ok $t->post_ok('/api/1.2/profiles/name/CCR_CREATE/copy/CCR1' => {Accept => 'application/json'}) ->status_is(200)
+	->or( sub { diag $t->tx->res->content->asset->{content}; } )
+	->json_is( "/response/name" => "CCR_CREATE" )
+		, 'Does the profile details return?';
+
+ok $t->post_ok('/api/1.2/profiles/name/CCR_COPY/copy/CCR1' => {Accept => 'application/json'})->status_is(400);
+ok $t->post_ok('/api/1.2/profiles/name/CCR_NEW/copy/not_exist' => {Accept => 'application/json'})->status_is(400);
 
 ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
-	"name" => "", "description" => "description", "profile_copy_from" => "CCR1" })->status_is(400);
+	"name" => "", "description" => "description" })->status_is(400);
 
 ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
-	"name" => "EDGE1", "description" => "description", "profile_copy_from" => "CCR1" })->status_is(400);
+	"name" => "EDGE1", "description" => "description"})->status_is(400);
 
 ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
-	"name" => "CCR_COPY", "profile_copy_from" => "CCR1" })->status_is(400);
+	"name" => "CCR_COPY"})->status_is(400);
 
 ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
-	"name" => "CCR_COPY", "description" => "", "profile_copy_from" => "CCR1" })->status_is(400);
+	"name" => "CCR_COPY", "description" => ""})->status_is(400);
 
 ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
-	"name" => "CCR_COPY", "description" => "ccr description", "profile_copy_from" => "CCR1" })->status_is(400);
-
-ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
-	"name" => "CCR_COPY", "description" => "CCR_COPY description", "profile_copy_from" => "not_exist" })->status_is(400);
-
-ok $t->post_ok('/api/1.2/profiles' => {Accept => 'application/json'} => json => {
-	"name" => "CCR_COPY", "description" => "CCR_COPY description", "profile_copy_from" => "" })->status_is(400);
+	"name" => "CCR_CREATE", "description" => "ccr description"})->status_is(400);
 
 ok $t->get_ok('/logout')->status_is(302)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 $dbh->disconnect();
 done_testing();
-

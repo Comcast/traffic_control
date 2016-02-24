@@ -153,7 +153,6 @@ sub create{
     if (!defined($params)) {
         return $self->alert("parameters must Json format,  please check!"); 
     }
-    $self->app->log->debug("create cachegroup with: " . Dumper($params) );
 
     if ( !&is_oper($self) ) {
         return $self->alert("You must be an ADMIN or OPER to perform this operation!");
