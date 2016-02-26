@@ -31,11 +31,16 @@ sub index {
 	my $rs_data = $self->db->resultset("ProfileParameter")->search( undef, { prefetch => [ 'parameter', 'profile' ] } );
 	my @data    = ();
 	while ( my $row = $rs_data->next ) {
+        my $value = $row->parameter->value;
+        if(!&is_admin($self)){ # Prevent other users to peek admin password in cron configuration
+            # replace password to '******' in '/opt/ort/traffic_ops_ort.pl syncds warn https://ops.com user:password> /tmp/ort/syncds.log 2>&1'
+             $value =~ s/(_ort.pl (\S+ ){3}\w+:)[^>]+>/$1******>/;
+        }
 		push(
 			@data, {
 				"name"        => $row->parameter->name,
 				"configFile"  => $row->parameter->config_file,
-				"value"       => $row->parameter->value,
+				"value"       => $value,
 				"lastUpdated" => $row->parameter->last_updated,
 			}
 		);
@@ -50,11 +55,16 @@ sub profile {
 	my $rs_data = $self->db->resultset("ProfileParameter")->search( { 'profile.name' => $profile_name }, { prefetch => [ 'parameter', 'profile' ] } );
 	my @data = ();
 	while ( my $row = $rs_data->next ) {
+        my $value = $row->parameter->value;
+        if(!&is_admin($self)){ # Prevent other users to peek admin password in cron configuration
+            # replace password to '******' in '/opt/ort/traffic_ops_ort.pl syncds warn https://ops.com user:password> /tmp/ort/syncds.log 2>&1'
+            $value =~ s/(_ort.pl (\S+ ){3}\w+:)[^>]+>/$1******>/;
+        }
 		push(
 			@data, {
 				"name"        => $row->parameter->name,
 				"configFile"  => $row->parameter->config_file,
-				"value"       => $row->parameter->value,
+				"value"       => $value,
 				"lastUpdated" => $row->parameter->last_updated,
 			}
 		);
