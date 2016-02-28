@@ -27,6 +27,10 @@ use Email::Valid;
 use Validate::Tiny ':all';
 use Data::Dumper;
 use Common::ReturnCodes qw(SUCCESS ERROR);
+use JSON;
+use MojoPlugins::Response;
+use UI::DeliveryService;
+use UI::Topology;
 
 my $valid_server_types = {
 	edge => "EDGE",
@@ -122,7 +126,7 @@ sub delivery_services {
 		}
 	}
 
-	return defined($forbidden) ? $self->forbidden() : $self->success(\@data);
+	return defined($forbidden) ? $self->forbidden() : $self->success( \@data );
 }
 
 sub get_delivery_services {
@@ -156,7 +160,7 @@ sub get_delivery_service_by_id {
 	my $forbidden;
 	if ( &is_privileged($self) ) {
 		my @ds_ids =
-		$rs = $self->db->resultset('Deliveryservice')
+			$rs = $self->db->resultset('Deliveryservice')
 			->search( { 'me.id' => $id }, { prefetch => [ 'cdn', 'deliveryservice_regexes' ], order_by => 'xml_id' } );
 	}
 	elsif ( $self->is_delivery_service_assigned($id) ) {
@@ -164,7 +168,8 @@ sub get_delivery_service_by_id {
 		$tm_user_id = $tm_user->id;
 
 		my @ds_ids =
-			$self->db->resultset('DeliveryserviceTmuser')->search( { tm_user_id => $tm_user_id, deliveryservice => $id } )->get_column('deliveryservice')->all();
+			$self->db->resultset('DeliveryserviceTmuser')->search( { tm_user_id => $tm_user_id, deliveryservice => $id } )->get_column('deliveryservice')
+			->all();
 		$rs =
 			$self->db->resultset('Deliveryservice')
 			->search( { 'me.id' => { -in => \@ds_ids } }, { prefetch => [ 'cdn', 'deliveryservice_regexes' ], order_by => 'xml_id' } );
@@ -175,7 +180,6 @@ sub get_delivery_service_by_id {
 
 	return ( $forbidden, $rs, $tm_user_id );
 }
-
 
 sub routing {
 	my $self = shift;
@@ -341,9 +345,9 @@ sub state {
 }
 
 sub request {
-	my $self      = shift;
-	my $email_to  = $self->req->json->{emailTo};
-	my $details = $self->req->json->{details};
+	my $self     = shift;
+	my $email_to = $self->req->json->{emailTo};
+	my $details  = $self->req->json->{details};
 
 	my $is_email_valid = Email::Valid->address($email_to);
 
@@ -364,7 +368,7 @@ sub request {
 }
 
 sub is_deliveryservice_request_valid {
-	my $self      = shift;
+	my $self    = shift;
 	my $details = shift;
 
 	my $rules = {
@@ -392,7 +396,313 @@ sub is_deliveryservice_request_valid {
 	else {
 		return ( 0, $result->{error} );
 	}
+}
 
+sub create {
+	my $self   = shift;
+	my $params = $self->req->json;
+	if ( !defined($params) ) {
+		return $self->alert("parameters are json format, please check!");
+	}
+	if ( !&is_oper($self) ) {
+		return $self->alert("You must be an ADMIN or OPER to perform this operation!");
+	}
+
+	my $profile_id;
+	my $delivery_services;
+	my %xml_id;
+	my %os_fqdn;
+	my $rs = $self->db->resultset('Deliveryservice');
+	while ( my $ds = $rs->next ) {
+		$xml_id{ $ds->xml_id }           = $ds->id;
+		$os_fqdn{ $ds->org_server_fqdn } = $ds->id;
+	}
+	$delivery_services->{'xml_id'}  = \%xml_id;
+	$delivery_services->{'os_fqdn'} = \%os_fqdn;
+
+	if ( exists $delivery_services->{xml_id}{ $params->{xml_id} } ) {
+		return $self->alert( "xml_id[" . $params->{xml_id} . "] is already exist." );
+	}
+	$rs = $self->get_types("deliveryservice");
+	if ( !exists $rs->{ $params->{type} } ) {
+		return $self->alert( "type[" . $params->{type} . "] must be deliveryservice type." );
+	}
+	else {
+		$params->{type} = $rs->{ $params->{type} };
+	}
+	if ( !( ( $params->{protocol} eq "HTTP" ) || ( $params->{protocol} eq "HTTPS" ) || ( $params->{protocol} eq "HTTP+HTTPS" ) ) ) {
+		return $self->alert( "protocol[" . $params->{protocol} . "] must be HTTP|HTTPS|HTTP+HTTPS." );
+	}
+
+	my $ccr_profiles;
+	my @ccrprofs = $self->db->resultset('Profile')->search( { name => { -like => 'CCR%' } } )->get_column('id')->all();
+	$rs =
+		$self->db->resultset('ProfileParameter')
+		->search( { profile => { -in => \@ccrprofs }, 'parameter.name' => 'domain_name', 'parameter.config_file' => 'CRConfig.json' },
+		{ prefetch => [ 'parameter', 'profile' ] } );
+	while ( my $row = $rs->next ) {
+		$ccr_profiles->{ $row->profile->name } = $row->profile->id;
+	}
+	if ( !exists $ccr_profiles->{ $params->{profile_name} } ) {
+		return $self->alert( "profile [" . $params->{profile_name} . "] must be CCR profiles." );
+	}
+	else {
+		$profile_id = $ccr_profiles->{ $params->{profile_name} };
+	}
+
+	my $cdn_id = $self->db->resultset('Cdn')->search( { name => $params->{cdn_name} } )->get_column('id')->single();
+	if ( !defined $cdn_id ) {
+		return $self->alert( "cdn_name [" . $params->{cdn_name} . "] does not exists." );
+	}
+
+	if ( !exists $params->{matchlist} ) {
+		return $self->alert("No  matchlist found.");
+	}
+
+	my $patterns     = $params->{matchlist};
+	my $patterns_len = @$patterns;
+	if ( $patterns_len == 0 ) {
+		return $self->alert("At least have 1 pattern in matchlist.");
+	}
+
+	my $insert = $self->db->resultset('Deliveryservice')->create(
+		{
+			xml_id                 => $params->{xml_id},
+			display_name           => $params->{display_name},
+			dscp                   => $self->nodef_to_default( $params->{dscp} eq "", 0 ),
+			signed                 => $self->nodef_to_default( $params->{signed}, 0 ),
+			qstring_ignore         => $params->{qstring_ignore},
+			geo_limit              => $params->{geo_limit},
+			http_bypass_fqdn       => $params->{http_bypass_fqdn},
+			dns_bypass_ip          => $params->{dns_bypass_ip},
+			dns_bypass_ip6         => $params->{dns_bypass_ip6},
+			dns_bypass_cname       => $params->{dns_bypass_cname},
+			dns_bypass_ttl         => $params->{dns_bypass_ttl},
+			org_server_fqdn        => $params->{org_server_fqdn},
+			multi_site_origin      => $params->{multi_site_origin},
+			ccr_dns_ttl            => $params->{ccr_dns_ttl},
+			type                   => $params->{type},
+			profile                => $profile_id,
+			cdn_id                 => $cdn_id,
+			global_max_mbps        => $self->nodef_to_default( $params->{global_max_mbps}, 0 ),
+			global_max_tps         => $self->nodef_to_default( $params->{global_max_tps}, 0 ),
+			miss_lat               => $params->{miss_lat},
+			miss_long              => $params->{miss_long},
+			long_desc              => $params->{long_desc},
+			long_desc_1            => $params->{long_desc_1},
+			long_desc_2            => $params->{long_desc_2},
+			max_dns_answers        => $self->nodef_to_default( $params->{max_dns_answers}, 0 ),
+			info_url               => $params->{info_url},
+			check_path             => $params->{check_path},
+			active                 => $self->nodef_to_default( $params->{active}, 1 ),
+			protocol               => $params->{protocol},
+			ipv6_routing_enabled   => $params->{ipv6_routing_enabled},
+			range_request_handling => $params->{range_request_handling},
+			edge_header_rewrite    => $params->{edge_header_rewrite},
+			mid_header_rewrite     => $params->{mid_header_rewrite},
+			regex_remap            => $params->{regex_remap},
+			origin_shield          => $params->{origin_shield},
+			cacheurl               => $params->{cacheurl},
+			remap_text             => $params->{remap_text},
+			initial_dispersion     => $params->{initial_dispersion},
+            regional_geo_blocking  => $self->nodef_to_default($params->{regional_geo_blocking}, 0),
+			ssl_key_version        => $self->{ssl_key_version},
+            tr_request_headers     => $self->{tr_request_headers},
+		}
+	);
+	$insert->insert();
+	my $new_id = $insert->id;
+
+	my $response;
+	my $r;
+	if ( $new_id > 0 ) {
+
+		my $order = 0;
+		foreach my $re (@$patterns) {
+			my $type = $self->db->resultset('Type')->search( { name => $re->{type} } )->get_column('id')->single();
+			my $regexp = $re->{pattern};
+
+			my $insert = $self->db->resultset('Regex')->create(
+				{
+					pattern => $regexp,
+					type    => $type,
+				}
+			);
+			$insert->insert();
+			my $new_re_id = $insert->id;
+
+			my $de_re_insert = $self->db->resultset('DeliveryserviceRegex')->create(
+				{
+					regex           => $new_re_id,
+					deliveryservice => $new_id,
+					set_number      => $order,
+				}
+			);
+			$de_re_insert->insert();
+			$order++;
+		}
+
+		&UI::DeliveryService::header_rewrite( $self, $new_id, $profile_id, $params->{xml_id}, $params->{edge_header_rewrite}, "edge" );
+		&UI::DeliveryService::header_rewrite( $self, $new_id, $profile_id, $params->{xml_id}, $params->{mid_header_rewrite},  "mid" );
+		&UI::DeliveryService::regex_remap( $self, $profile_id, $params->{xml_id}, $params->{regex_remap} );
+		&UI::DeliveryService::cacheurl( $self, $profile_id, $params->{xml_id}, $params->{cacheurl} );
+
+		$rs = $self->db->resultset('Deliveryservice')->find( { id => $new_id } );
+		if ( defined($rs) ) {
+			$response->{id}                     = $rs->id;
+			$response->{xml_id}                 = $rs->xml_id;
+			$response->{active}                 = $rs->active;
+			$response->{dscp}                   = $rs->dscp;
+			$response->{signed}                 = $rs->signed;
+			$response->{qstring_ignore}         = $rs->qstring_ignore;
+			$response->{geo_limit}              = $rs->geo_limit;
+			$response->{http_bypass_fqdn}       = $rs->http_bypass_fqdn;
+			$response->{dns_bypass_ip}          = $rs->dns_bypass_ip;
+			$response->{dns_bypass_ip6}         = $rs->dns_bypass_ip6;
+			$response->{dns_bypass_ttl}         = $rs->dns_bypass_ttl;
+			$response->{org_server_fqdn}        = $rs->org_server_fqdn;
+			$response->{type}                   = $rs->type->id;
+			$response->{profile}                = $rs->profile->id;
+			$response->{profile_name}           = $params->{profile_name};
+			$response->{cdn_name}               = $params->{cdn_name};
+			$response->{cdn_id}                 = $rs->cdn_id;
+			$response->{ccr_dns_ttl}            = $rs->ccr_dns_ttl;
+			$response->{global_max_mbps}        = $rs->global_max_mbps;
+			$response->{global_max_tps}         = $rs->global_max_tps;
+			$response->{long_desc}              = $rs->long_desc;
+			$response->{long_desc_1}            = $rs->long_desc_1;
+			$response->{long_desc_2}            = $rs->long_desc_2;
+			$response->{max_dns_answers}        = $rs->max_dns_answers;
+			$response->{info_url}               = $rs->info_url;
+			$response->{miss_lat}               = $rs->miss_lat;
+			$response->{miss_long}              = $rs->miss_long;
+			$response->{check_path}             = $rs->check_path;
+			$response->{last_updated}           = $rs->last_updated;
+			$response->{protocol}               = $rs->protocol;
+			$response->{protocol_name}          = $params->{protocol};
+			$response->{ssl_key_version}        = $rs->ssl_key_version;
+			$response->{ipv6_routing_enabled}   = $rs->ipv6_routing_enabled;
+			$response->{range_request_handling} = $rs->range_request_handling;
+			$response->{edge_header_rewrite}    = $rs->edge_header_rewrite;
+			$response->{origin_shield}          = $rs->origin_shield;
+			$response->{mid_header_rewrite}     = $rs->mid_header_rewrite;
+			$response->{regex_remap}            = $rs->regex_remap;
+			$response->{cacheurl}               = $rs->cacheurl;
+			$response->{remap_text}             = $rs->remap_text;
+			$response->{multi_site_origin}      = $rs->multi_site_origin;
+			$response->{display_name}           = $rs->display_name;
+			$response->{tr_response_headers}    = $rs->tr_response_headers;
+			$response->{initial_dispersion}     = $rs->initial_dispersion;
+			$response->{dns_bypass_cname}       = $rs->dns_bypass_cname;
+            $response->{regional_geo_blocking}  = $rs->regional_geo_blocking;
+            $response->{tr_request_headers}     = $rs->tr_request_headers;
+		}
+
+		my $patterns1;
+		$rs = $self->db->resultset('DeliveryserviceRegex')->search( { deliveryservice => $new_id } );
+		while ( my $row = $rs->next ) {
+			my $pat;
+			$pat->{'pattern'}                = $row->regex->pattern;
+			$pat->{'type'}                   = $row->regex->type->name;
+			$patterns1->{ $row->set_number } = $pat;
+		}
+		my @pats = ();
+		foreach my $re ( sort keys %{$patterns1} ) {
+			push(
+				@pats, {
+					'pattern' => $patterns1->{$re}->{'pattern'},
+					'type'    => $patterns1->{$re}->{'type'},
+				}
+			);
+		}
+		$response->{'matchlist'} = \@pats;
+
+		return $self->success($response);
+	}
+
+	$r = "Create Delivery Service fail, insert to database failed.";
+	return $self->alert($r);
+}
+
+sub nodef_to_default {
+	my $self    = shift;
+	my $v       = shift;
+	my $default = shift;
+
+	if ( !defined($default) ) {
+		return $v;
+	}
+	if ( !defined($v) ) {
+		return $default;
+	}
+	return $v;
+}
+
+sub get_types {
+	my $self         = shift;
+	my $use_in_table = shift;
+	my $types;
+	my $rs = $self->db->resultset('Type')->search( { use_in_table => $use_in_table } );
+	while ( my $row = $rs->next ) {
+		$types->{ $row->name } = $row->id;
+	}
+	return $types;
+}
+
+sub assign_servers {
+	my $self   = shift;
+    my $ds_xml_Id = $self->param('xml_id');
+	my $params = $self->req->json;
+
+	if ( !defined($params) ) {
+		return $self->alert("parameters are json format, please check!");
+	}
+	if ( !&is_oper($self) ) {
+		return $self->alert("You must be an ADMIN or OPER to perform this operation!");
+	}
+
+	if ( !exists( $params->{server_names} ) ) {
+		return $self->alert("Parameter 'server_names' is required JSON.");
+	}
+
+	my $dsid = $self->db->resultset('Deliveryservice')->search( { xml_id => $ds_xml_Id } )->get_column('id')->single();
+	if ( !defined($dsid) ) {
+		return $self->alert( "DeliveryService[" . $ds_xml_Id . "] is not found." );
+	}
+
+	my @server_ids;
+	my $svrs = $params->{server_names};
+	foreach my $svr (@$svrs) {
+		my $svr_id = $self->db->resultset('Server')->search( { host_name => $svr } )->get_column('id')->single();
+		if ( !defined($svr_id) ) {
+			return $self->alert( "Server[" . $svr . "] is not found in database." );
+		}
+		push( @server_ids, $svr_id );
+	}
+
+	# clean up
+	my $delete = $self->db->resultset('DeliveryserviceServer')->search( { deliveryservice => $dsid } );
+	$delete->delete();
+
+	# assign servers
+	foreach my $s_id (@server_ids) {
+		my $insert = $self->db->resultset('DeliveryserviceServer')->create(
+			{
+				deliveryservice => $dsid,
+				server          => $s_id,
+			}
+		);
+		$insert->insert();
+	}
+
+	my $ds = $self->db->resultset('Deliveryservice')->search( { id => $dsid } )->single();
+	&UI::DeliveryService::header_rewrite( $self, $ds->id, $ds->profile, $ds->xml_id, $ds->edge_header_rewrite, "edge" );
+
+	my $response;
+	$response->{xml_id} = $ds->xml_id;
+	$response->{'server_names'} = \@$svrs;
+
+	return $self->success($response);
 }
 
 1;
