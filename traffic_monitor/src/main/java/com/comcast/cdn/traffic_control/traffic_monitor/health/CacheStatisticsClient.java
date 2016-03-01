@@ -25,12 +25,8 @@ public class CacheStatisticsClient {
 			.setProxyServer(proxyServer)
 			.build();
 
-		try {
-			final Future<Object> future = asyncHttpClient.executeRequest(request, cacheStateUpdater);
-			cacheStateUpdater.setFuture(future);
-		} catch (IOException e) {
-			LOGGER.warn("Failed to fetch cache statistics from " + request.getUrl(),e);
-		}
+		final Future<Object> future = asyncHttpClient.executeRequest(request, cacheStateUpdater);
+		cacheStateUpdater.setFuture(future);
 	}
 
 
