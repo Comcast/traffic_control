@@ -4,10 +4,12 @@ import com.comcast.cdn.traffic_control.traffic_monitor.MonitorApplication;
 import com.comcast.cdn.traffic_control.traffic_monitor.config.ConfigHandler;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.reflect.Whitebox;
+import test.IntegrationTest;
 
 import java.security.AccessControlException;
 import java.security.Permission;
@@ -19,6 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 
+@Category(IntegrationTest.class)
 @PrepareForTest({MonitorApplication.class, ConfigHandler.class})
 @RunWith(PowerMockRunner.class)
 public class MonitorApplicationTest {
