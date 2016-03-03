@@ -10,9 +10,14 @@
 	<packaging>war</packaging>
 
 	<properties>
+		<deploy.dir>/opt/traffic_monitor</deploy.dir>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
+
+	<scm>
+		<connection>scm:git:git://localhost/${basedir}</connection>
+	</scm>
 
 	<build>
 		<finalName>ROOT</finalName>
@@ -41,6 +46,7 @@
 		<plugins>
 			<plugin>
 				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18.1</version>
 				<executions>
 					<execution>
 						<goals>
@@ -55,6 +61,7 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.19</version>
 				<executions>
 					<execution>
 						<goals>
@@ -101,6 +108,246 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>rpm-build</id>
+			<activation>
+				<os>
+					<name>linux</name>
+				</os>
+			</activation>
+			<build>
+				<finalName>ROOT</finalName>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-enforcer-plugin</artifactId>
+						<version>1.4.1</version>
+						<executions>
+							<execution>
+								<phase>package</phase>
+								<id>enforce-environment-variable-is-set</id>
+								<goals>
+									<goal>enforce</goal>
+								</goals>
+								<configuration>
+									<rules>
+										<requireEnvironmentVariable>
+											<variableName>GIT_REV_COUNT</variableName>
+										</requireEnvironmentVariable>
+									</rules>
+									<fail>true</fail>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>buildnumber-maven-plugin</artifactId>
+						<version>1.4</version>
+						<executions>
+							<execution>
+								<phase>validate</phase>
+								<goals>
+									<goal>create</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<shortRevisionLength>9</shortRevisionLength>
+							<doCheck>false</doCheck>
+							<doUpdate>false</doUpdate>
+							<timestampFormat>
+								{0,date,yyyy-MM-dd}
+							</timestampFormat>
+							<getRevisionOnlyOnce>false</getRevisionOnlyOnce>
+							<format>{0}</format>
+							<items>
+								<item>scmVersion</item>
+								<!-- <item>buildNumber</item>  -->
+							</items>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>rpm-maven-plugin</artifactId>
+						<version>2.1.4</version>
+						<extensions>true</extensions>
+						<executions>
+							<execution>
+								<id>package-rpm</id>
+								<goals>
+									<goal>attached-rpm</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<copyright>2011-2014, Comcast Converged Products</copyright>
+							<group>Applications/Internet</group>
+							<release>${env.GIT_REV_COUNT}.${buildNumber}.el6</release>
+							<needarch>x86_64</needarch>
+							<mappings>
+								<mapping>
+									<directory>${deploy.dir}</directory>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+								</mapping>
+								<mapping>
+									<directory>${deploy.dir}/conf</directory>
+									<filemode>700</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+								</mapping>
+								<mapping>
+									<directory>${deploy.dir}/conf</directory>
+									<directoryIncluded>false</directoryIncluded>
+									<configuration>noreplace</configuration>
+									<filemode>600</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<sources>
+										<source>
+											<filter>true</filter>
+											<location>src/main/conf</location>
+										</source>
+									</sources>
+								</mapping>
+
+								<mapping>
+									<directory>${deploy.dir}/var</directory>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+								</mapping>
+								<mapping>
+									<directory>${deploy.dir}/var/log</directory>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+								</mapping>
+								<mapping>
+									<directory>${deploy.dir}/db</directory>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+								</mapping>
+								<mapping>
+									<directory>${deploy.dir}/bin</directory>
+									<filemode>700</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+								</mapping>
+								<mapping>
+									<directory>${deploy.dir}/lib</directory>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+								</mapping>
+								<mapping>
+									<directory>${deploy.dir}/bin</directory>
+									<directoryIncluded>false</directoryIncluded>
+									<filemode>700</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<sources>
+										<source>
+											<filter>true</filter>
+											<location>src/main/bin</location>
+										</source>
+									</sources>
+								</mapping>
+								<mapping>
+									<directory>${deploy.dir}/lib</directory>
+									<directoryIncluded>false</directoryIncluded>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<artifact>
+										<classifiers>
+											<classifier />
+										</classifiers>
+									</artifact>
+									<dependency />
+								</mapping>
+								<mapping>
+									<directory>/etc/init.d</directory>
+									<directoryIncluded>false</directoryIncluded>
+									<filemode>700</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<sources>
+										<source>
+											<filter>true</filter>
+											<location>src/main/etc/init.d</location>
+										</source>
+									</sources>
+								</mapping>
+
+								<mapping>
+									<directory>/var/run/tomcat</directory>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+								</mapping>
+								<mapping>
+									<directory>${deploy.dir}/webapps</directory>
+									<directoryIncluded>false</directoryIncluded>
+									<filemode>644</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<artifact>
+										<classifiers>
+											<classifier />
+										</classifiers>
+									</artifact>
+								</mapping>
+								<mapping>
+									<directory>/opt/tomcat/conf</directory>
+									<directoryIncluded>true</directoryIncluded>
+									<configuration>true</configuration>
+									<filemode>644</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<sources>
+										<source>
+											<filter>true</filter>
+											<location>src/main/opt/tomcat/conf</location>
+										</source>
+									</sources>
+								</mapping>
+								<mapping>
+									<directory>/var/run/tomcat</directory>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+								</mapping>
+							</mappings>
+							<requires>
+								<require>jdk</require>
+								<require>perl-JSON</require>
+								<require>perl-WWW-Curl</require>
+							</requires>
+
+							<preinstallScriptlet>
+								<scriptFile>src/main/scripts/preinstall.sh</scriptFile>
+							</preinstallScriptlet>
+							<postinstallScriptlet>
+								<scriptFile>src/main/scripts/postinstall.sh</scriptFile>
+							</postinstallScriptlet>
+							<preremoveScriptlet>
+								<scriptFile>src/main/scripts/preremove.sh</scriptFile>
+							</preremoveScriptlet>
+							<postremoveScriptlet>
+								<scriptFile>src/main/scripts/postremove.sh</scriptFile>
+							</postremoveScriptlet>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 	<dependencies>
 		<dependency>
