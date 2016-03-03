@@ -22,9 +22,11 @@ import com.comcast.cdn.traffic_control.traffic_monitor.health.CacheWatcher;
 import org.apache.wicket.util.tester.WicketTester;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import test.IntegrationTest;
 
 import javax.net.ssl.SSLContext;
 
@@ -36,6 +38,7 @@ import java.io.File;
 
 import static org.mockito.Matchers.anyString;
 
+@Category(IntegrationTest.class)
 @PrepareForTest({ConfigHandler.class, CacheWatcher.class, SSLContext.class})
 @RunWith(PowerMockRunner.class)
 public class TestHomePage {

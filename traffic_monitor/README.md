@@ -1,5 +1,10 @@
 # Traffic Monitor
 
+### Manually building the rpm
+
+execute the following command:
+`GIT_REV_COUNT=$(git rev-list HEAD 2>/dev/null | wc -l) mvn clean verify -P rpm-build`
+
 ### Why Tests are not in exactly matching packages
 
 The "com.comcast.cdn.traffic_control.traffic_monitor" portion of the package name was omitted from unit
