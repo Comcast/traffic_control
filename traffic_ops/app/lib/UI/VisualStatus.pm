@@ -38,7 +38,7 @@ sub graphs {
 		push( @cdn_names, $ds->cdn->name );
 	}
 	else {                                             # we want all the CDNs with edges
-		@cdn_names = $self->db->resultset('Server')->search({ 'type.name' => 'EDGE' }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name' } )->get_column('cdn.name')->all();
+		@cdn_names = $self->db->resultset('Server')->search({ 'type.name' => { -like => 'EDGE%' } }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name' } )->get_column('cdn.name')->all();
 	}
 
 	my $pparam =
@@ -77,7 +77,7 @@ sub graphs_redis {
 		$ds_capacity = $ds->global_max_mbps / 1000;    # everything is in kbps in the stats
 	}
 	else {                                             # we want all the CDNs with edges
-		@cdn_names = $self->db->resultset('Server')->search({ 'type.name' => 'EDGE' }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name' } )->get_column('cdn.name')->all();
+		@cdn_names = $self->db->resultset('Server')->search({ 'type.name' => { -like => 'EDGE%' } }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name' } )->get_column('cdn.name')->all();
 	}
 	$self->stash(
 		cdn_names   => \@cdn_names,
@@ -101,7 +101,7 @@ sub daily_summary {
 		->search( { -and => [ 'parameter.name' => 'daily_served_url', 'profile.name' => 'GLOBAL' ] }, { prefetch => [ 'parameter', 'profile' ] } )->single();
 	my $served_url = defined($pparam) ? $pparam->parameter->value : undef;
 
-	my @cdn_names = $self->db->resultset('Server')->search({ 'type.name' => 'EDGE' }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name' } )->get_column('cdn.name')->all();
+	my @cdn_names = $self->db->resultset('Server')->search({ 'type.name' => { -like => 'EDGE%' } }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name' } )->get_column('cdn.name')->all();
 
 	$self->stash(
 		daily_bw_url => $bw_url,
