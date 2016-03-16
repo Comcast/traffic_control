@@ -140,6 +140,11 @@ sub check_profile_input {
 	#Check required fields
 	$self->field('profile.name')->is_required;
 	$self->field('profile.description')->is_required;
+
+	if( !($name =~ m/^TR|^EDGE|^GLOBAL|^MID|^ORG|^TM|^RIAK|^TRSTATS/) ) {
+		$self->field('profile.name')->is_equal( "", "profile name must start with CCR|EDGE|GLOBAL|MID|ORG|RASCAL|RIAK|TRSTATS");
+	}
+
 	if ( $mode eq 'add' ) {
 
 		#Check for duplicate profile name and description for NEW
