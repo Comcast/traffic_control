@@ -155,7 +155,7 @@ ALTER TABLE parameters OWNER TO touser;
 --
 
 CREATE TABLE profiles (
-    name text NOT NULL,
+    name text PRIMARY KEY,
     description text NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
@@ -1114,8 +1114,407 @@ REVOKE ALL ON SCHEMA public FROM postgres;
 GRANT ALL ON SCHEMA public TO postgres;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 
-
 --
 -- PostgreSQL database dump complete
 --
 
+
+----------------------------------------------------------------------
+--
+-- Caching Proxy Config Files
+--
+----------------------------------------------------------------------
+
+CREATE DOMAIN port AS integer CHECK (VALUE >= 0 AND VALUE <= 65535);
+
+-- records.config
+-----------------
+
+-- \todo rename to something more generic?
+-- \todo divide prefixes (alarm_, allocator_, etc) into their own tables?
+CREATE TABLE IF NOT EXISTS caching_proxy_record_data (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    accept_threads integer NOT NULL,
+    admin_user text NOT NULL, -- fk into ?
+    user_id text NOT NULL,
+    autoconf_port port NOT NULL,
+    number_config integer NOT NULL,
+    alarm_abs_path text,
+    alarm_bin text NOT NULL,
+    alarm_email text NOT NULL, -- \todo regex constraint? citext extension?
+    allocator_debug_filter integer NOT NULL,
+    allocator_enable_reclaim boolean NOT NULL, -- \todo verify param is boolean
+    allocator_huge_pages boolean NOT NULL,
+    allocator_max_overage integer NOT NULL,
+    allocator_thread_freelist_size integer NOT NULL,
+    body_factory_enable_customizations text NOT NULL CHECK (body_factory_enable_customizations in ('customizable response pages', 'language-targetted response pages', 'host-targetted response pages')), -- \todo rename check strings?
+    body_factory_enable_logging boolean NOT NULL,
+    body_factory_response_suppression_mode text NOT NULL CHECK (body_factory_response_suppression_mode in ('never', 'always', 'only intercepted traffic')),
+    body_factory_template_sets_dir text NOT NULL,
+    enable_read_while_writer text NOT NULL CHECK (enable_read_while_writer in ('never', 'always', 'always_and_allow_range')), -- \todo bikeshed
+    cluster_configuration text NOT NULL,
+    cluster_cluster_port port NOT NULL,
+    cluster_ethernet_interface text NOT NULL,
+    cluster_log_bogus_mc_msgs integer NOT NULL,
+    cluster_mc_group_addr text NOT NULL,
+    cluster_mc_ttl integer NOT NULL,
+    cluster_mcport port NOT NULL,
+    cluster_rsport port NOT NULL,
+    config_dir text NOT NULL,
+    core_limit integer NOT NULL,
+    diags_debug_enabled boolean NOT NULL,
+    diags_debug_tags text NOT NULL,
+    diags_show_location boolean NOT NULL,
+    dns_max_dns_in_flight integer NOT NULL,
+    dns_nameservers text,
+    dns_resolv_conf text NOT NULL,
+    dns_round_robin_nameservers boolean NOT NULL,
+    dns_search_default_domains text NOT NULL CHECK (dns_search_default_domains in ('disable', 'enable', 'enable_restrain_splitting')),
+    dns_splitDNS_enabled boolean NOT NULL,
+    dns_url_expansions text,
+    dns_validate_query_name boolean NOT NULL,
+    dump_mem_info_frequency integer NOT NULL,
+    env_prep text,
+    exec_thread_affinity text NOT NULL CHECK (exec_thread_affinity in ('machine', 'numa', 'sockets', 'cores', 'processing units')),
+    exec_thread_autoconfig boolean NOT NULL,
+    exec_thread_autoconfig_scale double precision NOT NULL,
+    exec_thread_limit integer NOT NULL,
+    parse_no_host_url_redirect text,
+    icp_enabled text NOT NULL CHECK (icp_enabled in ('disabled', 'receive', 'send and receive')),
+    icp_interface text,
+    icp_port port NOT NULL,
+    icp_multicast_enabled integer NOT NULL,
+    icp_query_timeout integer NOT NULL,
+    mloc_enabled integer NOT NULL,
+    net_connections_throttle integer NOT NULL,
+    net_defer_accept boolean NOT NULL,
+    net_sock_recv_buffer_size_in integer NOT NULL,
+    net_sock_recv_buffer_size_out integer NOT NULL,
+    net_sock_send_buffer_size_in integer NOT NULL,
+    net_sock_send_buffer_size_out integer NOT NULL,
+    output_logfile text NOT NULL,
+    process_manager_management_port port NOT NULL,
+    proxy_binary_opts text NOT NULL, -- \todo make table? Investigate this param
+    proxy_name text NOT NULL,
+    reverse_proxy_enabled boolean NOT NULL,
+    snapshot_dir text NOT NULL,
+    stack_dump_enabled integer NOT NULL,
+    syslog_facility text NOT NULL, -- \todo enum? Investigate.
+    system_mmap_max integer NOT NULL,
+    task_threads integer NOT NULL,
+    temp_dir text NOT NULL,
+    update_concurrent_updates integer NOT NULL,
+    update_enabled integer NOT NULL,
+    update_force integer NOT NULL,
+    update_retry_count integer NOT NULL,
+    update_retry_interval interval NOT NULL,
+    url_remap_default_to_server_pac integer NOT NULL,
+    url_remap_default_to_server_pac_port port,
+    url_remap_filename text NOT NULL,
+    url_remap_pristine_host_hdr integer NOT NULL,
+    url_remap_remap_required integer NOT NULL,
+    cron_ort_syncds_cdn text NOT NULL, -- \todo calculate in ort script (client side)?
+    domain_name text NOT NULL,
+    health_connection_timeout integer NOT NULL,
+    health_polling_url text NOT NULL,
+    health_threshold_available_bandwidth_kbps integer NOT NULL,
+    health_threshold_load_average integer NOT NULL,
+    health_threshold_query_time integer NOT NULL,
+    history_count integer NOT NULL,
+    cache_interim_storage text,
+    local_cluster_type integer NOT NULL,
+    local_log_collation_mode integer NOT NULL,
+    log_format_format text NOT NULL,
+    log_format_name text NOT NULL,
+    max_reval_duration interval NOT NULL,
+    astats_path text NOT NULL,
+    qstring text NOT NULL, -- \todo enum?
+    astats_record_types integer NOT NULL, -- \todo make astats table
+    regex_revalidate text NOT NULL, -- \todo this is '--config regex_revalidate'. Remove? Hardcode? Better way?
+    astats_library text NOT NULL, -- \todo this is 'remap_stats.so'. Remove & hardcode? Better way?
+    traffic_server_chkconfig text NOT NULL, -- \todo investigate-- make better
+    crconfig_weight double precision NOT NULL, -- \todo rename?
+    parent_config_weight double precision NOT NULL -- \todo rename?
+);
+
+-- one-to-one with record_data
+CREATE TABLE IF NOT EXISTS caching_proxy_record_data_log (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    auto_delete_rolled_files boolean NOT NULL,
+    collation_host text NOT NULL,
+    collation_host_tagged boolean NOT NULL,
+    collation_port port NOT NULL,
+    collation_retry interval NOT NULL,
+    collation_secret text NOT NULL,
+    custom_logs_enabled integer NOT NULL,
+    hostname text NOT NULL,
+    logfile_dir text NOT NULL,
+    logfile_perm text NOT NULL, -- \todo separate into its own table? Regex constraint?
+    logging_enabled text NOT NULL CHECK (logging_enabled in ('disabled', 'errors', 'transactions', 'all')),
+    max_secs_per_buffer integer NOT NULL,
+    max_space_mb_for_logs integer NOT NULL,
+    max_space_mb_for_orphan_logs integer NOT NULL,
+    max_space_mb_headroom integer NOT NULL,
+    rolling_enabled text NOT NULL CHECK (rolling_enabled in ('disabled', 'interval', 'size', 'either', 'both')),
+    rolling_interval interval NOT NULL,
+    rolling_offset interval NOT NULL,
+    rolling_size_mb integer NOT NULL,
+    sampling_frequency integer NOT NULL,
+    separate_host_logs integer NOT NULL,
+    separate_icp_logs integer NOT NULL,
+    xml_config_file text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS caching_proxy_record_data_log_data (
+    profile text REFERENCES caching_proxy_record_data (profile),
+    name text NOT NULL,
+    enabled boolean NOT NULL,
+    header text,
+    is_ascii boolean NOT NULL,
+    PRIMARY KEY (profile, name)
+);
+
+-- one-to-one with record_data, record_data_http
+CREATE TABLE IF NOT EXISTS caching_proxy_record_data_http_cache (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    allow_empty_doc boolean NOT NULL,
+    cache_responses_to_cookies text NOT NULL CHECK (cache_responses_to_cookies in ('no', 'any', 'only images', 'except text')),
+    cache_urls_that_look_dynamic boolean NOT NULL,
+    enable_default_vary_headers boolean NOT NULL,
+    fuzz_probability double precision NOT NULL,
+    fuzz_time interval NOT NULL,
+    heuristic_lm_factor double precision NOT NULL,
+    heuristic_max_lifetime integer NOT NULL,
+    heuristic_min_lifetime integer NOT NULL,
+    http boolean NOT NULL,
+    ignore_accept_encoding_mismatch boolean NOT NULL,
+    ignore_authentication boolean NOT NULL,
+    ignore_client_cc_max_age integer NOT NULL,
+    ignore_client_no_cache boolean NOT NULL,
+    ignore_server_no_cache boolean NOT NULL,
+    ims_on_client_no_cache boolean NOT NULL,
+    max_stale_age integer NOT NULL,
+    range_lookup boolean NOT NULL,
+    required_headers text NOT NULL CHECK (required_headers in ('no', 'implicit', 'explicit')),
+    vary_default_images text,
+    vary_default_other text,
+    vary_default_text text,
+    when_to_add_no_cache_to_msie_requests integer NOT NULL,
+    when_to_revalidate text NOT NULL CHECK (when_to_revalidate in ('directive or heuristic', 'stale if heuristic', 'always stale', 'never stale', 'directive or heuristic unless if-modified-since'))
+);
+
+-- one-to-one with record_data
+CREATE TABLE IF NOT EXISTS caching_proxy_record_data_http (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    accept_no_activity_timeout integer NOT NULL,
+    anonymize_insert_client_ip integer NOT NULL,
+    anonymize_other_header_list text,
+    anonymize_remove_client_ip bool NOT NULL,
+    anonymize_remove_cookie boolean NOT NULL,
+    anonymize_remove_from boolean NOT NULL,
+    anonymize_remove_referer boolean NOT NULL,
+    anonymize_remove_user_agent boolean NOT NULL,
+    background_fill_active_timeout integer NOT NULL,
+    background_fill_completed_threshold double precision NOT NULL,
+    chunking_enabled text NOT NULL CHECK (chunking_enabled in ('never', 'always', 'if prior response HTTP/1.1', 'if request and prior response HTTP/1.1')),
+    congestion_control_enabled boolean NOT NULL,
+    connect_attempts_max_retries integer NOT NULL,
+    connect_attempts_max_retries_dead_server integer NOT NULL,
+    connect_attempts_rr_retries integer NOT NULL,
+    connect_attempts_timeout integer NOT NULL,
+    down_server_abort_threshold integer NOT NULL,
+    down_server_cache_time integer NOT NULL,
+    enable_http_stats boolean NOT NULL,
+    enable_url_expandomatic boolean NOT NULL,
+    forward_proxy_auth_to_parent boolean NOT NULL,
+    insert_age_in_response boolean NOT NULL,
+    insert_request_via_str text NOT NULL CHECK (insert_request_via_str in ('no', 'normal', 'higher', 'highest')),
+    insert_response_via_str text NOT NULL CHECK (insert_response_via_str in ('no', 'normal', 'higher', 'highest')),
+    insert_squid_x_forwarded_for boolean NOT NULL,
+    keep_alive_enabled_in boolean NOT NULL,
+    keep_alive_enabled_out boolean NOT NULL,
+    keep_alive_enabled_no_activity_timeout_in integer NOT NULL,
+    keep_alive_enabled_no_activity_timeout_out integer NOT NULL,
+    negative_caching_enabled boolean NOT NULL,
+    negative_caching_lifetime integer NOT NULL,
+    no_dns_just_forward_to_parent boolean NOT NULL,
+    normalize_ae_gzip boolean NOT NULL,
+    origin_server_pipeline integer NOT NULL,
+    parent_proxy_connect_attempts_timeout integer NOT NULL,
+    parent_proxy_fail_threshold integer NOT NULL,
+    parent_proxy_file text NOT NULL,
+    parent_proxy_per_parent_connection_attempts integer NOT NULL,
+    parent_proxy_parent_proxy_retry_time integer NOT NULL,
+    parent_proxy_parent_proxy_total_connection_attempts integer NOT NULL,
+    parent_proxy_parent_proxy_routing_enable boolean NOT NULL,
+    post_connect_attempts_timeout integer NOT NULL,
+    parent_push_method_enabled boolean NOT NULL,
+    referer_default_redirect text NOT NULL,
+    referer_filter integer NOT NULL,
+    referer_format_redirect integer NOT NULL,
+    response_server_enabled text NOT NULL CHECK (response_server_enabled in ('no', 'add header', 'add header if nonexistent')),
+    send_http11_requests text NOT NULL CHECK (send_http11_requests in ('never', 'always', 'if prior response HTTP/1.1', 'if request and prior response HTTP/1.1')),
+    share_server_sessions integer NOT NULL,
+    slow_log_threshold integer NOT NULL,
+    transaction_active_timeout_in interval NOT NULL,
+    transaction_active_timeout_out interval NOT NULL,
+    transaction_no_activity_timeout_in interval NOT NULL,
+    transaction_no_activity_timeout_out interval NOT NULL,
+    uncacheable_requests_bypass_parent boolean NOT NULL,
+    user_agent_pipeline integer NOT NULL
+);
+
+-- one-to-one with record_data
+CREATE TABLE IF NOT EXISTS caching_proxy_record_data_ssl (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    ca_cert_filename text NOT NULL,
+    ca_cert_path text NOT NULL,
+    client_ca_cert_filename text,
+    client_ca_cert_path text NOT NULL,
+    client_cert_filename text,
+    client_cert_path text NOT NULL,
+    client_certification_level integer NOT NULL,
+    client_private_key_filename text,
+    client_private_key_path text NOT NULL,
+    client_verify_server integer NOT NULL,
+    compression integer NOT NULL,
+    number_threads integer NOT NULL,
+    server_cert_path text NOT NULL,
+    server_cert_chain_filename text,
+    server_cipher_suite text NOT NULL, -- \todo generate? default? one-to-many table?
+    server_honor_cipher_order integer NOT NULL,
+    server_multicert_filename text NOT NULL,
+    server_private_key_path text NOT NULL,
+    SSLv2 boolean NOT NULL,
+    SSLv3 boolean NOT NULL,
+    TLSv1 boolean NOT NULL
+);
+
+-- one-to-one with record_data
+CREATE TABLE IF NOT EXISTS caching_proxy_record_data_hostdb (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    server_stale_for interval NOT NULL,
+    size integer NOT NULL,
+    storage_size integer NOT NULL,
+    strict_round_robin boolean NOT NULL,
+    timeout integer NOT NULL,
+    ttl_mode text NOT NULL CHECK (ttl_mode in ('dns', 'internal', 'smaller', 'larger'))
+);
+
+-- one-to-one with record_data
+CREATE TABLE IF NOT EXISTS caching_proxy_cache (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    filename text NOT NULL,
+    hosting_filename text NOT NULL,
+    http_compatability_420_fixup integer NOT NULL,
+    limits_http_max_alts integer NOT NULL,
+    max_doc_size integer NOT NULL,
+    min_average_object_size integer NOT NULL,
+    mutex_retry_delay integer NOT NULL,
+    permit_pinning integer NOT NULL,
+    ram_cache_algorithm integer NOT NULL,
+    ram_cache_compress integer NOT NULL,
+    ram_cache_size bigint NOT NULL,
+    ram_cache_use_seen_filter boolean NOT NULL,
+    ram_cache_cutoff integer NOT NULL,
+    target_fragment_size integer NOT NULL,
+    threads_per_disk integer NOT NULL
+);
+
+-- one-to-many. one profile, many config files
+CREATE TABLE IF NOT EXISTS caching_proxy_config_file_locations (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    filename text NOT NULL,
+    location text NOT NULL
+);
+
+-- one-to-many. one profile, many ports
+CREATE TABLE IF NOT EXISTS caching_proxy_records_data_http_connect_ports (
+    profile text NOT NULL REFERENCES caching_proxy_record_data (profile),
+    port port NOT NULL,
+    PRIMARY KEY (profile, port)
+);
+
+-- one-to-many. one profile, many ports
+CREATE TABLE IF NOT EXISTS caching_proxy_records_data_http_server_ports (
+    profile text NOT NULL REFERENCES caching_proxy_record_data (profile),
+    port port NOT NULL,
+    ipv6 boolean NOT NULL,
+    ssl boolean NOT NULL,
+    PRIMARY KEY (profile, port, ipv6)
+);
+
+---- logs_xml.config
+--------------------
+
+CREATE TABLE IF NOT EXISTS caching_proxy_logs (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    rolling_enabled integer NOT NULL,
+    rolling_interval interval NOT NULL, -- \todo make interval type and remove unit from name?
+    rolling_offset_hr integer NOT NULL,
+    rolling_size_mb integer NOT NULL
+);
+
+---- parent.config
+------------------
+
+CREATE TABLE IF NOT EXISTS caching_proxy_parent_data (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    algorithm text NOT NULL -- \todo make enum? lookup table?
+);
+
+---- astats.config
+------------------
+
+-- one-to-many. one profile, many IPs
+CREATE TABLE IF NOT EXISTS caching_proxy_allowed_ips (
+    profile text NOT NULL REFERENCES caching_proxy_record_data (profile),
+    ip text NOT NULL, -- \todo make ip type? regex constraint?
+    PRIMARY KEY (profile, ip)
+);
+
+---- storage.config
+-------------------
+
+CREATE TABLE IF NOT EXISTS caching_proxy_drive_types (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    drive_type text NOT NULL
+);
+
+-- one-to-one
+-- \todo add foreign key constraint
+CREATE TABLE IF NOT EXISTS caching_proxy_drive_prefixes (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    prefix text NOT NULL
+);
+
+-- one-to-many (one profile, many prefixes)
+-- \todo add foreign key constraint
+CREATE TABLE IF NOT EXISTS caching_proxy_drive_letters (
+    profile text NOT NULL REFERENCES caching_proxy_record_data (profile),
+    letter char(1) NOT NULL,
+    PRIMARY KEY (profile, letter)
+);
+
+CREATE TABLE IF NOT EXISTS caching_proxy_drive_volumes (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    drive_type text NOT NULL, -- \todo enum?
+    volume text UNIQUE NOT NULL
+);
+
+-- package
+----------
+
+CREATE TABLE IF NOT EXISTS caching_proxy_packages (
+    profile text NOT NULL REFERENCES caching_proxy_record_data (profile),
+    product text NOT NULL, -- \todo better name?
+    version text NOT NULL,
+    PRIMARY KEY (profile, product)
+);
+
+-- \todo is this generic across caching proxy apps? Is there any way to make it generic?
+-- one-to-many (ne profile, many plugins)
+CREATE TABLE IF NOT EXISTS caching_proxy_plugins (
+    profile text PRIMARY KEY REFERENCES caching_proxy_record_data (profile),
+    plugin text NOT NULL
+);
