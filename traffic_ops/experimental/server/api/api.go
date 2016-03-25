@@ -104,44 +104,45 @@ func ApiHandlers() map[string]ApiHandlerFuncMap {
 		"federation_resolver/{id}":            ApiHandlerFuncMap{GET: idWrap(getFederationResolverById), PUT: idBodyWrap(putFederationResolver), DELETE: idWrap(delFederationResolver)},
 		"federation_tmuser":                   ApiHandlerFuncMap{GET: emptyWrap(getFederationTmusers), POST: bodyWrap(postFederationTmuser)},
 		"federation_tmuser/{id}":              ApiHandlerFuncMap{GET: idWrap(getFederationTmuserById), PUT: idBodyWrap(putFederationTmuser), DELETE: idWrap(delFederationTmuser)},
-		"job":                    ApiHandlerFuncMap{GET: emptyWrap(getJobs), POST: bodyWrap(postJob)},
-		"job/{id}":               ApiHandlerFuncMap{GET: idWrap(getJobById), PUT: idBodyWrap(putJob), DELETE: idWrap(delJob)},
-		"job_result":             ApiHandlerFuncMap{GET: emptyWrap(getJobResults), POST: bodyWrap(postJobResult)},
-		"job_result/{id}":        ApiHandlerFuncMap{GET: idWrap(getJobResultById), PUT: idBodyWrap(putJobResult), DELETE: idWrap(delJobResult)},
-		"job_status":             ApiHandlerFuncMap{GET: emptyWrap(getJobStatuss), POST: bodyWrap(postJobStatus)},
-		"job_status/{id}":        ApiHandlerFuncMap{GET: idWrap(getJobStatusById), PUT: idBodyWrap(putJobStatus), DELETE: idWrap(delJobStatus)},
-		"log":                    ApiHandlerFuncMap{GET: emptyWrap(getLogs), POST: bodyWrap(postLog)},
-		"log/{id}":               ApiHandlerFuncMap{GET: idWrap(getLogById), PUT: idBodyWrap(putLog), DELETE: idWrap(delLog)},
-		"parameter":              ApiHandlerFuncMap{GET: emptyWrap(getParameters), POST: bodyWrap(postParameter)},
-		"parameter/{id}":         ApiHandlerFuncMap{GET: idWrap(getParameterById), PUT: idBodyWrap(putParameter), DELETE: idWrap(delParameter)},
-		"phys_location":          ApiHandlerFuncMap{GET: emptyWrap(getPhysLocations), POST: bodyWrap(postPhysLocation)},
-		"phys_location/{id}":     ApiHandlerFuncMap{GET: idWrap(getPhysLocationById), PUT: idBodyWrap(putPhysLocation), DELETE: idWrap(delPhysLocation)},
-		"profile":                ApiHandlerFuncMap{GET: emptyWrap(getProfiles), POST: bodyWrap(postProfile)},
-		"profile/{id}":           ApiHandlerFuncMap{GET: idWrap(getProfileById), PUT: idBodyWrap(putProfile), DELETE: idWrap(delProfile)},
-		"profile_parameter":      ApiHandlerFuncMap{GET: emptyWrap(getProfileParameters), POST: bodyWrap(postProfileParameter)},
-		"profile_parameter/{id}": ApiHandlerFuncMap{GET: idWrap(getProfileParameterById), PUT: idBodyWrap(putProfileParameter), DELETE: idWrap(delProfileParameter)},
-		"regex":                  ApiHandlerFuncMap{GET: emptyWrap(getRegexs), POST: bodyWrap(postRegex)},
-		"regex/{id}":             ApiHandlerFuncMap{GET: idWrap(getRegexById), PUT: idBodyWrap(putRegex), DELETE: idWrap(delRegex)},
-		"region":                 ApiHandlerFuncMap{GET: emptyWrap(getRegions), POST: bodyWrap(postRegion)},
-		"region/{id}":            ApiHandlerFuncMap{GET: idWrap(getRegionById), PUT: idBodyWrap(putRegion), DELETE: idWrap(delRegion)},
-		"role":                   ApiHandlerFuncMap{GET: emptyWrap(getRoles), POST: bodyWrap(postRole)},
-		"role/{id}":              ApiHandlerFuncMap{GET: idWrap(getRoleById), PUT: idBodyWrap(putRole), DELETE: idWrap(delRole)},
-		"server":                 ApiHandlerFuncMap{GET: emptyWrap(getServers), POST: bodyWrap(postServer)},
-		"server/{id}":            ApiHandlerFuncMap{GET: idWrap(getServerById), PUT: idBodyWrap(putServer), DELETE: idWrap(delServer)},
-		"servercheck":            ApiHandlerFuncMap{GET: emptyWrap(getServerchecks), POST: bodyWrap(postServercheck)},
-		"servercheck/{id}":       ApiHandlerFuncMap{GET: idWrap(getServercheckById), PUT: idBodyWrap(putServercheck), DELETE: idWrap(delServercheck)},
-		"staticdnsentry":         ApiHandlerFuncMap{GET: emptyWrap(getStaticdnsentrys), POST: bodyWrap(postStaticdnsentry)},
-		"staticdnsentry/{id}":    ApiHandlerFuncMap{GET: idWrap(getStaticdnsentryById), PUT: idBodyWrap(putStaticdnsentry), DELETE: idWrap(delStaticdnsentry)},
-		"stats_summary":          ApiHandlerFuncMap{GET: emptyWrap(getStatsSummarys), POST: bodyWrap(postStatsSummary)},
-		"stats_summary/{id}":     ApiHandlerFuncMap{GET: idWrap(getStatsSummaryById), PUT: idBodyWrap(putStatsSummary), DELETE: idWrap(delStatsSummary)},
-		"status":                 ApiHandlerFuncMap{GET: emptyWrap(getStatuss), POST: bodyWrap(postStatus)},
-		"status/{id}":            ApiHandlerFuncMap{GET: idWrap(getStatusById), PUT: idBodyWrap(putStatus), DELETE: idWrap(delStatus)},
-		"tm_user":                ApiHandlerFuncMap{GET: emptyWrap(getTmUsers), POST: bodyWrap(postTmUser)},
-		"tm_user/{id}":           ApiHandlerFuncMap{GET: idWrap(getTmUserById), PUT: idBodyWrap(putTmUser), DELETE: idWrap(delTmUser)},
-		"to_extension":           ApiHandlerFuncMap{GET: emptyWrap(getToExtensions), POST: bodyWrap(postToExtension)},
-		"to_extension/{id}":      ApiHandlerFuncMap{GET: idWrap(getToExtensionById), PUT: idBodyWrap(putToExtension), DELETE: idWrap(delToExtension)},
-		"type":                   ApiHandlerFuncMap{GET: emptyWrap(getTypes), POST: bodyWrap(postType)},
-		"type/{id}":              ApiHandlerFuncMap{GET: idWrap(getTypeById), PUT: idBodyWrap(putType), DELETE: idWrap(delType)},
+		"job":                         ApiHandlerFuncMap{GET: emptyWrap(getJobs), POST: bodyWrap(postJob)},
+		"job/{id}":                    ApiHandlerFuncMap{GET: idWrap(getJobById), PUT: idBodyWrap(putJob), DELETE: idWrap(delJob)},
+		"job_result":                  ApiHandlerFuncMap{GET: emptyWrap(getJobResults), POST: bodyWrap(postJobResult)},
+		"job_result/{id}":             ApiHandlerFuncMap{GET: idWrap(getJobResultById), PUT: idBodyWrap(putJobResult), DELETE: idWrap(delJobResult)},
+		"job_status":                  ApiHandlerFuncMap{GET: emptyWrap(getJobStatuss), POST: bodyWrap(postJobStatus)},
+		"job_status/{id}":             ApiHandlerFuncMap{GET: idWrap(getJobStatusById), PUT: idBodyWrap(putJobStatus), DELETE: idWrap(delJobStatus)},
+		"log":                         ApiHandlerFuncMap{GET: emptyWrap(getLogs), POST: bodyWrap(postLog)},
+		"log/{id}":                    ApiHandlerFuncMap{GET: idWrap(getLogById), PUT: idBodyWrap(putLog), DELETE: idWrap(delLog)},
+		"parameter":                   ApiHandlerFuncMap{GET: emptyWrap(getParameters), POST: bodyWrap(postParameter)},
+		"parameter/{id}":              ApiHandlerFuncMap{GET: idWrap(getParameterById), PUT: idBodyWrap(putParameter), DELETE: idWrap(delParameter)},
+		"phys_location":               ApiHandlerFuncMap{GET: emptyWrap(getPhysLocations), POST: bodyWrap(postPhysLocation)},
+		"phys_location/{id}":          ApiHandlerFuncMap{GET: idWrap(getPhysLocationById), PUT: idBodyWrap(putPhysLocation), DELETE: idWrap(delPhysLocation)},
+		"profile":                     ApiHandlerFuncMap{GET: emptyWrap(getProfiles), POST: bodyWrap(postProfile)},
+		"profile/{id}":                ApiHandlerFuncMap{GET: idWrap(getProfileById), PUT: idBodyWrap(putProfile), DELETE: idWrap(delProfile)},
+		"profile_parameter":           ApiHandlerFuncMap{GET: emptyWrap(getProfileParameters), POST: bodyWrap(postProfileParameter)},
+		"profile_parameter/{id}":      ApiHandlerFuncMap{GET: idWrap(getProfileParameterById), PUT: idBodyWrap(putProfileParameter), DELETE: idWrap(delProfileParameter)},
+		"regex":                       ApiHandlerFuncMap{GET: emptyWrap(getRegexs), POST: bodyWrap(postRegex)},
+		"regex/{id}":                  ApiHandlerFuncMap{GET: idWrap(getRegexById), PUT: idBodyWrap(putRegex), DELETE: idWrap(delRegex)},
+		"region":                      ApiHandlerFuncMap{GET: emptyWrap(getRegions), POST: bodyWrap(postRegion)},
+		"region/{id}":                 ApiHandlerFuncMap{GET: idWrap(getRegionById), PUT: idBodyWrap(putRegion), DELETE: idWrap(delRegion)},
+		"role":                        ApiHandlerFuncMap{GET: emptyWrap(getRoles), POST: bodyWrap(postRole)},
+		"role/{id}":                   ApiHandlerFuncMap{GET: idWrap(getRoleById), PUT: idBodyWrap(putRole), DELETE: idWrap(delRole)},
+		"server":                      ApiHandlerFuncMap{GET: emptyWrap(getServers), POST: bodyWrap(postServer)},
+		"server/{id}":                 ApiHandlerFuncMap{GET: idWrap(getServerById), PUT: idBodyWrap(putServer), DELETE: idWrap(delServer)},
+		"servercheck":                 ApiHandlerFuncMap{GET: emptyWrap(getServerchecks), POST: bodyWrap(postServercheck)},
+		"servercheck/{id}":            ApiHandlerFuncMap{GET: idWrap(getServercheckById), PUT: idBodyWrap(putServercheck), DELETE: idWrap(delServercheck)},
+		"staticdnsentry":              ApiHandlerFuncMap{GET: emptyWrap(getStaticdnsentrys), POST: bodyWrap(postStaticdnsentry)},
+		"staticdnsentry/{id}":         ApiHandlerFuncMap{GET: idWrap(getStaticdnsentryById), PUT: idBodyWrap(putStaticdnsentry), DELETE: idWrap(delStaticdnsentry)},
+		"stats_summary":               ApiHandlerFuncMap{GET: emptyWrap(getStatsSummarys), POST: bodyWrap(postStatsSummary)},
+		"stats_summary/{id}":          ApiHandlerFuncMap{GET: idWrap(getStatsSummaryById), PUT: idBodyWrap(putStatsSummary), DELETE: idWrap(delStatsSummary)},
+		"status":                      ApiHandlerFuncMap{GET: emptyWrap(getStatuss), POST: bodyWrap(postStatus)},
+		"status/{id}":                 ApiHandlerFuncMap{GET: idWrap(getStatusById), PUT: idBodyWrap(putStatus), DELETE: idWrap(delStatus)},
+		"tm_user":                     ApiHandlerFuncMap{GET: emptyWrap(getTmUsers), POST: bodyWrap(postTmUser)},
+		"tm_user/{id}":                ApiHandlerFuncMap{GET: idWrap(getTmUserById), PUT: idBodyWrap(putTmUser), DELETE: idWrap(delTmUser)},
+		"to_extension":                ApiHandlerFuncMap{GET: emptyWrap(getToExtensions), POST: bodyWrap(postToExtension)},
+		"to_extension/{id}":           ApiHandlerFuncMap{GET: idWrap(getToExtensionById), PUT: idBodyWrap(putToExtension), DELETE: idWrap(delToExtension)},
+		"type":                        ApiHandlerFuncMap{GET: emptyWrap(getTypes), POST: bodyWrap(postType)},
+		"type/{id}":                   ApiHandlerFuncMap{GET: idWrap(getTypeById), PUT: idBodyWrap(putType), DELETE: idWrap(delType)},
+		"caching_proxy_record/{name}": ApiHandlerFuncMap{GET: nameWrap(getCachingProxyConfig)},
 	}
 }
 
@@ -149,6 +150,8 @@ type EmptyHandlerFunc func(db *sqlx.DB) (interface{}, error)
 type IntHandlerFunc func(id int, db *sqlx.DB) (interface{}, error)
 type BodyHandlerFunc func(payload []byte, db *sqlx.DB) (interface{}, error)
 type IntBodyHandlerFunc func(id int, payload []byte, db *sqlx.DB) (interface{}, error)
+type StringHandlerFunc func(s string, db *sqlx.DB) (interface{}, error)
+type StringBodyHandlerFunc func(s string, payload []byte, db *sqlx.DB) (interface{}, error)
 
 func idBodyWrap(f IntBodyHandlerFunc) ApiHandlerFunc {
 	return func(pathParams map[string]string, payload []byte, db *sqlx.DB) (interface{}, error) {
@@ -172,6 +175,22 @@ func bodyWrap(f BodyHandlerFunc) ApiHandlerFunc {
 	return func(pathParams map[string]string, payload []byte, db *sqlx.DB) (interface{}, error) {
 		return f(payload, db)
 	}
+}
+
+func nameBodyWrap(f StringBodyHandlerFunc) ApiHandlerFunc {
+	return func(pathParams map[string]string, payload []byte, db *sqlx.DB) (interface{}, error) {
+		if name, ok := pathParams["name"]; !ok {
+			return nil, errors.New("Name missing")
+		} else {
+			return f(name, payload, db)
+		}
+	}
+}
+
+func nameWrap(f StringHandlerFunc) ApiHandlerFunc {
+	return nameBodyWrap(func(name string, payload []byte, db *sqlx.DB) (interface{}, error) {
+		return f(name, db)
+	})
 }
 
 func emptyWrap(f EmptyHandlerFunc) ApiHandlerFunc {
