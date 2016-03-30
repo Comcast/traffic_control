@@ -941,7 +941,7 @@ sub remap_dot_config {
 				$mid_remap{ $remap->{org} } .= " \@plugin=cacheurl.so \@pparam=" . $remap->{cacheurl_file};
 			}
 			if ( $remap->{range_request_handling} == 2 ) {
-				$mid_remap{ $remap->{org} } .= " \@plugin=cache_range_requests.so";
+				$mid_remap{ $remap->{org} } .= " \@plugin=cache_range_requests.so \@pparam=none";
 			}
 		}
 		foreach my $key ( keys %mid_remap ) {
@@ -1023,7 +1023,7 @@ sub build_remap_line {
 		$text .= " \@plugin=background_fetch.so \@pparam=bg_fetch.config";
 	}
 	elsif ( $remap->{range_request_handling} == 2 ) {
-		$text .= " \@plugin=cache_range_requests.so ";
+		$text .= " \@plugin=cache_range_requests.so \@pparam=none";
 	}
 	if ( defined( $remap->{remap_text} ) ) {
 		$text .= " " . $remap->{remap_text};
