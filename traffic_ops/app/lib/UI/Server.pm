@@ -447,6 +447,10 @@ sub update {
 		# get resultset for original and one to be updated.  Use to examine diffs to propagate the effects of the change.
 		my $org_server = $self->db->resultset('Server')->search( { 'me.id' => $id }, { prefetch => 'cdn' } )->single();
 		my $update     = $self->db->resultset('Server')->search( { 'me.id' => $id }, { prefetch => 'cdn' } )->single();
+		my $ip6_address = $paramHashRef->{'ip6_address'};
+		if ($ip6_address eq "") {
+			$ip6_address = undef; #ip6_address is an unique key, so substitute "" to NULL to avoid conflict
+		}
 
 		$update->update(
 			{
@@ -457,7 +461,7 @@ sub update {
 				ip_address       => $paramHashRef->{'ip_address'},
 				ip_netmask       => $paramHashRef->{'ip_netmask'},
 				ip_gateway       => $paramHashRef->{'ip_gateway'},
-				ip6_address      => $paramHashRef->{'ip6_address'},
+				ip6_address      => $ip6_address,
 				ip6_gateway      => $paramHashRef->{'ip6_gateway'},
 				interface_mtu    => $paramHashRef->{'interface_mtu'},
 				cdn_id           => $paramHashRef->{'cdn'},
