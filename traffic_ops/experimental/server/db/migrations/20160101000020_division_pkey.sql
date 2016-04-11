@@ -5,16 +5,17 @@ ALTER TABLE region
 	DROP CONSTRAINT region_division_fkey,
 	ADD COLUMN division_name CHARACTER VARYING(45);
 UPDATE region
-	SET division_name = division.name
-	FROM division
-	WHERE division.id = region.division;
+	SET division_name = division.name FROM division WHERE division.id = region.division;
 ALTER TABLE division
 	DROP CONSTRAINT division_pkey,
 	ADD CONSTRAINT division_pkey PRIMARY KEY (name),
 	DROP COLUMN id;
 ALTER TABLE region
-	ADD CONSTRAINT region_division_fkey
-	FOREIGN KEY (region_division_fkey) REFERENCES division(name);
+	DROP COLUMN division;
+ALTER TABLE region
+	RENAME COLUMN division_name TO division;
+ALTER TABLE region
+	ADD CONSTRAINT region_division_fkey FOREIGN KEY (division) REFERENCES division(name);
 
 
 -- +goose Down
