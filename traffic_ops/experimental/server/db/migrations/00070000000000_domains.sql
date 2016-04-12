@@ -8,6 +8,7 @@ CREATE TABLE domains (
     dnssec boolean NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL
 );
+ALTER TABLE domains OWNER TO touser;
 
 ALTER TABLE cdns
 	ALTER dnssec_enabled DROP DEFAULT,
