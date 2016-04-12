@@ -15,6 +15,7 @@ DROP TABLE job;
 DROP TABLE job_agent;
 DROP TABLE job_status;
 DROP TABLE job_result;
+DROP TABLE servercheck;
 
 ALTER TABLE server RENAME COLUMN cdn_id TO cdn;
 ALTER TABLE deliveryservice RENAME COLUMN cdn_id TO cdn;

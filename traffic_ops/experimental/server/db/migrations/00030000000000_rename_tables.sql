@@ -29,6 +29,18 @@ ALTER TABLE role RENAME TO roles;
 ALTER TABLE status RENAME TO statuses;
 ALTER TABLE tm_user RENAME TO users;
 
+-- rename last_updated column to created_at
+-- +goose StatementBegin
+DO $$DECLARE row record;
+	BEGIN
+	FOR row IN SELECT table_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name = 'last_updated'
+	LOOP
+		EXECUTE 'ALTER TABLE public.' || quote_ident(row.table_name) || ' RENAME COLUMN last_updated TO created_at ';
+	END LOOP;
+END$$;
+-- +goose StatementEnd
+
+
 -- +goose Down
 -- SQL section 'Down' is executed when this migration is rolled back
 
