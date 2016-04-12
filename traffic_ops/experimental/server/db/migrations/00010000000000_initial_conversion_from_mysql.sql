@@ -20,7 +20,7 @@ CREATE TABLE asn (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE asn OWNER TO postgres;
+ALTER TABLE asn OWNER TO touser;
 
 CREATE SEQUENCE asn_id_seq
     START WITH 1
@@ -29,7 +29,7 @@ CREATE SEQUENCE asn_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE asn_id_seq OWNER TO postgres;
+ALTER TABLE asn_id_seq OWNER TO touser;
 
 ALTER SEQUENCE asn_id_seq OWNED BY asn.id;
 
@@ -45,7 +45,7 @@ CREATE TABLE cachegroup (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE cachegroup OWNER TO postgres;
+ALTER TABLE cachegroup OWNER TO touser;
 
 CREATE SEQUENCE cachegroup_id_seq
     START WITH 1
@@ -54,7 +54,7 @@ CREATE SEQUENCE cachegroup_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE cachegroup_id_seq OWNER TO postgres;
+ALTER TABLE cachegroup_id_seq OWNER TO touser;
 
 ALTER SEQUENCE cachegroup_id_seq OWNED BY cachegroup.id;
 
@@ -64,7 +64,7 @@ CREATE TABLE cachegroup_parameter (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE cachegroup_parameter OWNER TO postgres;
+ALTER TABLE cachegroup_parameter OWNER TO touser;
 
 CREATE TABLE cdn (
     id integer NOT NULL,
@@ -73,7 +73,7 @@ CREATE TABLE cdn (
     dnssec_enabled smallint DEFAULT 0
 );
 
-ALTER TABLE cdn OWNER TO postgres;
+ALTER TABLE cdn OWNER TO touser;
 
 CREATE SEQUENCE cdn_id_seq
     START WITH 1
@@ -82,7 +82,7 @@ CREATE SEQUENCE cdn_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE cdn_id_seq OWNER TO postgres;
+ALTER TABLE cdn_id_seq OWNER TO touser;
 
 ALTER SEQUENCE cdn_id_seq OWNED BY cdn.id;
 
@@ -132,7 +132,7 @@ CREATE TABLE deliveryservice (
     tr_request_headers character varying(1024)
 );
 
-ALTER TABLE deliveryservice OWNER TO postgres;
+ALTER TABLE deliveryservice OWNER TO touser;
 
 CREATE SEQUENCE deliveryservice_id_seq
     START WITH 1
@@ -141,7 +141,7 @@ CREATE SEQUENCE deliveryservice_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE deliveryservice_id_seq OWNER TO postgres;
+ALTER TABLE deliveryservice_id_seq OWNER TO touser;
 
 ALTER SEQUENCE deliveryservice_id_seq OWNED BY deliveryservice.id;
 
@@ -151,7 +151,7 @@ CREATE TABLE deliveryservice_regex (
     set_number integer DEFAULT 0
 );
 
-ALTER TABLE deliveryservice_regex OWNER TO postgres;
+ALTER TABLE deliveryservice_regex OWNER TO touser;
 
 CREATE TABLE deliveryservice_server (
     deliveryservice integer NOT NULL,
@@ -159,7 +159,7 @@ CREATE TABLE deliveryservice_server (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE deliveryservice_server OWNER TO postgres;
+ALTER TABLE deliveryservice_server OWNER TO touser;
 
 CREATE TABLE deliveryservice_tmuser (
     deliveryservice integer NOT NULL,
@@ -167,7 +167,7 @@ CREATE TABLE deliveryservice_tmuser (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE deliveryservice_tmuser OWNER TO postgres;
+ALTER TABLE deliveryservice_tmuser OWNER TO touser;
 
 CREATE TABLE division (
     id integer NOT NULL,
@@ -175,7 +175,7 @@ CREATE TABLE division (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE division OWNER TO postgres;
+ALTER TABLE division OWNER TO touser;
 
 CREATE SEQUENCE division_id_seq
     START WITH 1
@@ -184,7 +184,7 @@ CREATE SEQUENCE division_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE division_id_seq OWNER TO postgres;
+ALTER TABLE division_id_seq OWNER TO touser;
 
 ALTER SEQUENCE division_id_seq OWNED BY division.id;
 
@@ -196,7 +196,7 @@ CREATE TABLE federation (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE federation OWNER TO postgres;
+ALTER TABLE federation OWNER TO touser;
 
 CREATE TABLE federation_deliveryservice (
     federation integer NOT NULL,
@@ -204,7 +204,7 @@ CREATE TABLE federation_deliveryservice (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE federation_deliveryservice OWNER TO postgres;
+ALTER TABLE federation_deliveryservice OWNER TO touser;
 
 CREATE TABLE federation_federation_resolver (
     federation integer NOT NULL,
@@ -212,7 +212,7 @@ CREATE TABLE federation_federation_resolver (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE federation_federation_resolver OWNER TO postgres;
+ALTER TABLE federation_federation_resolver OWNER TO touser;
 
 CREATE SEQUENCE federation_id_seq
     START WITH 1
@@ -221,7 +221,7 @@ CREATE SEQUENCE federation_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE federation_id_seq OWNER TO postgres;
+ALTER TABLE federation_id_seq OWNER TO touser;
 
 ALTER SEQUENCE federation_id_seq OWNED BY federation.id;
 
@@ -232,7 +232,7 @@ CREATE TABLE federation_resolver (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE federation_resolver OWNER TO postgres;
+ALTER TABLE federation_resolver OWNER TO touser;
 
 CREATE SEQUENCE federation_resolver_id_seq
     START WITH 1
@@ -241,7 +241,7 @@ CREATE SEQUENCE federation_resolver_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE federation_resolver_id_seq OWNER TO postgres;
+ALTER TABLE federation_resolver_id_seq OWNER TO touser;
 
 ALTER SEQUENCE federation_resolver_id_seq OWNED BY federation_resolver.id;
 
@@ -252,7 +252,7 @@ CREATE TABLE federation_tmuser (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE federation_tmuser OWNER TO postgres;
+ALTER TABLE federation_tmuser OWNER TO touser;
 
 CREATE TABLE hwinfo (
     id integer NOT NULL,
@@ -262,7 +262,7 @@ CREATE TABLE hwinfo (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE hwinfo OWNER TO postgres;
+ALTER TABLE hwinfo OWNER TO touser;
 
 CREATE SEQUENCE hwinfo_id_seq
     START WITH 1
@@ -271,7 +271,7 @@ CREATE SEQUENCE hwinfo_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE hwinfo_id_seq OWNER TO postgres;
+ALTER TABLE hwinfo_id_seq OWNER TO touser;
 
 ALTER SEQUENCE hwinfo_id_seq OWNED BY hwinfo.id;
 
@@ -292,7 +292,7 @@ CREATE TABLE job (
     job_deliveryservice integer
 );
 
-ALTER TABLE job OWNER TO postgres;
+ALTER TABLE job OWNER TO touser;
 
 CREATE TABLE job_agent (
     id integer NOT NULL,
@@ -302,7 +302,7 @@ CREATE TABLE job_agent (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE job_agent OWNER TO postgres;
+ALTER TABLE job_agent OWNER TO touser;
 
 CREATE SEQUENCE job_agent_id_seq
     START WITH 1
@@ -311,7 +311,7 @@ CREATE SEQUENCE job_agent_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE job_agent_id_seq OWNER TO postgres;
+ALTER TABLE job_agent_id_seq OWNER TO touser;
 
 ALTER SEQUENCE job_agent_id_seq OWNED BY job_agent.id;
 
@@ -322,7 +322,7 @@ CREATE SEQUENCE job_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE job_id_seq OWNER TO postgres;
+ALTER TABLE job_id_seq OWNER TO touser;
 
 ALTER SEQUENCE job_id_seq OWNED BY job.id;
 
@@ -335,7 +335,7 @@ CREATE TABLE job_result (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE job_result OWNER TO postgres;
+ALTER TABLE job_result OWNER TO touser;
 
 CREATE SEQUENCE job_result_id_seq
     START WITH 1
@@ -344,7 +344,7 @@ CREATE SEQUENCE job_result_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE job_result_id_seq OWNER TO postgres;
+ALTER TABLE job_result_id_seq OWNER TO touser;
 
 ALTER SEQUENCE job_result_id_seq OWNED BY job_result.id;
 
@@ -355,7 +355,7 @@ CREATE TABLE job_status (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE job_status OWNER TO postgres;
+ALTER TABLE job_status OWNER TO touser;
 
 CREATE SEQUENCE job_status_id_seq
     START WITH 1
@@ -364,7 +364,7 @@ CREATE SEQUENCE job_status_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE job_status_id_seq OWNER TO postgres;
+ALTER TABLE job_status_id_seq OWNER TO touser;
 
 ALTER SEQUENCE job_status_id_seq OWNED BY job_status.id;
 
@@ -377,7 +377,7 @@ CREATE TABLE log (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE log OWNER TO postgres;
+ALTER TABLE log OWNER TO touser;
 
 CREATE SEQUENCE log_id_seq
     START WITH 1
@@ -386,7 +386,7 @@ CREATE SEQUENCE log_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE log_id_seq OWNER TO postgres;
+ALTER TABLE log_id_seq OWNER TO touser;
 
 ALTER SEQUENCE log_id_seq OWNED BY log.id;
 
@@ -398,7 +398,7 @@ CREATE TABLE parameter (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE parameter OWNER TO postgres;
+ALTER TABLE parameter OWNER TO touser;
 
 CREATE SEQUENCE parameter_id_seq
     START WITH 1
@@ -407,7 +407,7 @@ CREATE SEQUENCE parameter_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE parameter_id_seq OWNER TO postgres;
+ALTER TABLE parameter_id_seq OWNER TO touser;
 
 ALTER SEQUENCE parameter_id_seq OWNED BY parameter.id;
 
@@ -427,7 +427,7 @@ CREATE TABLE phys_location (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE phys_location OWNER TO postgres;
+ALTER TABLE phys_location OWNER TO touser;
 
 CREATE SEQUENCE phys_location_id_seq
     START WITH 1
@@ -436,7 +436,7 @@ CREATE SEQUENCE phys_location_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE phys_location_id_seq OWNER TO postgres;
+ALTER TABLE phys_location_id_seq OWNER TO touser;
 
 ALTER SEQUENCE phys_location_id_seq OWNED BY phys_location.id;
 
@@ -447,7 +447,7 @@ CREATE TABLE profile (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE profile OWNER TO postgres;
+ALTER TABLE profile OWNER TO touser;
 
 CREATE SEQUENCE profile_id_seq
     START WITH 1
@@ -456,7 +456,7 @@ CREATE SEQUENCE profile_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE profile_id_seq OWNER TO postgres;
+ALTER TABLE profile_id_seq OWNER TO touser;
 
 ALTER SEQUENCE profile_id_seq OWNED BY profile.id;
 
@@ -466,7 +466,7 @@ CREATE TABLE profile_parameter (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE profile_parameter OWNER TO postgres;
+ALTER TABLE profile_parameter OWNER TO touser;
 
 CREATE TABLE regex (
     id integer NOT NULL,
@@ -475,7 +475,7 @@ CREATE TABLE regex (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE regex OWNER TO postgres;
+ALTER TABLE regex OWNER TO touser;
 
 CREATE SEQUENCE regex_id_seq
     START WITH 1
@@ -484,7 +484,7 @@ CREATE SEQUENCE regex_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE regex_id_seq OWNER TO postgres;
+ALTER TABLE regex_id_seq OWNER TO touser;
 
 ALTER SEQUENCE regex_id_seq OWNED BY regex.id;
 
@@ -495,7 +495,7 @@ CREATE TABLE region (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE region OWNER TO postgres;
+ALTER TABLE region OWNER TO touser;
 
 CREATE SEQUENCE region_id_seq
     START WITH 1
@@ -504,7 +504,7 @@ CREATE SEQUENCE region_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE region_id_seq OWNER TO postgres;
+ALTER TABLE region_id_seq OWNER TO touser;
 
 ALTER SEQUENCE region_id_seq OWNED BY region.id;
 
@@ -515,7 +515,7 @@ CREATE TABLE role (
     priv_level integer NOT NULL
 );
 
-ALTER TABLE role OWNER TO postgres;
+ALTER TABLE role OWNER TO touser;
 
 CREATE SEQUENCE role_id_seq
     START WITH 1
@@ -524,7 +524,7 @@ CREATE SEQUENCE role_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE role_id_seq OWNER TO postgres;
+ALTER TABLE role_id_seq OWNER TO touser;
 
 ALTER SEQUENCE role_id_seq OWNED BY role.id;
 
@@ -563,7 +563,7 @@ CREATE TABLE server (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE server OWNER TO postgres;
+ALTER TABLE server OWNER TO touser;
 
 CREATE SEQUENCE server_id_seq
     START WITH 1
@@ -572,7 +572,7 @@ CREATE SEQUENCE server_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE server_id_seq OWNER TO postgres;
+ALTER TABLE server_id_seq OWNER TO touser;
 
 ALTER SEQUENCE server_id_seq OWNED BY server.id;
 
@@ -613,7 +613,7 @@ CREATE TABLE servercheck (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE servercheck OWNER TO postgres;
+ALTER TABLE servercheck OWNER TO touser;
 
 CREATE SEQUENCE servercheck_id_seq
     START WITH 1
@@ -622,7 +622,7 @@ CREATE SEQUENCE servercheck_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE servercheck_id_seq OWNER TO postgres;
+ALTER TABLE servercheck_id_seq OWNER TO touser;
 
 ALTER SEQUENCE servercheck_id_seq OWNED BY servercheck.id;
 
@@ -637,7 +637,7 @@ CREATE TABLE staticdnsentry (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE staticdnsentry OWNER TO postgres;
+ALTER TABLE staticdnsentry OWNER TO touser;
 
 CREATE SEQUENCE staticdnsentry_id_seq
     START WITH 1
@@ -646,7 +646,7 @@ CREATE SEQUENCE staticdnsentry_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE staticdnsentry_id_seq OWNER TO postgres;
+ALTER TABLE staticdnsentry_id_seq OWNER TO touser;
 
 ALTER SEQUENCE staticdnsentry_id_seq OWNED BY staticdnsentry.id;
 
@@ -660,7 +660,7 @@ CREATE TABLE stats_summary (
     stat_date date
 );
 
-ALTER TABLE stats_summary OWNER TO postgres;
+ALTER TABLE stats_summary OWNER TO touser;
 
 CREATE SEQUENCE stats_summary_id_seq
     START WITH 1
@@ -669,7 +669,7 @@ CREATE SEQUENCE stats_summary_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE stats_summary_id_seq OWNER TO postgres;
+ALTER TABLE stats_summary_id_seq OWNER TO touser;
 
 ALTER SEQUENCE stats_summary_id_seq OWNED BY stats_summary.id;
 
@@ -680,7 +680,7 @@ CREATE TABLE status (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE status OWNER TO postgres;
+ALTER TABLE status OWNER TO touser;
 
 CREATE SEQUENCE status_id_seq
     START WITH 1
@@ -689,7 +689,7 @@ CREATE SEQUENCE status_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE status_id_seq OWNER TO postgres;
+ALTER TABLE status_id_seq OWNER TO touser;
 
 ALTER SEQUENCE status_id_seq OWNED BY status.id;
 
@@ -717,7 +717,7 @@ CREATE TABLE tm_user (
     registration_sent timestamp without time zone DEFAULT '-infinity'::timestamp without time zone NOT NULL
 );
 
-ALTER TABLE tm_user OWNER TO postgres;
+ALTER TABLE tm_user OWNER TO touser;
 
 CREATE SEQUENCE tm_user_id_seq
     START WITH 1
@@ -726,7 +726,7 @@ CREATE SEQUENCE tm_user_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE tm_user_id_seq OWNER TO postgres;
+ALTER TABLE tm_user_id_seq OWNER TO touser;
 
 ALTER SEQUENCE tm_user_id_seq OWNED BY tm_user.id;
 
@@ -745,7 +745,7 @@ CREATE TABLE to_extension (
     last_updated timestamp without time zone DEFAULT now() NOT NULL
 );
 
-ALTER TABLE to_extension OWNER TO postgres;
+ALTER TABLE to_extension OWNER TO touser;
 
 CREATE SEQUENCE to_extension_id_seq
     START WITH 1
@@ -754,7 +754,7 @@ CREATE SEQUENCE to_extension_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE to_extension_id_seq OWNER TO postgres;
+ALTER TABLE to_extension_id_seq OWNER TO touser;
 
 ALTER SEQUENCE to_extension_id_seq OWNED BY to_extension.id;
 
@@ -766,7 +766,7 @@ CREATE TABLE type (
     last_updated timestamp without time zone DEFAULT now()
 );
 
-ALTER TABLE type OWNER TO postgres;
+ALTER TABLE type OWNER TO touser;
 
 CREATE SEQUENCE type_id_seq
     START WITH 1
@@ -775,7 +775,7 @@ CREATE SEQUENCE type_id_seq
     NO MAXVALUE
     CACHE 1;
 
-ALTER TABLE type_id_seq OWNER TO postgres;
+ALTER TABLE type_id_seq OWNER TO touser;
 
 ALTER SEQUENCE type_id_seq OWNED BY type.id;
 

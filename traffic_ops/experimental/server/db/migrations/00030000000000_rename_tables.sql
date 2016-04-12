@@ -1,3 +1,6 @@
+--
+-- +goose Up
+-- SQL in section 'Up' is executed when this migration is applied
 ALTER TABLE asn RENAME TO asns;
 ALTER TABLE cachegroup RENAME TO cachegroups;
 ALTER TABLE cachegroup_parameter RENAME TO cachegroups_parameters;
@@ -12,19 +15,21 @@ ALTER TABLE deliveryservice_server RENAME TO deliveryservices_servers;
 ALTER TABLE regex RENAME TO regexes;
 ALTER TABLE staticdnsentry RENAME TO staticdnsentries;
 ALTER TABLE type RENAME TO types;
-ALTER TABLE deliveryservice_user RENAME TO deliveryservices_users;
+ALTER TABLE deliveryservice_tmuser RENAME TO deliveryservices_users;
 ALTER TABLE division RENAME TO divisions;
-ALTER TABLE domain RENAME TO domains;
-ALTER TABLE extension RENAME TO extensions;
+ALTER TABLE to_extension RENAME TO extensions;
 ALTER TABLE federation_resolver RENAME TO federation_resolvers;
-ALTER TABLE federation_user RENAME TO federation_users;
+ALTER TABLE federation_tmuser RENAME TO federation_users;
 ALTER TABLE federation RENAME TO federations;
 ALTER TABLE federation_deliveryservice RENAME TO federations_deliveryservices;
 ALTER TABLE federation_federation_resolver RENAME TO federations_federation_resolvers;
 ALTER TABLE phys_location RENAME TO phys_locations;
 ALTER TABLE region RENAME TO regions;
 ALTER TABLE role RENAME TO roles;
-ALTER TABLE stats_summary RENAME TO stats_summary;
 ALTER TABLE status RENAME TO statuses;
 ALTER TABLE tm_user RENAME TO users;
-ALTER TABLE crconfig_snapshot RENAME TO crconfig_snapshots;
+
+-- +goose Down
+-- SQL section 'Down' is executed when this migration is rolled back
+
+
