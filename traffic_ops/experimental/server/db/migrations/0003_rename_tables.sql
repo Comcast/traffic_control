@@ -40,6 +40,18 @@ DO $$DECLARE row record;
 END$$;
 -- +goose StatementEnd
 
+-- rename any constraints containing tm_user or tmuser
+-- +goose StatementBegin
+DO $$DECLARE row record;
+	BEGIN
+	FOR row IN SELECT table_name, constraint_name FROM information_schema.table_constraints WHERE constraint_name SIMILAR TO '%tm\_?user%'
+	LOOP
+		EXECUTE 'ALTER TABLE public.' || quote_ident(row.table_name) || ' RENAME CONSTRAINT ' || quote_ident(row.constraint_name) ||
+	   		' TO ' || regexp_replace(quote_ident(row.constraint_name), 'tm_?user', 'user', 'g');
+	END LOOP;
+END$$;
+-- +goose StatementEnd
+
 
 -- +goose Down
 -- SQL section 'Down' is executed when this migration is rolled back
