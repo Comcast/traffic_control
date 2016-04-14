@@ -565,7 +565,8 @@ sub check_syncds_state {
 	( $log_level >> $DEBUG ) && print "DEBUG Checking syncds state.\n";
 	if ( $script_mode == $SYNCDS || $script_mode == $BADASS || $script_mode == $REPORT ) {
 		## The herd is about to get /update/<hostname>
-		&sleep_rand(10);
+		##changed to when get_cookie runs
+		##&sleep_rand(10);
 
 		my $url     = "$traffic_ops_host\/update/$hostname_short";
 		my $upd_ref = &lwp_get($url);
@@ -1200,7 +1201,7 @@ sub get_cookie {
 	my $to_login    = shift;
 	my ( $u, $p ) = split( /:/, $to_login );
 	my %headers;
-
+	&sleep_rand(60);
 	my $url = $to_host . "/login";
 	my $response = $lwp_conn->post( $url, [ 'u' => $u, 'p' => $p ], %headers );
 
