@@ -780,3 +780,40 @@ Server
   +------------------+--------+------------------------------------------------+
   
 |
+
+**POST /api/1.2/servers/{:id}/clone_siblings_ds**
+
+  Assign delivery service to the server with the same as sibling server in the cache group.
+
+  Authentication Required: Yes
+
+  Role(s) Required: admin or oper
+
+  **Request Route Parameters**
+
+  +------------+----------+--------------------------------------------------------+
+  |    Name    | Required |           Description                                  |
+  +============+==========+========================================================+
+  |     id     |   yes    | The server id to clone delivery service to.            |
+  +------------+----------+--------------------------------------------------------+
+  
+  **Response Properties**
+
+  +------------+----------+--------------------------------------------------------+
+  |  Parameter |   Type   |           Description                                  |
+  +============+==========+========================================================+
+  | hostName   |  string  | The server name to clone delivery service to.          |
+  +------------+----------+--------------------------------------------------------+
+  | dsAssigned |  array   | The deliveryservice name array the server is assigned. |
+  +------------+----------+--------------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+      "response": {
+          "hostName": "atlanta-edge-01",
+          "dsAssigned": [ "test-ds1", "test-ds2" ]
+      }
+    }
+
+|
