@@ -29,15 +29,16 @@ use File::Slurp;
 
 # This Perl Module was needed to better support SSL for the 'Vault'
 use LWP::UserAgent qw();
+use LWP::ConnCache qw();
 
 use constant RIAK_ROOT_URI => "riak";
 
 # The purpose of this class is to provide for an easy method
 # to 'mock' Riak calls.
-my $ua;
 my $riak_server;
 my $username;
 my $password;
+my $useragent;
 
 sub new {
 	my $class = shift;
@@ -50,11 +51,20 @@ sub new {
 		password    => $password,
 	}, $class;
 
-	$ua = LWP::UserAgent->new();
-	$ua->timeout(20);
-	$ua->ssl_opts( verify_hostname => 0, SSL_verify_mode => 0x00 );
-
 	return $self;
+}
+
+sub ua {
+	my $self = shift;
+	if ( !defined $useragent ) {
+		my $conn_cache = LWP::ConnCache->new( total_capacity => 1024 );
+		$useragent = LWP::UserAgent->new(
+			conn_cache => $conn_cache,
+			timeout    => 20,
+			ssl_opts   => { verify_hostname => 0, SSL_verify_mode => 0x00 },
+		);
+	}
+	return $useragent;
 }
 
 sub set_server {
@@ -75,13 +85,13 @@ sub get_key_uri {
 sub ping {
 	my $self = shift;
 	my $fqdn = $self->get_url("/ping");
-	return $ua->get($fqdn);
+	return $self->ua->get($fqdn);
 }
 
 sub stats {
 	my $self = shift;
 	my $fqdn = $self->get_url("/stats");
-	return $ua->get($fqdn);
+	return $self->ua->get($fqdn);
 }
 
 sub put {
@@ -91,12 +101,12 @@ sub put {
 	my $value        = shift || confess("Supply a value");
 	my $content_type = shift || 'application/json';
 
-	$ua->default_header( 'Content-Type' => $content_type );
+	$self->ua->default_header( 'Content-Type' => $content_type );
 
 	my $key_uri = $self->get_key_uri( $bucket, $key );
 	my $fqdn = $self->get_url($key_uri);
 
-	return $ua->put( $fqdn, Content => $value );
+	return $self->ua->put( $fqdn, Content => $value );
 }
 
 sub delete {
@@ -105,7 +115,7 @@ sub delete {
 	my $key     = shift || confess("Supply a key");
 	my $key_uri = $self->get_key_uri( $bucket, $key );
 	my $key_ctx = $self->get_url($key_uri);
-	return $ua->delete( $self->get_url($key_ctx) );
+	return $self->ua->delete( $self->get_url($key_ctx) );
 }
 
 sub get {
@@ -115,7 +125,7 @@ sub get {
 
 	my $key_uri = $self->get_key_uri( $bucket, $key );
 	my $fqdn = $self->get_url($key_uri);
-	return $ua->get($fqdn);
+	return $self->ua->get($fqdn);
 }
 
 #MOJOPlugins/Riak

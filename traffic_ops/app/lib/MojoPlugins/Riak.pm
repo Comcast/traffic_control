@@ -22,10 +22,8 @@ use utf8;
 use Carp qw(cluck confess);
 use Net::Riak;
 use Data::Dumper;
-use Mojo::UserAgent;
 use JSON;
 use IO::Socket::SSL qw();
-use LWP::UserAgent qw();
 use Connection::RiakAdapter;
 use File::Slurp;
 
