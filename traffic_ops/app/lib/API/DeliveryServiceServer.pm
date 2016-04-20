@@ -76,8 +76,11 @@ sub clone_siblings_ds {
 
 	my $host_id = $self->param('id');
 	my $server = $self->db->resultset('Server')->find( { id => $host_id } );
-	if ( !defined($server) || $server->type->name ne 'EDGE' ) {
+	if ( !defined($server) ) {
 		return $self->not_found();
+	}
+	if ( $server->type->name ne 'EDGE' ) {
+		return $self->alert("Only can assign delivery services to edge caches.");
 	}
 
 	my @servers = $self->db->resultset('Server')->search(
