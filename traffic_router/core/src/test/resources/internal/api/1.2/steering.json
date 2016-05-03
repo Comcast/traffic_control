@@ -2,8 +2,10 @@
   "response": [
     {
       "id": "mm-test",
-      "inclusionPath": "some-regex for a path",
-      "inclusionId": "real-ds-2",
+      "bypasses": [
+        { "filter": ".*/force-to-eight/.*", "destination": "ds-08" },
+        { "filter": ".*/force-to-five/.*", "destination": "ds-05"}
+      ],
       "steeredDeliveryServices": [
         {
           "id": "ds-05",
@@ -17,7 +19,6 @@
     },
     {
       "id": "test",
-      "inclusionId": "real-ds-2",
       "steeredDeliveryServices": [
         {
           "id": "ds-04",

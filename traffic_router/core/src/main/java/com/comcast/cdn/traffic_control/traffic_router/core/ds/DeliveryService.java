@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +31,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.comcast.cdn.traffic_control.traffic_router.core.hash.DefaultHashable;
+import com.comcast.cdn.traffic_control.traffic_router.core.hash.Hashable;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -47,12 +51,14 @@ import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Tr
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Track.ResultDetails;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.StringProtector;
 
-@SuppressWarnings("PMD.TooManyFields")
+@SuppressWarnings({"PMD.TooManyFields","PMD.CyclomaticComplexity"})
 public class DeliveryService {
 	protected static final Logger LOGGER = Logger.getLogger(DeliveryService.class);
 	private final String id;
+	@JsonIgnore
 	private final JSONObject ttls;
 	private final boolean coverageZoneOnly;
+	@JsonIgnore
 	private final JSONArray geoEnabled;
 	private final String geoRedirectUrl;
 	//store the url file path info
@@ -60,10 +66,15 @@ public class DeliveryService {
 	//check if the geoRedirectUrl belongs to this DeliveryService, avoid calculating this for multiple times
 	//"INVALID_URL" for init status, "DS_URL" means that the request url belongs to this DeliveryService, "NOT_DS_URL" means that the request url doesn't belong to this DeliveryService
 	private String geoRedirectUrlType;
+	@JsonIgnore
 	private final JSONArray staticDnsEntries;
+	@JsonIgnore
 	private final JSONArray domains;
+	@JsonIgnore
 	private final JSONObject bypassDestination;
+	@JsonIgnore
 	private final JSONObject soa;
+	@JsonIgnore
 	private final JSONObject props;
 	private boolean isDns;
 	private final boolean shouldAppendQueryString;
@@ -74,6 +85,8 @@ public class DeliveryService {
 	private final Set<String> requestHeaders = new HashSet<String>();
 	private final boolean regionalGeoEnabled;
 	private final String geolocationProvider;
+	private final DefaultHashable defaultHashable = new DefaultHashable();
+	private final Map<String, DefaultHashable> steeredDeliveryServices = new HashMap<String, DefaultHashable>();
 
 	public DeliveryService(final String id, final JSONObject dsJo) throws JSONException {
 		this.id = id;
@@ -118,12 +131,20 @@ public class DeliveryService {
 		} else {
 			LOGGER.info("DeliveryService '" + id + "' will use default geolocation provider Maxmind");
 		}
+
+		defaultHashable.generateHashes(id, 100);
+	}
+
+	public void addSteeredDeliveryService(final SteeredDeliveryService steeredDeliveryService) {
+		steeredDeliveryServices.put(steeredDeliveryService.getId(), steeredDeliveryService.generateHashes());
+		LOGGER.info("Adding Steered Delivery Service " + steeredDeliveryService.getId() + " to delivery serivce " + getId() + " it has " + steeredDeliveryServices.get(steeredDeliveryService.getId()).getHashValues().size() + " count of hashables");
 	}
 
 	public String getId() {
 		return id;
 	}
 
+	@JsonIgnore
 	public JSONObject getTtls() {
 		return ttls;
 	}
@@ -137,7 +158,7 @@ public class DeliveryService {
 		return missLocation;
 	}
 
-	public Geolocation supportLocation(final Geolocation clientLocation, final String requestType) {
+	public Geolocation supportLocation(final Geolocation clientLocation) {
 		if (clientLocation == null) {
 			if (missLocation == null) {
 				return null;
@@ -330,6 +351,7 @@ public class DeliveryService {
 		return redirectInetRecords;
 	}
 
+	@JsonIgnore
 	public JSONObject getSoa() {
 		return soa;
 	}
@@ -454,10 +476,12 @@ public class DeliveryService {
 		return getProp("maxDnsIpsForLocation",0);
 	}
 
+	@JsonIgnore
 	public JSONArray getStaticDnsEntries() {
 		return staticDnsEntries;
 	}
 
+	@JsonIgnore
 	public JSONArray getDomains() {
 		return domains;
 	}
@@ -522,5 +546,37 @@ public class DeliveryService {
 
 	public String getGeolocationProvider() {
 		return geolocationProvider;
+	}
+
+	public List<CacheLocation> filterAvailableLocations(final Collection<CacheLocation> cacheLocations) {
+		final List<CacheLocation> locations = new ArrayList<CacheLocation>();
+
+		for (CacheLocation cl : cacheLocations) {
+			if (isLocationAvailable(cl)) {
+				locations.add(cl);
+			}
+		}
+
+		return locations;
+	}
+
+	public boolean isSteering() {
+		return steeredDeliveryServices.isEmpty() == false;
+	}
+
+	public List<Hashable> getSteeringHashables() {
+		final List<Hashable> hashables = new ArrayList<Hashable>();
+		hashables.addAll(steeredDeliveryServices.values());
+		return hashables;
+	}
+
+	public String getSteeredId(final Hashable hashable) {
+		for (Map.Entry<String, DefaultHashable> entry : steeredDeliveryServices.entrySet()) {
+			if (hashable.equals(entry.getValue())) {
+				return entry.getKey();
+			}
+		}
+
+		return null;
 	}
 }
