@@ -67,4 +67,66 @@ sub domains {
 	}
 	$self->success( \@data );
 }
+
+sub clone_siblings_ds {
+	my $self = shift;
+	if ( !&is_oper($self) ) {
+		return $self->forbidden();
+	}
+
+	my $host_id = $self->param('id');
+	my $server = $self->db->resultset('Server')->find( { id => $host_id } );
+	if ( !defined($server) ) {
+		return $self->not_found();
+	}
+	if ( $server->type->name ne 'EDGE' ) {
+		return $self->alert("Only can assign delivery services to edge caches.");
+	}
+
+	my @servers = $self->db->resultset('Server')->search(
+		{
+			cachegroup => $server->cachegroup->id,
+			type => $server->type->id,
+			cdn_id => $server->cdn_id,
+			id => { '!=' => $host_id }
+		}
+	)->get_column('id')->all();
+	my $deliveryservice_servers = $self->db->resultset('DeliveryserviceServer')->search(
+		{ server => { -in => \@servers } },
+		{
+			columns => [ qw/deliveryservice/ ],
+			distinct => 1
+		}
+	);
+	my $deliveryservices = "";
+	while ( my $ds_server = $deliveryservice_servers->next ) {
+		my $insert = $self->db->resultset('DeliveryserviceServer')->create(
+			{
+				deliveryservice => $ds_server->deliveryservice->id,
+				server          => $server->id,
+			}
+		);
+		$insert->insert();
+
+		my $ds = $self->db->resultset('Deliveryservice')->search( { id => $ds_server->deliveryservice->id } )->single();
+		&UI::DeliveryService::header_rewrite( $self, $ds->id, $ds->profile, $ds->xml_id, $ds->edge_header_rewrite, "edge" );
+		$deliveryservices = $deliveryservices . " \"". $ds->xml_id . "\"";
+	}
+
+	my $host_name = $server->host_name;
+	&log( $self, "Link deliveryservices " . $deliveryservices . " to server " . $host_name, "APICHANGE" );
+
+	my $response;
+	$response->{hostName} = $host_name;
+	my @assigned_deliveryservices_id = $self->db->resultset('DeliveryserviceServer')->search( { server => $server->id } )->get_column('deliveryservice')->all();
+	my $assigned_deliveryservices = $self->db->resultset('Deliveryservice')->search( { id => { -in => \@assigned_deliveryservices_id } } );
+	my @ds = ();
+        while ( my $row = $assigned_deliveryservices->next ) {
+                push( @ds, $row->xml_id);
+        }
+	$response->{dsAssigned} = \@ds;
+
+	$self->success( $response );
+}
+
 1;
