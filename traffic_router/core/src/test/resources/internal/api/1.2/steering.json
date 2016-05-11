@@ -1,0 +1,34 @@
+{
+  "response": [
+    {
+      "id": "mm-test",
+      "bypasses": [
+        { "filter": ".*/force-to-eight/.*", "destination": "ds-08" },
+        { "filter": ".*/force-to-five/.*", "destination": "ds-05"}
+      ],
+      "steeredDeliveryServices": [
+        {
+          "id": "ds-05",
+          "weight": 1000
+        },
+        {
+          "id": "ds-08",
+          "weight": 9000
+        }
+      ]
+    },
+    {
+      "id": "test",
+      "steeredDeliveryServices": [
+        {
+          "id": "ds-04",
+          "weight": 45000
+        },
+        {
+          "id": "ds-03",
+          "weight": 60000
+        }
+      ]
+    }
+  ]
+}
