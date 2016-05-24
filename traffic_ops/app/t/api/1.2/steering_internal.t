@@ -94,10 +94,10 @@ ok $t->get_ok("/internal/api/1.2/steering.json")->status_is(200)
     ->json_is("/response/1/deliveryService", "steering-ds2")
     ->json_is("/response/1/targets/0/deliveryService", "target-ds3")
     ->json_is("/response/1/targets/0/weight", 123)
-    ->json_is("/response/1/filters/2/pattern", ".*/use-three/.*")
+    ->json_is("/response/1/filters/0/pattern", ".*/use-three/.*")
     ->json_is("/response/1/targets/1/deliveryService", "target-ds4")
     ->json_is("/response/1/targets/1/weight", 999)
-    ->json_is("/response/1/filters/3/pattern", ".*/go-to-four/.*");
+    ->json_is("/response/1/filters/1/pattern", ".*/go-to-four/.*");
 
 ok $t->get_ok("/internal/api/1.2/steering/steering-ds1.json")->status_is(200)
     ->or(sub {diag $t->tx->res->headers->to_string();})
