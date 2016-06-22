@@ -36,7 +36,9 @@ public class NetworkUpdater extends AbstractServiceUpdater {
 			return false;
 		}
 
-		NetworkNode.generateTree(existingDB);
+		if (null == NetworkNode.generateTree(existingDB)) {
+			return false;
+		}
 		return true;
 	}
 }
