@@ -37,10 +37,7 @@ public class RegionalGeoUpdater extends AbstractServiceUpdater {
             return false;
         }
 
-        if (!RegionalGeo.parseConfigFile(existingDB)) {
-            return false;
-        }
-        return true;
+        return RegionalGeo.parseConfigFile(existingDB);
     }
 }
 
