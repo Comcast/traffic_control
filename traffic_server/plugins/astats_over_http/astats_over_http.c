@@ -584,7 +584,7 @@ static bool is_ip_allowed(const config_t* config, const struct sockaddr* addr) {
 	}
 
 	if (addr->sa_family == AF_INET && config->allowIps) {
-	    const char *ip = (const char*)&((struct sockaddr_in*)addr)->sin_addr;
+		const char *ip = (const char*)&((struct sockaddr_in*)addr)->sin_addr;
 		for(i=0; i < config->ipCount; i++) {
 			ipmask = config->allowIps+ (i*5);
 			if(is_ip_match(ip, ipmask, ipmask[4])) {
@@ -595,7 +595,7 @@ static bool is_ip_allowed(const config_t* config, const struct sockaddr* addr) {
 		TSDebug(PLUGIN_TAG, "clientip is %s--> DENY", inet_ntop(AF_INET,ip,ip_port_text_buffer,INET6_ADDRSTRLEN));
 		return false;
 	} else if (addr->sa_family == AF_INET6 && config->allowIps6) {
-	    const char *ip = (const char*)&((struct sockaddr_in6*)addr)->sin6_addr;
+		const char *ip = (const char*)&((struct sockaddr_in6*)addr)->sin6_addr;
 		for(i=0; i < config->ip6Count; i++) {
 			ipmask = config->allowIps6 + (i*17);
 			if(is_ip_match(ip, ipmask, ipmask[16])) {
