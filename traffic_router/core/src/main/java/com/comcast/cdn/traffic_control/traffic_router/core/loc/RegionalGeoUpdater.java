@@ -33,8 +33,11 @@ public class RegionalGeoUpdater extends AbstractServiceUpdater {
 
     public boolean loadDatabase() throws IOException {
         final File existingDB = databasesDirectory.resolve(databaseName).toFile();
-        RegionalGeo.parseConfigFile(existingDB);
-        return true;
+        if (!existingDB.exists() || !existingDB.canRead()) {
+            return false;
+        }
+
+        return RegionalGeo.parseConfigFile(existingDB);
     }
 }
 

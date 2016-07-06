@@ -95,6 +95,7 @@ public class NetworkNode implements Comparable<NetworkNode> {
                             root.add6(new NetworkNode(ip, loc, geolocation));
                         } catch (NetworkNodeException ex) {
                             LOGGER.error(ex, ex);
+                            return null;
                         }
                     }
                 } catch (JSONException ex) {
@@ -111,6 +112,7 @@ public class NetworkNode implements Comparable<NetworkNode> {
                             root.add(new NetworkNode(ip, loc, geolocation));
                         } catch (NetworkNodeException ex) {
                             LOGGER.error(ex, ex);
+                            return null;
                         }
                     }
                 } catch (JSONException ex) {

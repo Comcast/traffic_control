@@ -26,7 +26,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.ScheduledExecutorService;
@@ -52,6 +51,7 @@ public abstract class AbstractServiceUpdater {
 	protected boolean loaded = false;
 	protected ScheduledFuture<?> scheduledService;
 	private TrafficRouterManager trafficRouterManager;
+	protected boolean databaseReverted = false; // indicate whether a fallback db is used when the downloaded one is invalid
 	protected Path databasesDirectory;
 
 	public void destroy() {
@@ -110,16 +110,11 @@ public abstract class AbstractServiceUpdater {
 		}
 
 		if (!isLoaded()) {
-			try {
-				setLoaded(loadDatabase());
-			} catch (Exception e) {
-				LOGGER.error("Failed to load existing database! " + e.getMessage());
-				return false;
-			}
+			setLoaded(loadDatabaseWrap());
 		}
 
 		final File existingDB = databasesDirectory.resolve(databaseName).toFile();
-		File newDB;
+		File newDB = null;
 		if (!needsUpdating(existingDB)) {
 			LOGGER.info("[" + getClass().getSimpleName() + "] Location database does not require updating.");
 			return false;
@@ -137,6 +132,9 @@ public abstract class AbstractServiceUpdater {
 			}
 		} catch (Exception e) {
 			LOGGER.fatal("[" + getClass().getSimpleName() + "] Caught exception while attempting to download: " + getDataBaseURL(), e);
+			if (newDB != null && newDB.exists()) {
+				deleteDatabase(newDB);
+			}
 			return false;
 		}
 
@@ -151,28 +149,102 @@ public abstract class AbstractServiceUpdater {
 			}
 		} catch (Exception e) {
 			LOGGER.error("[" + getClass().getSimpleName() + "] Failed verifying database " + newDB.getAbsolutePath() + " : " + e.getMessage());
+			deleteDatabase(newDB);
 			return false;
 		}
 
+		loadNewDatabase(existingDB, newDB);
+		return true;
+	}
+
+	@SuppressWarnings({"PMD.CyclomaticComplexity"})
+	protected void loadNewDatabase(final File existingDB, final File newDB) {
+		File backupDB = null;
 		try {
-			if (copyDatabaseIfDifferent(existingDB, newDB)) {
-				setLoaded(loadDatabase());
-				trafficRouterManager.trackEvent("last" + getClass().getSimpleName() + "Update");
-			} else {
-				newDB.delete();
+			backupDB = File.createTempFile(tmpPrefix, ".bak");
+			final boolean isDifferent = copyDatabaseIfDifferent(existingDB, newDB, backupDB);
+
+			if (isDifferent) {
+				LOGGER.info("Reload new downloaded DB");
+				if (!loadDatabaseWrap()) {
+					LOGGER.info("Revert " + existingDB + " as the new one is invalid");
+					revertBackupDatabase(existingDB, backupDB);
+					databaseReverted = true;
+				}
+			} else if (!isDifferent && databaseReverted) {
+
+				// If just reverted, even the newly downloaded file is the same as the reverted one,
+				// reload it to indicate that we are using a "normal" one instead of a reverted one.
+				LOGGER.info("Reload downloaded DB though it is the same as the reverted one");
+				loadDatabaseWrap();
 			}
 		} catch (Exception e) {
 			LOGGER.error("[" + getClass().getSimpleName() + "] Failed copying and loading new database " + newDB.getAbsolutePath() + " : " + e.getMessage());
+		} finally {
+			if (newDB != null && newDB.exists()) {
+				deleteDatabase(newDB);
+			}
+			if (backupDB != null && backupDB.exists()) {
+				deleteDatabase(backupDB);
+			}
+		}
+	}
+
+	public boolean loadDatabaseWrap() {
+		try {
+			if (loadDatabase()) {
+				setLoaded(true);
+				databaseReverted = false;
+				trafficRouterManager.trackEvent("last" + getClass().getSimpleName() + "Update");
+				return true;
+			}
+		} catch (Exception e) {
+			LOGGER.error("loadDatabase with exception", e);
 		}
 
-		return true;
+		LOGGER.warn("loadDatabase failed " + getClass().getSimpleName());
+		return false;
+	}
+
+	protected void revertBackupDatabase(final File existingDB, final File backupDB) throws IOException, JSONException {
+		if (backupDB == null || !backupDB.exists()) {
+			LOGGER.info("Backup DB doesn't exist");
+			return;
+		}
+
+		if (existingDB != null && existingDB.exists()) {
+			existingDB.setReadable(true, true);
+			existingDB.setWritable(true, false);
+			existingDB.delete();
+		}
+
+		backupDB.setReadable(true, true);
+		backupDB.setWritable(true, false);
+		if (!backupDB.renameTo(existingDB)) {
+			LOGGER.fatal("Unable to rename backup " + backupDB + " to " + existingDB + "; current working directory is " + System.getProperty("user.dir"));
+			return;
+		}
+
+		if (!isLoaded()) {
+			setLoaded(loadDatabaseWrap());
+		}
+	}
+
+	protected void deleteDatabase(final File db) {
+		if (db.isDirectory()) {
+			for (File file : db.listFiles()) {
+				file.delete();
+			}
+			LOGGER.debug("[" + getClass().getSimpleName() + "] Successfully deleted database under: " + db);
+		} else {
+			db.delete();
+		}
 	}
 
 	public boolean verifyDatabase(final File dbFile) throws IOException {
 		return true;
 	}
 	abstract public boolean loadDatabase() throws IOException, JSONException;
-
 	public void setDatabaseName(final String databaseName) {
 		this.databaseName = databaseName;
 	}
@@ -272,29 +344,21 @@ public abstract class AbstractServiceUpdater {
 		return false;
 	}
 
-	protected boolean copyDatabaseIfDifferent(final File existingDB, final File newDB) throws IOException {
+	static class CopyDatabaseException extends Exception { }
+
+	protected boolean copyDatabaseIfDifferent(final File existingDB, final File newDB, final File backupDB) throws IOException, CopyDatabaseException {
 		if (filesEqual(existingDB, newDB)) {
 			LOGGER.info("[" + getClass().getSimpleName() + "] database unchanged.");
 			return false;
-		}
-
-		if (existingDB.isDirectory() && newDB.isDirectory()) {
-			moveDirectory(existingDB, newDB);
-			LOGGER.info("[" + getClass().getSimpleName() + "] Successfully updated database " + existingDB);
-			return true;
 		}
 
 		if (existingDB != null && existingDB.exists()) {
 			existingDB.setReadable(true, true);
 			existingDB.setWritable(true, false);
 
-			if (existingDB.isDirectory()) {
-				for (File file : existingDB.listFiles()) {
-					file.delete();
-				}
-				LOGGER.debug("[" + getClass().getSimpleName() + "] Successfully deleted database under: " + existingDB);
-			} else {
-				existingDB.delete();
+			if (!existingDB.renameTo(backupDB)) {
+				LOGGER.fatal("Unable to rename " + existingDB + " to backup " + backupDB + "; current working directory is " + System.getProperty("user.dir"));
+				throw new CopyDatabaseException();
 			}
 		}
 
@@ -304,24 +368,12 @@ public abstract class AbstractServiceUpdater {
 
 		if (!renamed) {
 			LOGGER.fatal("[" + getClass().getSimpleName() + "] Unable to rename " + newDB + " to " + existingDB.getAbsolutePath() + "; current working directory is " + System.getProperty("user.dir"));
-			return false;
+			backupDB.renameTo(existingDB); // revert backup to existing
+			throw new CopyDatabaseException();
 		}
 
-		LOGGER.info("[" + getClass().getSimpleName() + "] Successfully updated database " + existingDB);
+		LOGGER.info("[" + getClass().getSimpleName() + "] Successfully updated database " + existingDB + ", from " + newDB);
 		return true;
-	}
-
-	private void moveDirectory(final File existingDB, final File newDB) throws IOException {
-		LOGGER.info("[" + getClass().getSimpleName() + "] Moving Location database from: " + newDB + ", to: " + existingDB);
-
-		for (File file : existingDB.listFiles()) {
-			file.setReadable(true, true);
-			file.setWritable(true, false);
-			file.delete();
-		}
-
-		existingDB.delete();
-		Files.move(newDB.toPath(), existingDB.toPath(), StandardCopyOption.ATOMIC_MOVE);
 	}
 
 	protected boolean sourceCompressed = true;
