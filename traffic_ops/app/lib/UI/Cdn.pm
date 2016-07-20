@@ -311,7 +311,6 @@ sub aparameter {
     }
 
     if ( defined($rs) ) {
-
         while ( my $row = $rs->next ) {
             my $value = ($row->parameter->secure && !&is_admin($self)) ? "*********" : $row->parameter->value; # mask the param value if secure and you're not an admin
             my $secure = ($row->parameter->secure) ? "yes" : "no";

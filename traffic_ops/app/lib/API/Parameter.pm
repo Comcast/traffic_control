@@ -32,7 +32,7 @@ sub index {
 	my $rs_data = $self->db->resultset("ProfileParameter")->search( undef, { prefetch => [ 'parameter', 'profile' ] } );
 	my @data    = ();
 	while ( my $row = $rs_data->next ) {
-        my $value = ($row->parameter->secure && !&is_admin($self)) ? "*********" : $row->parameter->value; # mask the param value if secure and you're not an admin
+		my $value = ($row->parameter->secure && !&is_admin($self)) ? "*********" : $row->parameter->value; # mask the param value if secure and you're not an admin
 		push(
 			@data, {
 				"name"        => $row->parameter->name,
@@ -54,7 +54,7 @@ sub profile {
 	my $rs_data = $self->db->resultset("ProfileParameter")->search( { 'profile.name' => $profile_name }, { prefetch => [ 'parameter', 'profile' ] } );
 	my @data = ();
 	while ( my $row = $rs_data->next ) {
-        my $value = ($row->parameter->secure && !&is_admin($self)) ? "*********" : $row->parameter->value; # mask the param value if secure and you're not an admin
+		my $value = ($row->parameter->secure && !&is_admin($self)) ? "*********" : $row->parameter->value; # mask the param value if secure and you're not an admin
 		push(
 			@data, {
 				"name"        => $row->parameter->name,
