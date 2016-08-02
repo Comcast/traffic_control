@@ -26,6 +26,7 @@ use NetAddr::IP;
 use UI::DeliveryService;
 use JSON;
 use API::DeliveryService::KeysUrlSig qw(URL_SIG_KEYS_BUCKET);
+use URI;
 
 my $dispatch_table ||= {
 	"logs_xml.config"         => sub { logs_xml_dot_config(@_) },
@@ -829,7 +830,7 @@ sub hosting_dot_config {
 			}
 		}
 	}
-	my $disk_volume = 1;    # note this will actually be the RAM (RAM_Drive_Prefix) volume if there is no Drive_Prefix parameter.
+	my $disk_volume = 1; # note this will actually be the RAM (RAM_Drive_Prefix) volume if there is no Drive_Prefix parameter.
 	$text .= "hostname=*   volume=" . $disk_volume . "\n";
 
 	return $text;
@@ -1088,23 +1089,22 @@ sub parent_dot_config {
 			my $multi_site_origin           = defined( $ds->{multi_site_origin} ) ? $ds->{multi_site_origin} : 0;
 			my $multi_site_origin_algorithm = defined( $ds->{multi_site_origin_algorithm} ) ? $ds->{multi_site_origin_algorithm} : 0;
 
-			my $org_fqdn = $ds->{org};
-			$org_fqdn =~ s/https?:\/\///;
+			my $org_uri = URI->new($ds->{org});
 			if ( defined($os) ) {
 				my $pselect_alg = $self->profile_param_value( $server->profile->id, 'parent.config', 'algorithm', undef );
 				my $algorithm = "";
 				if ( defined($pselect_alg) ) {
 					$algorithm = "round_robin=$pselect_alg";
 				}
-				$text .= "dest_domain=$org_fqdn parent=$os $algorithm go_direct=true\n";
+				$text .= "dest_domain=" . $org_uri->host . " port=" . $org_uri->port . " parent=$os $algorithm go_direct=true\n";
 			}
 			elsif ($multi_site_origin) {
-				$text .= "dest_domain=$org_fqdn ";
+				$text .= "dest_domain=" . $org_uri->host . " port=" . $org_uri->port . " ";
 				my $pinfo = $self->parent_data($server);
 
 				my @ranked_parents = ();
-				if ( exists( $pinfo->{$org_fqdn} ) ) {
-					@ranked_parents = sort by_parent_rank @{ $pinfo->{$org_fqdn} };
+				if ( exists( $pinfo->{$org_uri->host} ) ) {
+					@ranked_parents = sort by_parent_rank @{ $pinfo->{$org_uri->host} };
 				}
 
 				my @parent_info;
@@ -1151,15 +1151,11 @@ sub parent_dot_config {
 			my $org = $remap->{org};
 			next if !defined $org || $org eq "";
 			next if $done{$org};
+			my $org_uri = URI->new($org);
 			if ( $remap->{type} eq "HTTP_NO_CACHE" || $remap->{type} eq "HTTP_LIVE" || $remap->{type} eq "DNS_LIVE" ) {
-				my $org_fqdn = $remap->{org};
-				$org_fqdn =~ s/https?:\/\///;
-				$text .= "dest_domain=" . $org_fqdn . " go_direct=true\n";
+				$text .= "dest_domain=" . $org_uri->host . " port=" . $org_uri->port . " go_direct=true\n";
 			}
 			else {
-				my $org_fqdn = $remap->{org};
-				$org_fqdn =~ s/https?:\/\///;
-
 				my $qstring = $self->profile_param_value( $server->profile->id, 'parent.config', 'qstring', undef );
 				$qstring = ( defined $qstring ) ? "qstring=$qstring" : '';
 
@@ -1185,7 +1181,8 @@ sub parent_dot_config {
 				}
 				my $round_robin = 'round_robin=consistent_hash';
 				my $go_direct   = 'go_direct=false';
-				$text .= "dest_domain=$org_fqdn $parents $secparents $round_robin $go_direct $qstring\n";
+				#$text .= "dest_domain=$org_fqdn $parents $secparents $round_robin $go_direct $qstring\n";
+				$text .= "dest_domain=" . $org_uri->host . " port=" . $org_uri->port . " $parents $secparents $round_robin $go_direct $qstring\n";
 			}
 			$done{$org} = 1;
 		}
