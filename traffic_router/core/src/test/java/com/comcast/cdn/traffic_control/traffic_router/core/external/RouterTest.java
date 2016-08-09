@@ -69,11 +69,11 @@ public class RouterTest {
 	private String deliveryServiceId;
 	private List<String> validLocations = new ArrayList<>();
 	private String deliveryServiceDomain;
-	private final String secureDeliveryServiceId = "https-test";
+	private final String secureDeliveryServiceId = "https-only-test";
 	private final String secureNoCertId = "https-nocert";
 	private List<String> secureValidLocations = new ArrayList<>();
 	private List<String> noCertValidLocations = new ArrayList<>();
-	private String secureDeliveryServiceDomain = "https-test.thecdn.example.com";
+	private String secureDeliveryServiceDomain = "https-only-test.thecdn.example.com";
 	private String noCertsDeliveryServiceDomain = "https-nocert.thecdn.example.com";
 	private String routerHttpPort = System.getProperty("routerHttpPort", "8888");
 	private String routerSecurePort = System.getProperty("routerSecurePort", "8443");
@@ -164,7 +164,7 @@ public class RouterTest {
 		assertThat(secureValidLocations.isEmpty(), equalTo(false));
 
 		httpClient = HttpClientBuilder.create()
-			.setSSLSocketFactory(new ClientSslSocketFactory("tr.https-test.thecdn.example.com"))
+			.setSSLSocketFactory(new ClientSslSocketFactory("tr.https-only-test.thecdn.example.com"))
 			.setSSLHostnameVerifier(new TestHostnameVerifier())
 			.disableRedirectHandling()
 			.build();
@@ -350,7 +350,7 @@ public class RouterTest {
 	}
 
 	// This is a workaround to get HttpClient to do the equivalent of
-	// curl -v --resolve 'tr.https-test.thecdn.cdnlab.example.com:8443:127.0.0.1' https://tr.https-test.thecdn.example.com:8443/foo.json
+	// curl -v --resolve 'tr.https-only-test.thecdn.cdnlab.example.com:8443:127.0.0.1' https://tr.https-only-test.thecdn.example.com:8443/foo.json
 	class ClientSslSocketFactory extends SSLConnectionSocketFactory {
 		private final String host;
 

@@ -14,7 +14,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
-        "https-test": ["edge-cache-001.https-test.thecdn.example.com"],
+        "https-only-test": ["edge-cache-001.https-only-test.thecdn.example.com"],
         "mm-test": ["edge-cache-001.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-001.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -48,7 +48,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
-        "https-test": ["edge-cache-001.https-test.thecdn.example.com"],
+        "https-only-test": ["edge-cache-001.https-only-test.thecdn.example.com"],
         "mm-test": ["edge-cache-001.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-001.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -82,7 +82,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
-        "https-test": ["edge-cache-002.https-test.thecdn.example.com"],
+        "https-only-test": ["edge-cache-002.https-only-test.thecdn.example.com"],
         "ds-08": ["edge-cache-002.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
         "test": ["edge-cache-002.test.thecdn.example.com"],
@@ -115,7 +115,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
-        "https-test": ["edge-cache-003.https-test.thecdn.example.com"],
+        "https-only-test": ["edge-cache-003.https-only-test.thecdn.example.com"],
         "mm-test": ["edge-cache-003.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-003.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -149,7 +149,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
-        "https-test": ["edge-cache-004.https-test.thecdn.example.com"],
+        "https-only-test": ["edge-cache-004.https-only-test.thecdn.example.com"],
         "mm-test": ["edge-cache-004.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-004.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -348,6 +348,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-010.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-010.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-010.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -381,6 +382,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-011.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-011.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-011.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -414,6 +416,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-012.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-012.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-012.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -447,6 +450,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-013.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-013.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-013.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -480,6 +484,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-014.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-014.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-014.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -513,6 +518,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-015.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-015.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-015.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -546,6 +552,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-016.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-016.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-016.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -579,6 +586,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-017.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-017.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-017.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -612,6 +620,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-018.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-018.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-018.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -645,6 +654,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-and-https-test": ["edge-cache-019.http-and-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-019.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-019.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -678,6 +688,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-020.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-020.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-020.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -711,6 +722,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-021.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-021.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-021.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -744,6 +756,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-022.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-022.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-022.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -777,6 +790,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-023.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-023.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-023.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -810,6 +824,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-024.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-024.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-024.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -843,6 +858,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-025.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-025.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-025.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -876,6 +892,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-026.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-026.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-026.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -909,6 +926,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-027.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-027.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-027.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -942,6 +960,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-028.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-028.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-028.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -975,6 +994,7 @@
       "hashCount": 1000,
       "interfaceName": "bond0",
       "deliveryServices": {
+        "http-to-https-test": ["edge-cache-026.http-to-https-test.thecdn.example.com"],
         "mm-test": ["edge-cache-029.mm-test.thecdn.example.com"],
         "ds-08": ["edge-cache-029.ds-08.thecdn.example.com"],
         "ds-07": ["edge.ds-07.thecdn.example.com"],
@@ -3371,9 +3391,10 @@
     }
   },
   "deliveryServices": {
-    "https-test": {
+    "https-only-test": {
       "sslEnabled": "true",
-      "domains": ["https-test.thecdn.example.com"],
+      "protocol": 1,
+      "domains": ["https-only-test.thecdn.example.com"],
       "missLocation": {
         "long": "-87.627778",
         "lat": "41.881944"
@@ -3395,7 +3416,83 @@
       "matchsets": [{
         "protocol": "HTTP",
         "matchlist": [{
-          "regex": ".*\\.https-test\\..*",
+          "regex": ".*\\.https-only-test\\..*",
+          "match-type": "HOST"
+        }]
+      }],
+      "soa": {
+        "expire": "604800",
+        "minimum": "30",
+        "admin": "admin@thecdn.example.com",
+        "retry": "7200",
+        "refresh": "28800"
+      },
+      "geolocationProvider": "maxmindGeolocationService"
+    },
+    "http-and-https-test": {
+      "sslEnabled": "true",
+      "protocol": 2,
+      "domains": ["http-and-https-test.thecdn.example.com"],
+      "missLocation": {
+        "long": "-87.627778",
+        "lat": "41.881944"
+      },
+      "ttls": {
+        "AAAA": "3600",
+        "SOA": "7200",
+        "A": "3600",
+        "NS": "3600"
+      },
+      "ttl": "3600",
+      "ip6RoutingEnabled": "false",
+      "dispersion": {
+        "limit": 1,
+        "shuffled": "true"
+      },
+      "coverageZoneOnly": "false",
+      "regionalGeoBlocking": "false",
+      "matchsets": [{
+        "protocol": "HTTP",
+        "matchlist": [{
+          "regex": ".*\\.http-and-https-test\\..*",
+          "match-type": "HOST"
+        }]
+      }],
+      "soa": {
+        "expire": "604800",
+        "minimum": "30",
+        "admin": "admin@thecdn.example.com",
+        "retry": "7200",
+        "refresh": "28800"
+      },
+      "geolocationProvider": "maxmindGeolocationService"
+    },
+    "http-to-https-test": {
+      "sslEnabled": "true",
+      "protocol": 3,
+      "domains": ["http-to-https-test.thecdn.example.com"],
+      "missLocation": {
+        "long": "-87.627778",
+        "lat": "41.881944"
+      },
+      "ttls": {
+        "AAAA": "3600",
+        "SOA": "7200",
+        "A": "3600",
+        "NS": "3600"
+      },
+      "ttl": "3600",
+      "ip6RoutingEnabled": "false",
+      "dispersion": {
+        "limit": 1,
+        "shuffled": "true"
+      },
+      "coverageZoneOnly": "false",
+      "regionalGeoBlocking": "false",
+      "matchsets": [{
+        "protocol": "HTTP",
+        "matchlist": [{
+          "regex": ".*\\.http-to-https-test\\..*",
           "match-type": "HOST"
         }]
       }],
@@ -3846,6 +3943,7 @@
     },
     "https-nocert": {
       "sslEnabled": "true",
+      "protocol": 1,
       "domains": ["https-nocert.thecdn.example.com"],
       "missLocation": {
         "long": "-87.627778",
