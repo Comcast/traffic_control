@@ -35,6 +35,7 @@ import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
@@ -275,6 +276,22 @@ public class RouterTest {
 	}
 
 	@Test
+	public void itRejectsHttpRequestsToHttpsOnlyDeliveryService() throws Exception {
+		HttpGet httpGet = new HttpGet("http://localhost:" + routerHttpPort + "/stuff?fakeClientIpAddress=12.34.56.78");
+		httpGet.addHeader("Host", "tr." + secureDeliveryServiceId + ".thecdn.example.com");
+		CloseableHttpResponse response = null;
+
+		try {
+			response = httpClient.execute(httpGet);
+			assertThat(response.getStatusLine().getStatusCode(), equalTo(503));
+		} finally {
+			if (response != null) response.close();
+		}
+	}
+
+	// This test will be added back as soon as TR support for http to https protocol is added
+	@Ignore
+	@Test
 	public void itRedirectsFromHttpToHttps() throws Exception {
 		HttpGet httpGet = new HttpGet("http://localhost:" + routerHttpPort + "/stuff?fakeClientIpAddress=12.34.56.78");
 		httpGet.addHeader("Host", "tr." + secureDeliveryServiceId + ".bar");
@@ -312,10 +329,7 @@ public class RouterTest {
 
 		httpGet.addHeader("Host", "tr.https-nocert.bar");
 		try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
-			assertThat(response.getStatusLine().getStatusCode(), equalTo(302));
-			String location = response.getFirstHeader("Location").getValue();
-			assertThat(location, startsWith("http://edge-cache-09"));
-			assertThat(location, endsWith("https-nocert.thecdn.example.com:8090/stuff?fakeClientIpAddress=12.34.56.78"));
+			assertThat(response.getStatusLine().getStatusCode(), equalTo(503));
 		}
 
 		httpClient = HttpClientBuilder.create()
