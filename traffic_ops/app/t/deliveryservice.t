@@ -92,14 +92,14 @@ ok $t->post_ok(
 		'ds.signed'                      => '0',
 		'ds.type'                        => '8',
 		'ds.xml_id'                      => 'tst_xml_id_1',
-		'ds.protocol'                    => '0',
+		'ds.protocol'                    => '3',
 		'ds.edge_header_rewrite'         => '',
 		'ds.mid_header_rewrite'          => '',
 		'ds.regex_remap'                 => '',
 		'ds.origin_shield'               => '',
 		'ds.range_request_handling'      => '0',
 		'ds.ipv6_routing_enabled'        => '1',
-		'ds.display_name'                => 'display name',
+		'ds.display_name'                => 'display name 1',
 		'ds.regional_geo_blocking'       => '1',
 	}
 )->status_is(302), "create HTTP delivery service";
@@ -208,8 +208,8 @@ ok $t->post_ok(
 #Validate create
 # Note the 4 is the index, not the id.
 #This can potentially make the tests fragile if more ds's are added to the fixtures...
-ok $t->get_ok('/datadeliveryservice')->status_is(200)->json_is( '/4/dscp' => '40' )->json_is( '/4/active' => '1' )->json_is( '/4/protocol' => '0' )
-	->json_is( '/4/display_name' => 'display name' )->json_is( '/4/regional_geo_blocking' => '1' )->json_is( '/0/regional_geo_blocking' => '1' )
+ok $t->get_ok('/datadeliveryservice')->status_is(200)->json_is( '/4/dscp' => '40' )->json_is( '/4/active' => '1' )->json_is( '/4/protocol' => '3' )
+	->json_is( '/4/display_name' => 'display name 1' )->json_is( '/4/regional_geo_blocking' => '1' )->json_is( '/0/regional_geo_blocking' => '1' )
 	->json_is( '/1/regional_geo_blocking' => '0' ),
 	"validate delivery services were created";
 

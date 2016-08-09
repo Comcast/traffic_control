@@ -16,7 +16,10 @@
 
 package com.comcast.cdn.traffic_control.traffic_router.core;
 
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 
@@ -37,6 +40,12 @@ public class TestBase {
 		if (context != null) {
 			return context;
 		}
+
+		ConsoleAppender console = new ConsoleAppender();
+		console.setLayout(new PatternLayout("%-5p %d{yyyy-MM-dd'T'HH:mm:ss.SSS} [%t] %c - %m%n"));
+		console.setThreshold(Level.WARN);
+		console.activateOptions();
+		Logger.getRootLogger().addAppender(console);
 
 		LOGGER.warn("Initializing context before running integration tests");
 		context = new FileSystemXmlApplicationContext("src/main/webapp/WEB-INF/applicationContext.xml");

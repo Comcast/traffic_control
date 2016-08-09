@@ -35,6 +35,7 @@ import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
@@ -69,11 +70,11 @@ public class RouterTest {
 	private String deliveryServiceId;
 	private List<String> validLocations = new ArrayList<>();
 	private String deliveryServiceDomain;
-	private final String secureDeliveryServiceId = "https-test";
+	private final String secureDeliveryServiceId = "https-only-test";
 	private final String secureNoCertId = "https-nocert";
 	private List<String> secureValidLocations = new ArrayList<>();
 	private List<String> noCertValidLocations = new ArrayList<>();
-	private String secureDeliveryServiceDomain = "https-test.thecdn.example.com";
+	private String secureDeliveryServiceDomain = "https-only-test.thecdn.example.com";
 	private String noCertsDeliveryServiceDomain = "https-nocert.thecdn.example.com";
 	private String routerHttpPort = System.getProperty("routerHttpPort", "8888");
 	private String routerSecurePort = System.getProperty("routerSecurePort", "8443");
@@ -164,7 +165,7 @@ public class RouterTest {
 		assertThat(secureValidLocations.isEmpty(), equalTo(false));
 
 		httpClient = HttpClientBuilder.create()
-			.setSSLSocketFactory(new ClientSslSocketFactory("tr.https-test.thecdn.example.com"))
+			.setSSLSocketFactory(new ClientSslSocketFactory("tr.https-only-test.thecdn.example.com"))
 			.setSSLHostnameVerifier(new TestHostnameVerifier())
 			.disableRedirectHandling()
 			.build();
@@ -275,6 +276,22 @@ public class RouterTest {
 	}
 
 	@Test
+	public void itRejectsHttpRequestsToHttpsOnlyDeliveryService() throws Exception {
+		HttpGet httpGet = new HttpGet("http://localhost:" + routerHttpPort + "/stuff?fakeClientIpAddress=12.34.56.78");
+		httpGet.addHeader("Host", "tr." + secureDeliveryServiceId + ".thecdn.example.com");
+		CloseableHttpResponse response = null;
+
+		try {
+			response = httpClient.execute(httpGet);
+			assertThat(response.getStatusLine().getStatusCode(), equalTo(503));
+		} finally {
+			if (response != null) response.close();
+		}
+	}
+
+	// This test will be added back as soon as TR support for http to https protocol is added
+	@Ignore
+	@Test
 	public void itRedirectsFromHttpToHttps() throws Exception {
 		HttpGet httpGet = new HttpGet("http://localhost:" + routerHttpPort + "/stuff?fakeClientIpAddress=12.34.56.78");
 		httpGet.addHeader("Host", "tr." + secureDeliveryServiceId + ".bar");
@@ -312,10 +329,7 @@ public class RouterTest {
 
 		httpGet.addHeader("Host", "tr.https-nocert.bar");
 		try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
-			assertThat(response.getStatusLine().getStatusCode(), equalTo(302));
-			String location = response.getFirstHeader("Location").getValue();
-			assertThat(location, startsWith("http://edge-cache-09"));
-			assertThat(location, endsWith("https-nocert.thecdn.example.com:8090/stuff?fakeClientIpAddress=12.34.56.78"));
+			assertThat(response.getStatusLine().getStatusCode(), equalTo(503));
 		}
 
 		httpClient = HttpClientBuilder.create()
@@ -350,7 +364,7 @@ public class RouterTest {
 	}
 
 	// This is a workaround to get HttpClient to do the equivalent of
-	// curl -v --resolve 'tr.https-test.thecdn.cdnlab.example.com:8443:127.0.0.1' https://tr.https-test.thecdn.example.com:8443/foo.json
+	// curl -v --resolve 'tr.https-only-test.thecdn.cdnlab.example.com:8443:127.0.0.1' https://tr.https-only-test.thecdn.example.com:8443/foo.json
 	class ClientSslSocketFactory extends SSLConnectionSocketFactory {
 		private final String host;
 

@@ -84,6 +84,7 @@ public class DeliveryService {
 	private final boolean regionalGeoEnabled;
 	private final String geolocationProvider;
 	private final boolean sslEnabled;
+	private boolean rejectHttp = false;
 	private static final int STANDARD_HTTP_PORT = 80;
 	private static final int STANDARD_HTTPS_PORT = 443;
 	private boolean hasX509Cert = false;
@@ -132,6 +133,10 @@ public class DeliveryService {
 			LOGGER.info("DeliveryService '" + id + "' will use default geolocation provider Maxmind");
 		}
 		sslEnabled = dsJo.optBoolean("sslEnabled", false);
+
+		if (dsJo.has("protocol") && dsJo.optInt("protocol", -1) == 1) {
+			rejectHttp = true;
+		}
 	}
 
 	public String getId() {
@@ -571,5 +576,9 @@ public class DeliveryService {
 
 	public boolean isSslReady() {
 		return sslEnabled && hasX509Cert;
+	}
+
+	public boolean isHttpRejected() {
+		return rejectHttp;
 	}
 }
