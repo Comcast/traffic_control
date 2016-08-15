@@ -1,4 +1,4 @@
-package Fixtures::FederationResolver;
+package Fixtures::StatsSummary;
 #
 # Copyright 2015 Comcast Cable Communications Management, LLC
 #
@@ -14,44 +14,20 @@ package Fixtures::FederationResolver;
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#
-#
 use Moose;
 extends 'DBIx::Class::EasyFixture';
 use namespace::autoclean;
-use Digest::SHA1 qw(sha1_hex);
 
 my %definition_for = (
 	## id => 1
-	ipv4_resolver1 => {
-		new   => 'FederationResolver',
+	stat1 => {
+		new   => 'StatsSummary',
 		using => {
-			ip_address => "127.0.0.1/32",
-			type       => 24,
-		},
-	},
-	## id => 2
-	ipv4_resolver2 => {
-		new   => 'FederationResolver',
-		using => {
-			ip_address => "127.0.0.2/32",
-			type       => 24,
-		},
-	},
-	## id => 3
-	ipv6_resolver1 => {
-		new   => 'FederationResolver',
-		using => {
-			ip_address => "FE80::0202:B3FF:FE1E:8329/128",
-			type       => 25,
-		},
-	},
-	## id => 4
-	ipv6_resolver2 => {
-		new   => 'FederationResolver',
-		using => {
-			ip_address => "FE80::0202:B3FF:FE1E:8330/128",
-			type       => 25,
+			cdn_name => "cdn1",
+      deliveryservice_name => "test-ds1",
+      stat_name => "test_stat",
+      stat_value => "1",
+      stat_date => "2016-07-25"
 		},
 	},
 );
@@ -61,11 +37,11 @@ sub get_definition {
 	return $definition_for{$name};
 }
 
-sub all_fixture_names {
-	# sort by db ip_address to guarantee insertion order
-	return (sort { $definition_for{$a}{using}{ip_address} cmp $definition_for{$b}{using}{ip_address} } keys %definition_for);
-}
 
+sub all_fixture_names {
+	# sort by db stat_name to guarantee insertion order
+	return (sort { $definition_for{$a}{using}{stat_name} cmp $definition_for{$b}{using}{stat_name} } keys %definition_for);
+}
 __PACKAGE__->meta->make_immutable;
 
 1;

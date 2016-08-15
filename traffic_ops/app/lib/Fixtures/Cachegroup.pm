@@ -19,25 +19,25 @@ extends 'DBIx::Class::EasyFixture';
 use namespace::autoclean;
 
 my %definition_for = (
+	## id => 1
 	mid_northeast => {
 		new   => 'Cachegroup',
 		using => {
-			id                   => 1,
 			name                 => 'mid-northeast-group',
 			short_name           => 'ne',
-			type                 => 2,
+			type                 => 18,
 			latitude             => 120,
 			longitude            => 120,
 			parent_cachegroup_id => undef,
 		},
 	},
+	## id => 2
 	mid_northwest => {
 		new   => 'Cachegroup',
 		using => {
-			id                   => 2,
 			name                 => 'mid-northwest-group',
 			short_name           => 'nw',
-			type                 => 2,
+			type                 => 18,
 			latitude             => 100,
 			longitude            => 100,
 			parent_cachegroup_id => 1,
@@ -52,9 +52,13 @@ sub get_definition {
 
 sub all_fixture_names {
 
-	# sort by db id to guarantee insertion order
-	return sort { $definition_for{$a}{using}{id} <=> $definition_for{$b}{using}{id} } keys %definition_for;
+	# sort by db name to guarantee insertion order
+	return (sort { $definition_for{$a}{using}{name} cmp $definition_for{$b}{using}{name} } keys %definition_for);
 }
+
+# sub all_fixture_names {
+# 	return keys %definition_for;
+# }
 
 __PACKAGE__->meta->make_immutable;
 
