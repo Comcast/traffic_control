@@ -475,8 +475,19 @@ public class TrafficRouter {
 			return routeResult;
 		}
 
+		return onCacheSelectedInHttpRoute(request, deliveryService, caches, routeResult, track);
+	}
+
+	private HTTPRouteResult onCacheSelectedInHttpRoute(final HTTPRequest request, final DeliveryService deliveryService, final List<Cache> caches,
+			final HTTPRouteResult routeResult, final Track track) throws MalformedURLException {
+
 		final boolean isShuffled = deliveryService.getDispersion().getLimit() > 1 && deliveryService.getDispersion().isShuffled();
 		final Cache cache = consistentHasher.selectHashable(caches, request.getPath(), isShuffled);
+
+		if (track.getResult() == ResultType.GEO_REDIRECT) {
+			routeResult.setUrl(new URL(deliveryService.createURIString(request, deliveryService.getGeoRedirectFile(), cache)));
+			return routeResult;
+		}
 
 		if (deliveryService.isRegionalGeoEnabled()) {
 			RegionalGeo.enforce(this, request, deliveryService, cache, routeResult, track);
