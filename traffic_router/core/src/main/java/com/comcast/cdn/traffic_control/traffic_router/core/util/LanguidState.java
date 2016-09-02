@@ -33,6 +33,7 @@ public class LanguidState {
 	private int apiPort = 0;
 	private int securePort = 0;
 
+	@SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
 	public void init() {
 		if (trafficRouterManager == null || trafficRouterManager.getTrafficRouter() == null) {
 			return;

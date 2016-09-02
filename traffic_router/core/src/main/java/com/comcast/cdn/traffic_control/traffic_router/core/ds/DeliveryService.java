@@ -93,6 +93,7 @@ public class DeliveryService {
 	private final boolean acceptHttps;
 	private final boolean redirectToHttps;
 
+	@SuppressWarnings("PMD.SimplifiedTernary")
 	public DeliveryService(final String id, final JSONObject dsJo) throws JSONException {
 		this.id = id;
 		this.props = dsJo;

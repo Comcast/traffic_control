@@ -113,6 +113,7 @@ public class TrafficRouter {
 	 *            the DeliveryService to check
 	 * @return collection of supported caches
 	 */
+	@SuppressWarnings("PMD.SimplifiedTernary")
 	public List<Cache> getSupportingCaches(final List<Cache> caches, final DeliveryService ds) {
 		final List<Cache> supportingCaches = new ArrayList<Cache>();
 

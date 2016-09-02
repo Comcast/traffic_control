@@ -5,23 +5,30 @@ MAINTAINER Dan Kirkwood
 RUN	yum -y install \
 		epel-release \
 		git \
-		rpm-build && \
-	yum -y clean all
+		rpm-build
 
+# all ENV vars can be controlled by, e.g. `docker run -e BRANCH=1.6.x <image>`
 ENV GITREPO=https://github.com/Comcast/traffic_control
 ENV BRANCH=master
 
+#############################################################################
 # Above are common for all sub-projects.
 
-### traffic_monitor specific
 RUN	yum -y install \
-		which && \
+		which wget && \
 	yum -y clean all
 
+### java
 WORKDIR /opt
-RUN curl -L -b "oraclelicense=a" http://download.oracle.com/otn-pub/java/jdk/8u101-b13/jdk-8u101-linux-x64.tar.gz | tar xzf - && \
-    curl -L http://mirror.nexcess.net/apache/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz | tar xzf -
-RUN ln -s jdk* java && ln -s apache-maven* maven
+RUN curl -L -b "oraclelicense=a" http://download.oracle.com/otn-pub/java/jdk/8u101-b13/jdk-8u101-linux-x64.tar.gz | tar xzf -
+RUN curl -L 'http://www.verisignlabs.com/dnssec-tools/packages/jdnssec-tools-0.12.tar.gz' | tar xzf -
+RUN ln -s jdk* java
+
+RUN mkdir -p ~/.m2/repository/jdnssec/jdnssec-tools/0.12
+RUN cp jdnssec-tools-0.12/lib/jdnssec-tools.jar ~/.m2/repository/jdnssec/jdnssec-tools/0.12/jdnssec-tools-0.12.jar
+
+RUN curl -L -O https://services.gradle.org/distributions/gradle-3.0-bin.zip
+RUN unzip -q gradle-3.0-bin.zip
 
 RUN alternatives --install /usr/bin/java java /opt/java/bin/java 2 && \
     alternatives --install /usr/bin/jar jar /opt/java/bin/jar 2 && \
@@ -29,14 +36,19 @@ RUN alternatives --install /usr/bin/java java /opt/java/bin/java 2 && \
     alternatives --set java /opt/java/bin/java && \
     alternatives --set jar /opt/java/bin/jar && \
     alternatives --set javac /opt/java/bin/javac && \
-    alternatives --install /usr/bin/mvn mvn /opt/maven/bin/mvn 1
-WORKDIR /
+    alternatives --install /usr/bin/gradle gradle /opt/gradle-3.0/bin/gradle 1
 ###
 
-VOLUME ./artifacts:/artifacts
+RUN gradle --version
+RUN java -version
 
-ADD run-build.sh .
+RUN	mkdir -p /dist
+VOLUME	/dist
 
-CMD ./run-build.sh traffic_monitor 2>&1 | tee /artifacts/build-traffic_monitor.log
-
-# vi:syntax=Dockerfile
+WORKDIR /
+CMD	git clone --branch $BRANCH $GITREPO && cd traffic_control/traffic_router && \
+  echo $MONITOR_HOSTS > core/src/test/conf/traffic_monitor.properties && \
+  echo traffic_ops.username=$OPS_USER > core/src/test/conf/traffic_ops.properties && \
+  echo traffic_ops.password=$OPS_PASSWORD >> core/src/test/conf/traffic_ops.properties && \
+	./gradlew && \
+	cp -f dist/* /dist/.

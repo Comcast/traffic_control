@@ -1,0 +1,15 @@
+
+description = ''
+
+compileTestJava {
+    // compilerArgs will only work with fork=true and executable = javac
+    // otherwise javac api is called and it has no effect
+    options.compilerArgs << '-XDignore.symbol.file'
+    options.fork = true
+    options.forkOptions.executable = 'javac'
+}
+
+dependencies {
+    compile group: 'org.apache.tomcat', name: 'juli', version:'6.0.33'
+}
+
