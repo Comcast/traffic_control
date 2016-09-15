@@ -1,19 +1,37 @@
+/*
+ * Copyright 2015 Comcast Cable Communications Management, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.util.CidrAddress;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.ComparableTreeSet;
 
+import java.util.Set;
+
 public class FederationMapping implements Comparable<FederationMapping> {
     private final String cname;
     private final int ttl;
-    private final ComparableTreeSet<CidrAddress> resolve4;
-    private final ComparableTreeSet<CidrAddress> resolve6;
+    private final ComparableTreeSet<CidrAddress> resolve4 = new ComparableTreeSet<CidrAddress>();
+    private final ComparableTreeSet<CidrAddress> resolve6 = new ComparableTreeSet<CidrAddress>();
 
     public FederationMapping(final String cname, final int ttl, final ComparableTreeSet<CidrAddress> resolve4, final ComparableTreeSet<CidrAddress> resolve6) {
         this.cname = cname;
         this.ttl = ttl;
-        this.resolve4 = resolve4;
-        this.resolve6 = resolve6;
+        this.resolve4.addAll(resolve4);
+        this.resolve6.addAll(resolve6);
     }
 
     public String getCname() {
@@ -30,6 +48,10 @@ public class FederationMapping implements Comparable<FederationMapping> {
 
     public ComparableTreeSet<CidrAddress> getResolve6() {
         return resolve6;
+    }
+
+    public ComparableTreeSet<CidrAddress> getResolveAddresses(final CidrAddress cidrAddress) {
+        return (cidrAddress.isIpV6()) ? getResolve6() : getResolve4();
     }
 
     @Override
@@ -88,4 +110,32 @@ public class FederationMapping implements Comparable<FederationMapping> {
 
         return resolve6.compareTo(other.resolve6);
     }
+
+    public boolean containsCidrAddress(final CidrAddress cidrAddress) {
+	    return resolve4.contains(cidrAddress) || resolve6.contains(cidrAddress);
+    }
+
+    public ComparableTreeSet<CidrAddress> getResolve4Matches(final CidrAddress cidrAddress) {
+        return getResolveMatches(resolve4, cidrAddress);
+    }
+
+    public ComparableTreeSet<CidrAddress> getResolve6Matches(final CidrAddress cidrAddress) {
+        return getResolveMatches(resolve6, cidrAddress);
+    }
+
+    protected ComparableTreeSet<CidrAddress> getResolveMatches(final Set<CidrAddress> resolves, final CidrAddress cidrAddress) {
+        final ComparableTreeSet<CidrAddress> cidrAddresses = new ComparableTreeSet<CidrAddress>();
+
+            for (final CidrAddress cidrAddressResolve4 : resolves) {
+            if (cidrAddressResolve4.includesAddress(cidrAddress)) {
+                cidrAddresses.add(cidrAddressResolve4);
+            }
+        }
+
+        return cidrAddresses;
+    }
+
+	public FederationMapping createFilteredMapping(final CidrAddress cidrAddress) {
+		return new FederationMapping(cname, ttl, getResolve4Matches(cidrAddress), getResolve6Matches(cidrAddress));
+	}
 }

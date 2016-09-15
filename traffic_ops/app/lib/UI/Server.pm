@@ -65,15 +65,18 @@ sub view {
 }
 
 sub server_by_id {
-	my $self       = shift;
-	my $serverid   = $self->param('id');
-	my $server_row = $self->db->resultset("Server")->search( { id => $serverid } )->single;
+	my $self     = shift;
+	my $serverid = $self->param('id');
+	my $server_row =
+		$self->db->resultset("Server")->search( { id => $serverid } )->single;
 	if ( defined($server_row) ) {
 		my %data = (
 			"id"             => $server_row->id,
 			"host_name"      => $server_row->host_name,
 			"domain_name"    => $server_row->domain_name,
+			"guid"           => $server_row->guid,
 			"tcp_port"       => $server_row->tcp_port,
+			"https_port"       => $server_row->https_port,
 			"xmpp_id"        => $server_row->xmpp_id,
 			"xmpp_passwd"    => $server_row->xmpp_passwd,
 			"interface_name" => $server_row->interface_name,
@@ -119,6 +122,7 @@ sub getserverdata {
 				"host_name"        => $row->host_name,
 				"domain_name"      => $row->domain_name,
 				"tcp_port"         => $row->tcp_port,
+				"https_port"         => $row->https_port,
 				"xmpp_id"          => $row->xmpp_id,
 				"xmpp_passwd"      => "**********",
 				"interface_name"   => $row->interface_name,
@@ -131,9 +135,11 @@ sub getserverdata {
 				"cdn"              => $cdn_name,
 				"cachegroup"       => $row->cachegroup->name,
 				"phys_location"    => $row->phys_location->name,
+				"guid"             => $row->guid,
 				"rack"             => $row->rack,
 				"type"             => $row->type->name,
 				"status"           => $row->status->name,
+				"offline_reason"   => $row->offline_reason,
 				"profile"          => $row->profile->name,
 				"mgmt_ip_address"  => $row->mgmt_ip_address,
 				"mgmt_ip_netmask"  => $row->mgmt_ip_netmask,
@@ -160,7 +166,11 @@ sub serverdetail {
 	my @data;
 	my $select = undef;
 	$select = $self->param('select') if ( defined $self->param('select') );
-	my $rs_data = $self->db->resultset('Server')->search( undef, { prefetch => [ 'cdn', 'cachegroup', 'type', 'profile', 'status', 'phys_location' ], } );
+	my $rs_data = $self->db->resultset('Server')->search(
+		undef, {
+			prefetch => [ 'cdn', 'cachegroup', 'type', 'profile', 'status', 'phys_location' ],
+		}
+	);
 	while ( my $row = $rs_data->next ) {
 		my $cdn_name = defined( $row->cdn_id ) ? $row->cdn->name : "";
 		my $fqdn = $row->host_name . "." . $row->domain_name;
@@ -170,6 +180,7 @@ sub serverdetail {
 			"host_name"        => $row->host_name,
 			"domain_name"      => $row->domain_name,
 			"tcp_port"         => $row->tcp_port,
+			"https_port"         => $row->https_port,
 			"xmpp_id"          => $row->xmpp_id,
 			"xmpp_passwd"      => $row->xmpp_passwd,
 			"interface_name"   => $row->interface_name,
@@ -182,9 +193,11 @@ sub serverdetail {
 			"cdn"              => $cdn_name,
 			"cachegroup"       => $row->cachegroup->name,
 			"phys_location"    => $row->phys_location->name,
+			"guid"             => $row->guid,
 			"rack"             => $row->rack,
 			"type"             => $row->type->name,
 			"status"           => $row->status->name,
+			"offline_reason"   => $row->offline_reason,
 			"profile"          => $row->profile->name,
 			"mgmt_ip_address"  => $row->mgmt_ip_address,
 			"mgmt_ip_netmask"  => $row->mgmt_ip_netmask,
@@ -198,7 +211,8 @@ sub serverdetail {
 			"router_port_name" => $row->router_port_name,
 		};
 		my $id = $row->id;
-		my $rs_hwinfo_data = $self->db->resultset('Hwinfo')->search( { 'serverid' => $id } );
+		my $rs_hwinfo_data =
+			$self->db->resultset('Hwinfo')->search( { 'serverid' => $id } );
 		while ( my $hwinfo_row = $rs_hwinfo_data->next ) {
 			$serv->{ $hwinfo_row->description } = $hwinfo_row->val;
 		}
@@ -216,8 +230,15 @@ sub edge_ds_status {
 
 	my %servers_in_cg = ();
 	my %servers_in_ds = ();
-	my $etype         = &type_id( $self, 'EDGE' );
-	my $rs_servers_cg = $self->db->resultset('Server')->search( { cachegroup => $cachegroup_id, profile => $profile_id, type => $etype } );
+	my @etypes        = &type_ids( $self, 'EDGE%', 'server' );
+	my $rs_servers_cg = $self->db->resultset('Server')->search(
+		{
+			cachegroup => $cachegroup_id,
+			profile    => $profile_id,
+			type       => { -in => \@etypes }
+		}
+	);
+
 	while ( my $row = $rs_servers_cg->next ) {
 		$servers_in_cg{ $row->host_name } = $row->id;
 
@@ -257,7 +278,8 @@ sub delete {
 		my $delete = $self->db->resultset('Server')->search( { id => $id } );
 		my $host_name = $delete->get_column('host_name')->single();
 		$delete->delete();
-		$delete = $self->db->resultset('Servercheck')->search( { server => $id } );
+		$delete =
+			$self->db->resultset('Servercheck')->search( { server => $id } );
 		$delete->delete();
 		&log( $self, "Delete server with id:" . $id . " named " . $host_name, "UICHANGE" );
 	}
@@ -266,26 +288,28 @@ sub delete {
 
 sub check_server_input_cgi {
 	my $self         = shift;
+	my $id         	 = shift;
 	my $paramHashRef = {};
 	my $err          = undef;
-	foreach my $requiredParam (qw/host_name domain_name ip_address ip_netmask ip_gateway interface_mtu interface_name cdn cachegroup type profile/) {
+	foreach my $requiredParam (qw/host_name domain_name ip_address interface_name ip_netmask ip_gateway interface_mtu cdn cachegroup type profile offline_reason/) {
 		$paramHashRef->{$requiredParam} = $self->param($requiredParam);
 	}
 	foreach my $optionalParam (
-		qw/ilo_ip_address ilo_ip_netmask ilo_ip_gateway mgmt_ip_address mgmt_ip_netmask mgmt_ip_gateway ip6_address ip6_gateway tcp_port/)
+		qw/ilo_ip_address ilo_ip_netmask ilo_ip_gateway mgmt_ip_address mgmt_ip_netmask mgmt_ip_gateway ip6_address ip6_gateway tcp_port https_port/)
 	{
 		$paramHashRef->{$optionalParam} = $self->param($optionalParam);
 	}
 
 	$paramHashRef = &trim_whitespace($paramHashRef);
 
-	$err = &check_server_input( $self, $paramHashRef );
+	$err = &check_server_input( $self, $paramHashRef, $id );
 	return $err;
 }
 
 sub check_server_input {
 	my $self              = shift;
 	my $paramHashRef      = shift;
+	my $id                = shift;
 	my $sep               = "__NEWLINE__";    # the line separator sub that with \n in the .ep javascript
 	my $err               = '';
 	my $errorCSVLineDelim = '';
@@ -301,10 +325,12 @@ sub check_server_input {
 
 	# then, check the mandatory parameters for 'existence'. The error may be a bit cryptic to the user, but
 	# I don't want to write too much code around it.
-	foreach my $param (qw/host_name domain_name ip_address ip_netmask ip_gateway interface_mtu interface_name cdn cachegroup type profile/) {
+	foreach my $param (qw/host_name domain_name ip_address interface_name ip_netmask ip_gateway interface_mtu cdn cachegroup type profile offline_reason/) {
 
 		#print "$param -> " . $paramHashRef->{$param} . "\n";
-		if ( !defined( $paramHashRef->{$param} ) || $paramHashRef->{$param} eq "" ) {
+		if ( !defined( $paramHashRef->{$param} )
+			|| $paramHashRef->{$param} eq "" )
+		{
 			$err .= $param . " is a required field.";
 			if ( defined( $paramHashRef->{'csv_line_number'} ) ) {
 				$err = '</li><li>' . $errorCSVLineDelim . '[LINE #:' . $paramHashRef->{'csv_line_number'} . ']:  ' . $err . '\n';
@@ -337,7 +363,14 @@ sub check_server_input {
 		}
 	}
 
-	if ( !&is_netmask( $paramHashRef->{'ip_netmask'} ) ) {
+	my $ip_used =
+		$self->db->resultset('Server')
+			->search( { -and => [ ip_address => $paramHashRef->{'ip_address'}, profile => $paramHashRef->{'profile'}, id => { '!=' => $id } ] })->single();
+	if ( $ip_used ) {
+		$err .= $paramHashRef->{'ip_address'} . " is already being used by a server with the same profile" . $sep;
+	}
+
+	if ( defined( $paramHashRef->{'ip_netmask'} ) && $paramHashRef->{'ip_netmask'} ne "" && !&is_netmask( $paramHashRef->{'ip_netmask'} ) ) {
 		$err .= $paramHashRef->{'ip_netmask'} . " is not a valid netmask (I think... ;-)" . $sep;
 	}
 	if ( $paramHashRef->{'ilo_ip_netmask'} ne ""
@@ -352,17 +385,30 @@ sub check_server_input {
 	}
 	my $ipstr1 = $paramHashRef->{'ip_address'} . "/" . $paramHashRef->{'ip_netmask'};
 	my $ipstr2 = $paramHashRef->{'ip_gateway'} . "/" . $paramHashRef->{'ip_netmask'};
-	if ( !&in_same_net( $ipstr1, $ipstr2 ) ) {
+	if ( defined( $paramHashRef->{'ip_netmask'} ) && $paramHashRef->{'ip_netmask'} ne "" && !&in_same_net( $ipstr1, $ipstr2 ) ) {
 		$err .= $paramHashRef->{'ip_address'} . " and " . $paramHashRef->{'ip_gateway'} . " are not in same network" . $sep;
 	}
 
-	if ( defined( $paramHashRef->{'ip6_address'} )
-		&& $paramHashRef->{'ip6_address'} ne "" )
+	if ( defined( $paramHashRef->{'ip6_address'} ) && $paramHashRef->{'ip6_address'} ne "" ) {
+		my $ip6_used =
+			$self->db->resultset('Server')
+				->search( { -and => [ ip6_address => $paramHashRef->{'ip6_address'}, profile => $paramHashRef->{'profile'}, id => { '!=' => $id } ] })->single();
+		if ( $ip6_used ) {
+			$err .= $paramHashRef->{'ip6_address'} . " is already being used by a server with the same profile" . $sep;
+		}
+	}
+
+	if (
+		( defined( $paramHashRef->{'ip6_address'} ) && $paramHashRef->{'ip6_address'} ne "" )
+		|| ( defined( $paramHashRef->{'ip6_gateway'} )
+			&& $paramHashRef->{'ip6_gateway'} ne "" )
+		)
 	{
-		if (   !&is_ip6address( $paramHashRef->{'ip6_address'} )
-			|| !&is_ip6address( $paramHashRef->{'ip6_gateway'} ) )
-		{
-			$err .= $paramHashRef->{'ip6_address'} . " is not a valid IPv6 address " . $sep;
+		if ( !&is_ip6address( $paramHashRef->{'ip6_address'} ) ) {
+			$err .= "Address " . $paramHashRef->{'ip6_address'} . " is not a valid IPv6 address " . $sep;
+		}
+		if ( !&is_ip6address( $paramHashRef->{'ip6_gateway'} ) ) {
+			$err .= "Gateway " . $paramHashRef->{'ip6_gateway'} . " is not a valid IPv6 address " . $sep;
 		}
 		if ( !&in_same_net( $paramHashRef->{'ip6_address'}, $paramHashRef->{'ip6_gateway'} ) ) {
 			$err .= $paramHashRef->{'ip6_address'} . " and " . $paramHashRef->{'ip6_gateway'} . " are not in same network" . $sep;
@@ -387,8 +433,12 @@ sub check_server_input {
 		}
 	}
 
-	if ( $paramHashRef->{'tcp_port'} !~ /\d+/ ) {
+	if ( defined( $paramHashRef->{'tcp_port'} ) && $paramHashRef->{'tcp_port'} !~ /\d+/ ) {
 		$err .= $paramHashRef->{'tcp_port'} . " is not a valid tcp port" . $sep;
+	}
+	if ( defined( $paramHashRef->{'https_port'} ) && $paramHashRef->{'https_port'} ne "" && $paramHashRef->{'https_port'} !~ /\d+/ ) {
+		print("https_port: " . defined( $paramHashRef->{'https_port'} ) . "\n");
+		$err .= $paramHashRef->{'https_port'} . " is not a valid https port" . $sep;
 	}
 
 	# RFC5952 checks (lc)
@@ -410,14 +460,31 @@ sub update {
 	# }
 	#===
 
+
+	my $server_status = $self->db->resultset('Status')->search( { id => $self->param('status') } )->get_column('name')->single();
+	my $offline_reason = &cgi_params_to_param_hash_ref($self)->{'offline_reason'};
+
+	if ($server_status ne "OFFLINE" && $server_status ne "ADMIN_DOWN") {
+		$self->param(offline_reason => "N/A"); # this will satisfy the UI's requirement of offline reason if not offline or admin_down
+	} else {
+		if (defined($offline_reason) && $offline_reason ne "") {
+			my $user=$self->current_user()->{username};
+			if ($offline_reason !~ /^${user}: /) {
+				$self->param(offline_reason => $user . ": " . $offline_reason);
+			}
+		}
+	}
+
 	if ( !defined( $paramHashRef->{'csv_line_number'} ) ) {
 		$paramHashRef = &cgi_params_to_param_hash_ref($self);
 	}
+
 	my $id = $paramHashRef->{'id'};
 
 	$paramHashRef = &trim_whitespace($paramHashRef);
 
-	my $err = &check_server_input_cgi($self);
+	my $err = &check_server_input_cgi($self, $id);
+
 	if ( defined($err) && length($err) > 0 ) {
 		$self->flash( alertmsg => "update():  " . $err );
 	}
@@ -427,72 +494,40 @@ sub update {
 		my $org_server = $self->db->resultset('Server')->search( { 'me.id' => $id }, { prefetch => 'cdn' } )->single();
 		my $update     = $self->db->resultset('Server')->search( { 'me.id' => $id }, { prefetch => 'cdn' } )->single();
 
-		if ( defined( $paramHashRef->{'ip6_address'} )
-			&& $paramHashRef->{'ip6_address'} ne "" )
-		{
-			$update->update(
-				{
-					host_name        => $paramHashRef->{'host_name'},
-					domain_name      => $paramHashRef->{'domain_name'},
-					tcp_port         => $paramHashRef->{'tcp_port'},
-					interface_name   => $paramHashRef->{'interface_name'},
-					ip_address       => $paramHashRef->{'ip_address'},
-					ip_netmask       => $paramHashRef->{'ip_netmask'},
-					ip_gateway       => $paramHashRef->{'ip_gateway'},
-					ip6_address      => $paramHashRef->{'ip6_address'},
-					ip6_gateway      => $paramHashRef->{'ip6_gateway'},
-					interface_mtu    => $paramHashRef->{'interface_mtu'},
-					cdn_id           => $paramHashRef->{'cdn'},
-					cachegroup       => $paramHashRef->{'cachegroup'},
-					phys_location    => $paramHashRef->{'phys_location'},
-					rack             => $paramHashRef->{'rack'},
-					type             => $paramHashRef->{'type'},
-					status           => $paramHashRef->{'status'},
-					profile          => $paramHashRef->{'profile'},
-					mgmt_ip_address  => $paramHashRef->{'mgmt_ip_address'},
-					mgmt_ip_netmask  => $paramHashRef->{'mgmt_ip_netmask'},
-					mgmt_ip_gateway  => $paramHashRef->{'mgmt_ip_gateway'},
-					ilo_ip_address   => $paramHashRef->{'ilo_ip_address'},
-					ilo_ip_netmask   => $paramHashRef->{'ilo_ip_netmask'},
-					ilo_ip_gateway   => $paramHashRef->{'ilo_ip_gateway'},
-					ilo_username     => $paramHashRef->{'ilo_username'},
-					ilo_password     => $paramHashRef->{'ilo_password'},
-					router_host_name => $paramHashRef->{'router_host_name'},
-					router_port_name => $paramHashRef->{'router_port_name'},
-				}
-			);
-		}
-		else {    # drop the ip6 stuff; it's not always mandatory
-			$update->update(
-				{
-					host_name        => $paramHashRef->{'host_name'},
-					domain_name      => $paramHashRef->{'domain_name'},
-					tcp_port         => $paramHashRef->{'tcp_port'},
-					interface_name   => $paramHashRef->{'interface_name'},
-					ip_address       => $paramHashRef->{'ip_address'},
-					ip_netmask       => $paramHashRef->{'ip_netmask'},
-					ip_gateway       => $paramHashRef->{'ip_gateway'},
-					interface_mtu    => $paramHashRef->{'interface_mtu'},
-					cdn_id           => $paramHashRef->{'cdn'},
-					cachegroup       => $paramHashRef->{'cachegroup'},
-					phys_location    => $paramHashRef->{'phys_location'},
-					rack             => $paramHashRef->{'rack'},
-					type             => $paramHashRef->{'type'},
-					status           => $paramHashRef->{'status'},
-					profile          => $paramHashRef->{'profile'},
-					mgmt_ip_address  => $paramHashRef->{'mgmt_ip_address'},
-					mgmt_ip_netmask  => $paramHashRef->{'mgmt_ip_netmask'},
-					mgmt_ip_gateway  => $paramHashRef->{'mgmt_ip_gateway'},
-					ilo_ip_address   => $paramHashRef->{'ilo_ip_address'},
-					ilo_ip_netmask   => $paramHashRef->{'ilo_ip_netmask'},
-					ilo_ip_gateway   => $paramHashRef->{'ilo_ip_gateway'},
-					ilo_username     => $paramHashRef->{'ilo_username'},
-					ilo_password     => $paramHashRef->{'ilo_password'},
-					router_host_name => $paramHashRef->{'router_host_name'},
-					router_port_name => $paramHashRef->{'router_port_name'},
-				}
-			);
-		}
+		$update->update(
+			{
+				host_name        => $paramHashRef->{'host_name'},
+				domain_name      => $paramHashRef->{'domain_name'},
+				tcp_port         => $paramHashRef->{'tcp_port'},
+				https_port         => $paramHashRef->{'https_port'},
+				interface_name   => $paramHashRef->{'interface_name'},
+				ip_address       => $paramHashRef->{'ip_address'},
+				ip_netmask       => $paramHashRef->{'ip_netmask'},
+				ip_gateway       => $paramHashRef->{'ip_gateway'},
+				ip6_address      => $self->paramAsScalar( 'ip6_address', undef ),
+				ip6_gateway      => $paramHashRef->{'ip6_gateway'},
+				interface_mtu    => $paramHashRef->{'interface_mtu'},
+				cdn_id           => $paramHashRef->{'cdn'},
+				cachegroup       => $paramHashRef->{'cachegroup'},
+				phys_location    => $paramHashRef->{'phys_location'},
+				guid             => $paramHashRef->{'guid'},
+				rack             => $paramHashRef->{'rack'},
+				type             => $paramHashRef->{'type'},
+				status           => $paramHashRef->{'status'},
+				offline_reason   => $paramHashRef->{'offline_reason'},
+				profile          => $paramHashRef->{'profile'},
+				mgmt_ip_address  => $paramHashRef->{'mgmt_ip_address'},
+				mgmt_ip_netmask  => $paramHashRef->{'mgmt_ip_netmask'},
+				mgmt_ip_gateway  => $paramHashRef->{'mgmt_ip_gateway'},
+				ilo_ip_address   => $paramHashRef->{'ilo_ip_address'},
+				ilo_ip_netmask   => $paramHashRef->{'ilo_ip_netmask'},
+				ilo_ip_gateway   => $paramHashRef->{'ilo_ip_gateway'},
+				ilo_username     => $paramHashRef->{'ilo_username'},
+				ilo_password     => $paramHashRef->{'ilo_password'},
+				router_host_name => $paramHashRef->{'router_host_name'},
+				router_port_name => $paramHashRef->{'router_port_name'},
+			}
+		);
 		$update->update();
 
 		if ( $org_server->profile->id != $update->profile->id ) {
@@ -516,9 +551,13 @@ sub update {
 		if ( $org_server->type->id != $update->type->id ) {
 
 			# server type changed:  servercheck entry required for EDGE and MID, but not others. Add or remove servercheck entry accordingly
-			my %need_servercheck = map { &type_id( $self, $_ ) => 1 } qw{ EDGE MID };
-			my $newtype_id       = $update->type->id;
-			my $servercheck      = $self->db->resultset('Servercheck')->search( { server => $id } );
+			my @types;
+			push( @types, &type_ids( $self, 'EDGE%', 'server' ) );
+			push( @types, &type_ids( $self, 'MID%',  'server' ) );
+			my %need_servercheck = map { $_ => 1 } @types;
+			my $newtype_id = $update->type->id;
+			my $servercheck =
+				$self->db->resultset('Servercheck')->search( { server => $id } );
 			if ( $servercheck != 0 && !$need_servercheck{$newtype_id} ) {
 
 				# servercheck entry found but not needed -- delete it
@@ -534,7 +573,7 @@ sub update {
 			}
 		}
 
-		# this just creates the log string for the log table / tab.
+		# creates the change log entry string which includes the new values for server properties that have changed (i.e. host_name->foo-bar)
 		my $lstring = "Update server " . $self->param('host_name') . " ";
 		foreach my $col ( keys %{ $org_server->{_column_data} } ) {
 			if ( defined( $self->param($col) )
@@ -559,9 +598,10 @@ sub update {
 }
 
 sub updatestatus {
-	my $self   = shift;
-	my $id     = $self->param('id');
-	my $status = $self->param('status');
+	my $self   			= shift;
+	my $id     			= $self->param('id');
+	my $status 			= $self->param('status');
+	my $offline_reason 	= $self->param('offlineReason');
 
 	my $statstring = undef;
 	if ( $status !~ /^\d$/ ) {    # if it is a string like "REPORTED", look up the id in the db.
@@ -571,11 +611,11 @@ sub updatestatus {
 	else {
 		$statstring = $self->db->resultset('Status')->search( { id => $status } )->get_column('name')->single();
 	}
-	my $update = $self->set_serverstatus( $id, $status );
+	my $update = $self->set_serverstatus( $id, $status, $offline_reason );
 	my $fqdn = $update->host_name . "." . $update->domain_name;
 
-	my $lstring = "Update server $fqdn new status = $statstring";
-	&log( $self, $lstring, "UICHANGE" );
+	my $lstring = "Update server $fqdn new status = $statstring [" . qq/$offline_reason/ . "]";
+	&log( $self, qq/$lstring/, "UICHANGE" );
 
 	my $referer = $self->req->headers->header('referer');
 	return $self->redirect_to($referer);
@@ -588,10 +628,10 @@ sub set_serverstatus {
 	# we can't use :status as a placeholder in our rest call -jse
 	my $id     = shift;
 	my $status = shift;
+	my $offline_reason = shift;
 
 	my $update = $self->db->resultset('Server')->find( { id => $id } );
-	$update->update( { status => $status, } );
-	$update->update();
+	$update->update( { status => $status, offline_reason => $offline_reason } );
 
 	return ($update);
 }
@@ -599,14 +639,14 @@ sub set_serverstatus {
 sub cgi_params_to_param_hash_ref {
 	my $self         = shift;
 	my $paramHashRef = {};
-	foreach
-		my $requiredParam (qw/host_name domain_name ip_address ip_netmask ip_gateway interface_mtu interface_name cdn cachegroup type profile phys_location/)
+	foreach my $requiredParam (
+		qw/host_name domain_name ip_address interface_name ip_netmask ip_gateway interface_mtu cdn cachegroup type profile phys_location offline_reason/)
 	{
 		$paramHashRef->{$requiredParam} = $self->param($requiredParam);
 	}
 	foreach my $optionalParam (
-		qw/ilo_ip_address ilo_ip_netmask ilo_ip_gateway mgmt_ip_address mgmt_ip_netmask mgmt_ip_gateway ip6_address ip6_gateway tcp_port
-		ilo_username ilo_password router_host_name router_port_name status rack id/
+		qw/ilo_ip_address ilo_ip_netmask ilo_ip_gateway mgmt_ip_address mgmt_ip_netmask mgmt_ip_gateway ip6_address ip6_gateway tcp_port https_port
+		ilo_username ilo_password router_host_name router_port_name status rack guid id/
 		)
 	{
 		$paramHashRef->{$optionalParam} = $self->param($optionalParam);
@@ -645,6 +685,7 @@ sub create {
 					host_name        => $paramHashRef->{'host_name'},
 					domain_name      => $paramHashRef->{'domain_name'},
 					tcp_port         => $paramHashRef->{'tcp_port'},
+					https_port         => $paramHashRef->{'https_port'},
 					xmpp_id          => $paramHashRef->{'host_name'},           # TODO JvD remove me later.
 					xmpp_passwd      => $xmpp_passwd,
 					interface_name   => $paramHashRef->{'interface_name'},
@@ -657,9 +698,11 @@ sub create {
 					cdn_id           => $paramHashRef->{'cdn'},
 					cachegroup       => $paramHashRef->{'cachegroup'},
 					phys_location    => $paramHashRef->{'phys_location'},
+					guid             => $paramHashRef->{'guid'},
 					rack             => $paramHashRef->{'rack'},
 					type             => $paramHashRef->{'type'},
 					status           => &admin_status_id( $self, "OFFLINE" ),
+					offline_reason   => "Newly created",
 					profile          => $paramHashRef->{'profile'},
 					mgmt_ip_address  => $paramHashRef->{'mgmt_ip_address'},
 					mgmt_ip_netmask  => $paramHashRef->{'mgmt_ip_netmask'},
@@ -680,6 +723,7 @@ sub create {
 					host_name        => $paramHashRef->{'host_name'},
 					domain_name      => $paramHashRef->{'domain_name'},
 					tcp_port         => $paramHashRef->{'tcp_port'},
+					https_port         => $paramHashRef->{'https_port'},
 					xmpp_id          => $paramHashRef->{'host_name'},           # TODO JvD remove me later.
 					xmpp_passwd      => $xmpp_passwd,
 					interface_name   => $paramHashRef->{'interface_name'},
@@ -690,9 +734,11 @@ sub create {
 					cdn_id           => $paramHashRef->{'cdn'},
 					cachegroup       => $paramHashRef->{'cachegroup'},
 					phys_location    => $paramHashRef->{'phys_location'},
+					guid             => $paramHashRef->{'guid'},
 					rack             => $paramHashRef->{'rack'},
 					type             => $paramHashRef->{'type'},
 					status           => &admin_status_id( $self, "OFFLINE" ),
+					offline_reason   => "Newly created",
 					profile          => $paramHashRef->{'profile'},
 					mgmt_ip_address  => $paramHashRef->{'mgmt_ip_address'},
 					mgmt_ip_netmask  => $paramHashRef->{'mgmt_ip_netmask'},
@@ -709,8 +755,8 @@ sub create {
 		}
 		$insert->insert();
 		$new_id = $insert->id;
-		if (   $paramHashRef->{'type'} == &type_id( $self, "EDGE" )
-			|| $paramHashRef->{'type'} == &type_id( $self, "MID" ) )
+		if (   scalar( grep { $paramHashRef->{'type'} eq $_ } &type_ids( $self, 'EDGE%', 'server' ) )
+			|| scalar( grep { $paramHashRef->{'type'} eq $_ } &type_ids( $self, 'MID%', 'server' ) ) )
 		{
 			$insert = $self->db->resultset('Servercheck')->create( { server => $new_id, } );
 			$insert->insert();
@@ -738,7 +784,10 @@ sub create {
 				return $self->redirect_to( $stripped . $qstring );
 			}
 			else {
-				return $self->render( text => "ERR = " . $err, layout => undef );    # for testing - $referer is not defined there.
+				return $self->render(
+					text   => "ERR = " . $err,
+					layout => undef
+				);    # for testing - $referer is not defined there.
 			}
 		}
 		else {
@@ -753,9 +802,11 @@ sub add {
 	my $self = shift;
 
 	my $default_port = 80;
+	my $default_https_port = 443;
 	$self->stash(
 		fbox_layout      => 1,
 		default_tcp_port => $default_port,
+		default_https_port => $default_https_port,
 	);
 	my @params = $self->param;
 	foreach my $field (@params) {
@@ -828,16 +879,6 @@ sub get_server_status {
 	$self->render( json => $response );
 }
 
-sub get_redis_key {
-	my $self     = shift;
-	my $key      = $self->param("key");
-	my $redis    = $self->redis_connect();
-	my $value    = $redis->get($key);
-	my $response = { value => $value };
-
-	$self->render( json => $response );
-}
-
 sub readupdate {
 	my $self = shift;
 	my @data;
@@ -849,14 +890,20 @@ sub readupdate {
 		$rs_servers = $self->db->resultset("Server")->search(undef);
 	}
 	else {
-		$rs_servers = $self->db->resultset("Server")->search( { host_name => $host_name } );
-		if ( $rs_servers->single->type->name eq "EDGE" ) {
-			my $parent_cg =
-				$self->db->resultset('Cachegroup')->search( { id => $rs_servers->single->cachegroup->id } )->get_column('parent_cachegroup_id')->single;
-			my $rs_parents = $self->db->resultset('Server')->search( { cachegroup => $parent_cg } );
-			while ( my $prow = $rs_parents->next ) {
-				if ( $prow->upd_pending == 1 && $prow->status->name ne "OFFLINE" ) {
-					$parent_pending{ $rs_servers->single->host_name } = 1;
+		$rs_servers =
+			$self->db->resultset("Server")->search( { host_name => $host_name } );
+		my $count = $rs_servers->count();
+		if ( $count > 0 ) {
+			if ( $rs_servers->single->type->name =~ m/^EDGE/ ) {
+				my $parent_cg =
+					$self->db->resultset('Cachegroup')->search( { id => $rs_servers->single->cachegroup->id } )->get_column('parent_cachegroup_id')->single;
+				my $rs_parents = $self->db->resultset('Server')->search( { cachegroup => $parent_cg } );
+				while ( my $prow = $rs_parents->next ) {
+					if (   $prow->upd_pending == 1
+						&& $prow->status->name ne "OFFLINE" )
+					{
+						$parent_pending{ $rs_servers->single->host_name } = 1;
+					}
 				}
 			}
 		}
@@ -901,18 +948,27 @@ sub postupdate {
 	}
 
 	if ( !defined($updated) ) {
-		$self->render_text( "Failed request.  Must provide updated status", status => 500, layout => undef );
+		$self->render_text(
+			"Failed request.  Must provide updated status",
+			status => 500,
+			layout => undef
+		);
 		return;
 	}
 
 	# resolve server id
 	my $serverid = $self->db->resultset("Server")->search( { host_name => $host_name } )->get_column('id')->single;
 	if ( !defined $serverid ) {
-		$self->render_text( "Failed request.  Unknown server", status => 500, layout => undef );
+		$self->render_text(
+			"Failed request.  Unknown server",
+			status => 500,
+			layout => undef
+		);
 		return;
 	}
 
-	my $update_server = $self->db->resultset('Server')->search( { id => $serverid } );
+	my $update_server =
+		$self->db->resultset('Server')->search( { id => $serverid } );
 	if ( defined $updated ) {
 		$update_server->update( { upd_pending => $updated } );
 	}
@@ -924,9 +980,11 @@ sub postupdate {
 sub postupdatequeue {
 	my $self       = shift;
 	my $setqueue   = $self->param("setqueue");
+	my $status     = $self->param("status");
 	my $host       = $self->param("id");
 	my $cdn        = $self->param("cdn");
 	my $cachegroup = $self->param("cachegroup");
+	my $wording    = ( $setqueue == 1 ) ? "Queue Updates" : "Unqueue Updates";
 
 	if ( !&is_admin($self) && !&is_oper($self) ) {
 		$self->flash( alertmsg => "No can do. Get more privs." );
@@ -935,44 +993,50 @@ sub postupdatequeue {
 
 	if ( defined($host) ) {
 		my $update;
+		my $message;
+
 		if ( $host eq "all" ) {
-			$update = $self->db->resultset('Server')->search(undef);
+			$update  = $self->db->resultset('Server')->search(undef);
+			$message = "all servers";
 		}
-		else {
-			$update
-				= $self->db->resultset('Server')->search( { id => $host, } );
+		elsif (defined($status)) {
+			my $server = $self->db->resultset('Server')->search( { id => $host, } )->single();
+			my @edge_cache_groups = $self->db->resultset('Cachegroup')->search( { parent_cachegroup_id => $server->cachegroup->id } )->all();
+			my @cg_ids = map { $_->id } @edge_cache_groups;
+			$update = $self->db->resultset('Server')->search( { cachegroup => { -in => \@cg_ids }, cdn_id => $server->cdn_id } );
+			$message = "children of " . $server->host_name . " in the following cachegroups: " . join( ", ", map { $_->name } @edge_cache_groups );
+		} else {
+			$update = $self->db->resultset('Server')->search( { id => $host } );
+			$message = $host;
 		}
 		$update->update( { upd_pending => $setqueue } );
-		&log( $self, "Flip Update bit (Queue Updates) for server(s):" . $host,
-			"OPER" );
+		&log( $self, "Flip Update bit ($wording) for " . $message, "OPER" );
 	}
 	elsif ( defined($cdn) && defined($cachegroup) ) {
 		my @profiles;
 		if ( $cdn ne "all" ) {
-
 			@profiles = $self->db->resultset('Server')->search(
 				{ 'cdn.name' => $cdn },
-				{   prefetch => 'cdn',
+				{
+					prefetch => 'cdn',
 					select   => 'me.profile',
 					distinct => 1
 				}
 			)->get_column('profile')->all();
 		}
 		else {
-			@profiles = $self->db->resultset('Profile')->search(undef)
-				->get_column('id')->all;
+			@profiles = $self->db->resultset('Profile')->search(undef)->get_column('id')->all;
 		}
 		my @cachegroups;
 		if ( $cachegroup ne "all" ) {
-			@cachegroups = $self->db->resultset('Cachegroup')
-				->search( { name => $cachegroup } )->get_column('id')->all;
+			@cachegroups = $self->db->resultset('Cachegroup')->search( { name => $cachegroup } )->get_column('id')->all;
 		}
 		else {
-			@cachegroups = $self->db->resultset('Cachegroup')->search(undef)
-				->get_column('id')->all;
+			@cachegroups = $self->db->resultset('Cachegroup')->search(undef)->get_column('id')->all;
 		}
 		my $update = $self->db->resultset('Server')->search(
-			{   -and => [
+			{
+				-and => [
 					cachegroup => { -in => \@cachegroups },
 					profile    => { -in => \@profiles }
 				]
@@ -981,26 +1045,15 @@ sub postupdatequeue {
 
 		if ( $update->count() > 0 ) {
 			$update->update( { upd_pending => $setqueue } );
-			$self->app->log->debug(
-				"Flip Update bit (Queue Updates) for servers in CDN: $cdn, Cachegroup: $cachegroup"
-			);
-			&log(
-				$self,
-				"Flip Update bit (Queue Updates) for servers in CDN:"
-					. $cdn
-					. " cachegroup:"
-					. $cachegroup,
-				"OPER"
-			);
+			$self->app->log->debug("Flip Update bit ($wording) for servers in CDN: $cdn, Cachegroup: $cachegroup");
+			&log( $self, "Flip Update bit ($wording) for servers in CDN:" . $cdn . " cachegroup:" . $cachegroup, "OPER" );
 		}
 		else {
-			$self->app->log->debug(
-				"No Queue Updates for servers in CDN: $cdn, Cachegroup: $cachegroup"
-			);
+			$self->app->log->debug("No Queue Updates for servers in CDN: $cdn, Cachegroup: $cachegroup");
 		}
 	}
 
-	#shouldn't we return something here?
+	$self->redirect_to('/tools/queue_updates');
 }
 
 1;

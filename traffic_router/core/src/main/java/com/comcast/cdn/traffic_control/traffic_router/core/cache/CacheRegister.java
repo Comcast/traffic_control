@@ -16,27 +16,26 @@
 
 package com.comcast.cdn.traffic_control.traffic_router.core.cache;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
-import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.ds.DeliveryService;
 import com.comcast.cdn.traffic_control.traffic_router.core.ds.DeliveryServiceMatcher;
 import com.comcast.cdn.traffic_control.traffic_router.core.request.Request;
 
+@SuppressWarnings("PMD.LooseCoupling")
 public class CacheRegister implements CacheLocationManager {
 	private final Map<String, CacheLocation> configuredLocations;
 	private JSONObject trafficRouters;
 	private Map<String,Cache> allCaches;
-	private List<DeliveryServiceMatcher> dnsServiceMatchers;
-	private List<DeliveryServiceMatcher> httpServiceMatchers;
+	private TreeSet<DeliveryServiceMatcher> dnsServiceMatchers;
+	private TreeSet<DeliveryServiceMatcher> httpServiceMatchers;
 	private Map<String, DeliveryService> dsMap;
 	private JSONObject config;
 	private JSONObject stats;
@@ -45,11 +44,6 @@ public class CacheRegister implements CacheLocationManager {
 		configuredLocations = new HashMap<String, CacheLocation>();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheLocationManager#getCacheLocation(java.lang.String)
-	 */
 	@Override
 	public CacheLocation getCacheLocation(final String id) {
 		return configuredLocations.get(id);
@@ -62,23 +56,14 @@ public class CacheRegister implements CacheLocationManager {
 		return result;
 	}
 
-	@Override
-	@SuppressWarnings("PMD")
-	public Collection<CacheLocation> getCacheLocations(String zoneId) {
-		if(zoneId == null) { zoneId = ""; }
-		final List<CacheLocation> result = new ArrayList<CacheLocation>(configuredLocations.size());
-		for (final CacheLocation location : configuredLocations.values()) {
-			if (strsEqual(location.getZoneId(),zoneId)) {
-				result.add(location);
+	public CacheLocation getCacheLocationById(final String id) {
+		for (final CacheLocation cacheLocation : configuredLocations.values()) {
+			if (id.equals(cacheLocation.getId())) {
+				return cacheLocation;
 			}
 		}
-		return result;
-	}
-	@SuppressWarnings("PMD")
-	private boolean strsEqual(String a, String b) {
-		if(a == null) { a = ""; }
-		if(b == null) { b = ""; }
-		return a.equals(b);
+
+		return null;
 	}
 
 	/**
@@ -94,43 +79,22 @@ public class CacheRegister implements CacheLocationManager {
 		}
 	}
 
-	public void print(final Logger log) {
-		final Collection<CacheLocation> locs = configuredLocations.values();
-		for(CacheLocation loc : locs) {
-			final String id = loc.getId();
-			final List<Cache> caches = loc.getCaches();
-			log.warn("CacheLocation: "+id);
-			for(Cache c : caches) {
-				log.warn("\tCache: "+c.getId() + " : " + c.toString());
-			}
-		}
-	}
-
 	public void setCacheMap(final Map<String,Cache> map) {
 		allCaches = map;
 	}
-	public void mergeState(final CacheRegister cacheRegister) {
-		if(allCaches != null && cacheRegister.allCaches != null) {
-			for(String key : allCaches.keySet()) {
-				final Cache orig = cacheRegister.allCaches.get(key);
-				final Cache n = allCaches.get(key);
-				if(orig == null) { continue; }
-				if(orig.hasAuthority) {
-					n.setIsAvailable(orig.isAvailable);
-				}
-			}
-		}
-	}
+
 	public Map<String,Cache> getCacheMap() {
 		return allCaches;
 	}
 	
-	public void setDnsDeliveryServiceMatchers(final List<DeliveryServiceMatcher> dnsServices) {
+	public void setDnsDeliveryServiceMatchers(final TreeSet<DeliveryServiceMatcher> dnsServices) {
 		this.dnsServiceMatchers = dnsServices;
 	}
-	public void setHttpDeliveryServiceMatchers(final List<DeliveryServiceMatcher> httpServices) {
+
+	public void setHttpDeliveryServiceMatchers(final TreeSet<DeliveryServiceMatcher> httpServices) {
 		this.httpServiceMatchers = httpServices;
 	}
+
 	/**
 	 * Gets the first {@link DeliveryService} that matches the {@link Request}.
 	 * 
@@ -139,29 +103,37 @@ public class CacheRegister implements CacheLocationManager {
 	 * @return the DeliveryService that matches the request
 	 */
 	public DeliveryService getDeliveryService(final Request request, final boolean isHttp) {
-		DeliveryService result = null;
 
-		List<DeliveryServiceMatcher> matchers = null;
+		TreeSet<DeliveryServiceMatcher> matchers = dnsServiceMatchers;
 		if (isHttp) {
 			matchers = httpServiceMatchers;
-		} else {
-			matchers = dnsServiceMatchers;
 		}
 
-		if (matchers != null) {
-			for (final DeliveryServiceMatcher m : matchers) {
-				if (m.matches(request)) {
-					result = m.getDeliveryService();
-					break;
-				}
+		if (matchers == null) {
+			return null;
+		}
+
+		for (final DeliveryServiceMatcher m : matchers) {
+			if (m.matches(request)) {
+				return m.getDeliveryService();
 			}
 		}
 
-		return result;
+		return null;
 	}
 
 	public DeliveryService getDeliveryService(final String deliveryServiceId) {
 		return dsMap.get(deliveryServiceId);
+	}
+
+	public List<CacheLocation> filterAvailableLocations(final String deliveryServiceId) {
+		final DeliveryService deliveryService = dsMap.get(deliveryServiceId);
+
+		if (deliveryService == null) {
+			return null;
+		}
+
+		return deliveryService.filterAvailableLocations(getCacheLocations());
 	}
 
 	public void setDeliveryServiceMap(final Map<String, DeliveryService> dsMap) {

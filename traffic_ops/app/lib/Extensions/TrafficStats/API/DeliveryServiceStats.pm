@@ -21,6 +21,7 @@ use Data::Dumper;
 use Extensions::TrafficStats::Delegate::Statistics;
 use Common::ReturnCodes qw(SUCCESS ERROR);
 use Validate::Tiny ':all';
+use UI::Utils;
 
 my $builder;
 
@@ -48,7 +49,7 @@ sub index {
 				}
 			}
 			else {
-				return $self->forbidden();
+				return $self->forbidden("Forbidden. Delivery service not assigned to user.");
 			}
 		}
 	}

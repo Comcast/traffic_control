@@ -1,18 +1,18 @@
-.. 
+..
 .. Copyright 2015 Comcast Cable Communications Management, LLC
-.. 
+..
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
 .. You may obtain a copy of the License at
-.. 
+..
 ..     http://www.apache.org/licenses/LICENSE-2.0
-.. 
+..
 .. Unless required by applicable law or agreed to in writing, software
 .. distributed under the License is distributed on an "AS IS" BASIS,
 .. WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 .. See the License for the specific language governing permissions and
 .. limitations under the License.
-.. 
+..
 
 *****************************
 Traffic Router Administration
@@ -32,8 +32,6 @@ The following are requirements to ensure an accurate set up:
 
 1. If no suitable profile exists, create a new profile for Traffic Router.
 
-..  Note:: The ``CDN_name`` parameter with a config file name of ``rascal-config.txt`` must exist in the profile and the value should be the name of the CDN for which this Traffic Router will be authoritative. This same parameter will be mapped to all profiles that participate in this CDN (edges, mids, Traffic Monitors, etc). See :ref:`rl-param-prof` for more information.
-
 2. Enter the Traffic Router server into Traffic Ops, assign it to a Traffic Router profile, and ensure that its status is set to ``ONLINE``.
 3. Ensure the FQDN of the Traffic Monitor is resolvable in DNS. This FQDN must be resolvable by the clients expected to use this CDN.
 4. Install a traffic router: ``sudo yum install traffic_router``.
@@ -43,7 +41,7 @@ The following are requirements to ensure an accurate set up:
 
 	# Frequency for reloading this file
 	# traffic_monitor.properties.reload.period=60000
-   
+
 
 6. Start Tomcat: ``sudo service tomcat start``, and test lookups with dig and curl against that server.
 7. Snapshot CRConfig; See :ref:`rl-snapshot-crconfig`
@@ -55,7 +53,11 @@ The following are requirements to ensure an accurate set up:
 Configuring Traffic Router
 ==========================
 
-By default, Traffic Router installs all configuration files under ``/opt/traffic_router/conf``. For the most part, the configuration files and parameters that follow are used to get Traffic Router online and communicating with various Traffic Control components. Once Traffic Router is successfully communicating with Traffic Control, configuration is mostly performed in Traffic Ops, and is distributed throughout Traffic Control via the CRConfig snapshot process. See :ref:`rl-snapshot-crconfig` for more information. Please see the parameter documentation for Traffic Router in the Using Traffic Ops guide documented under :ref:`rl-ccr-profile` for parameters that influence the behavior of Traffic Router via the CRConfig.
+.. Note:: Starting with Traffic Router 1.5, many of the configuration files under ``/opt/traffic_router/conf`` are only needed to override the default configuration values for Traffic Router. Most of the given default values will work well for any CDN. Critical values that must be changed are hostnames and credentials for communicating with other Traffic Control components such as Traffic Ops and Traffic Monitor.
+
+.. Note:: Pre-existing installations having configuration files in ``/opt/traffic_router/conf`` will still be used and honored for Traffic Router 1.5 and onward.
+
+For the most part, the configuration files and parameters that follow are used to get Traffic Router online and communicating with various Traffic Control components. Once Traffic Router is successfully communicating with Traffic Control, configuration is mostly performed in Traffic Ops, and is distributed throughout Traffic Control via the CRConfig snapshot process. See :ref:`rl-snapshot-crconfig` for more information. Please see the parameter documentation for Traffic Router in the Using Traffic Ops guide documented under :ref:`rl-ccr-profile` for parameters that influence the behavior of Traffic Router via the CRConfig.
 
 .. _rl-tr-config-files:
 
@@ -140,3 +142,248 @@ Traffic Router currently follows the zone signing key pre-publishing operational
 Troubleshooting and log files
 =============================
 Traffic Router log files are in ``/opt/traffic_router/var/log``, and Tomcat log files are in ``/opt/tomcat/logs``. Application related logging is in ``/opt/traffic_router/var/log/traffic_router.log``, while access logs are written to ``/opt/traffic_router/var/log/access.log``.
+
+Event Log File Format
+=====================
+
+Summary
+-------
+
+All access events to Traffic Router are logged to the file ``/opt/traffic_router/var/log/access.log``
+This file grows up to 200Mb and gets rolled into older log files, 10 log files total are kept (total of up to 2Gb of logged events per traffic router)
+
+Traffic Router logs access events in a format that largely following `ATS event logging format
+<https://docs.trafficserver.apache.org/en/6.0.x/admin/event-logging-formats.en.html>`_
+
+--------------
+
+Sample Message
+--------------
+
+Items within brackets below are detailed under the HTTP and DNS sections
+::
+
+  144140678.000 qtype=DNS chi=192.168.10.11 ttms=789 [Fields Specific to the DNS request] rtype=CZ rloc="40.252611,58.439389" rdtl=- rerr="-" [Fields Specific to the DNS result]
+  144140678.000 qtype=HTTP chi=192.168.10.11 ttms=789 [Fields Specific to the HTTP request] rtype=GEO rloc="40.252611,58.439389" rdtl=- rerr="-" [Fields Specific to the HTTP result]
+
+.. Note:: The above message samples contain fields that are always present for every single access event to Traffic Router
+
+**Message Format**
+- Each event that is logged is a series of space separated key value pairs except for the first item.
+- The first item is always the epoch in seconds with a decimal field precision of up to milliseconds
+- Each key value pair is in the form of unquoted string, equals character, optionally quoted string
+- Values that are quoted strings may contain space characters
+- Values that are not quoted should not contains any space characters
+
+.. Note:: Any value that is a single dash character or a dash character enclosed in quotes represents an empty value
+
+--------
+
+Fields Always Present
+---------------------
+
++------+---------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+|Name  |Description                                                                      |Data                                                                       |
++======+=================================================================================+===========================================================================+
+|qtype |Whether the request was for DNS or HTTP                                          |Always DNS or HTTP                                                         |
++------+---------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+|chi   |The IP address of the requester                                                  |Depends on whether this was a DNS or HTTP request, see below sections      |
++------+---------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+|ttms  |The amount of time in milliseconds it took Traffic Router to process the request |A number greater than or equal to zero                                     |
++------+---------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+|rtype |Routing Result Type                                                              |One of ERROR, CZ, GEO, MISS, STATIC_ROUTE, DS_REDIRECT, DS_MISS, INIT, FED |
++------+---------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+|rloc  |GeoLocation of result                                                            |Latitude and Longitude in Decimal Degrees                                  |
++------+---------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+|rdtl  |Result Details Associated with unusual conditions                                |One of DS_NOT_FOUND, DS_NO_BYPASS, DS_BYPASS, DS_CZ_ONLY                   |
++------+---------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+|rerr  |Message about internal Traffic Router Error                                      |String                                                                     |
++------+---------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+
+**rtype meanings**
+
++-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|Name         |Meaning                                                                                                                                                                 |
++=============+========================================================================================================================================================================+
+|ERROR        |An internal error occurred within Traffic Router, more details may be found in the rerr field                                                                           |
++-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|CZ           |The result was derived from Coverage Zone data based on the address in the chi field                                                                                    |
++-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|GEO          |The result was derived from geolocation service based on the address in the chi field                                                                                   |
++-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|MISS         |Traffic Router was unable to resolve a DNS request or find a cache for the requested resource                                                                           |
++-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|STATIC_ROUTE |_*DNS Only*_ No DNS Delivery Service supports the hostname portion of the requested url                                                                                 |
++-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|DS_MISS      |_*HTTP Only*_ No HTTP Delivery Service supports either this request's URL path or headers                                                                               |
++-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|DS_REDIRECT  |The result is using the Bypass Destination configured for the matched Delivery Service when that Delivery Service is unavailable or does not have the requested resource|
++-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|FED          |_*DNS Only*_ The result was obtained through federated coverage zone data outside of any delivery service                                                               |
++-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+**rdtl meanings**
+
++--------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+|Name                      |Meaning                                                                                                                                     |
++==========================+============================================================================================================================================+
+|DS_NOT_FOUND              |Always goes with rtypes STATIC_ROUTE and DS_MISS                                                                                            |
++--------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+|DS_BYPASS                 |Used Bypass Destination for Redirect of Delivery Service                                                                                    |
++--------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+|DS_NO_BYPASS              |No valid Bypass Destination is configured for the matched Delivery Service and the delivery service does not have the requested resource    |
++--------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+|DS_CZ_ONLY                |The selected Delivery Service only supports resource lookup based on Coverage Zone data                                                     |
++--------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+|DS_CLIENT_GEO_UNSUPPORTED |Traffic Router did not find a resource supported by coverage zone data and was unable to determine the geolocation of the requesting client |
++--------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+|GEO_NO_CACHE_FOUND        |Traffic Router could not find a resource via geolocation data based on the requesting client's geolocation                                  |
++--------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+
+---------------
+
+HTTP Specifics
+--------------
+
+Sample Message
+::
+
+  1452197640.936 qtype=HTTP chi=69.241.53.218 url="http://ccr.mm-test.jenkins.cdnlab.comcast.net/some/asset.m3u8" cqhm=GET cqhv=HTTP/1.1 rtype=GEO rloc="40.252611,58.439389" rdtl=- rerr="-" pssc=302 ttms=0 rurl="http://odol-atsec-sim-114.mm-test.jenkins.cdnlab.comcast.net:8090/some/asset.m3u8" rh="Accept: */*" rh="myheader: asdasdasdasfasg"
+
+**Request Fields**
+
++-----+-----------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+
+|Name |Description                                                                                                                              |Data                                       |
++=====+=========================================================================================================================================+===========================================+
+|url  |Requested URL with query string                                                                                                          |String                                     |
++-----+-----------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+
+|cqhm |Http Method                                                                                                                              |e.g GET, POST                              |
++-----+-----------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+
+|cqhv |Http Protocol Version                                                                                                                    |e.g. HTTP/1.1                              |
++-----+-----------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+
+|rh   |One or more of these key value pairs may exist in a logged event and are controlled by the configuration of the matched Delivery Service |Key value pair of the format "name: value" |
++-----+-----------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+
+
+**Response Fields**
+
++-----+----------------------------------------------------------+------------+
+|Name |Description                                               |Data        |
++=====+==========================================================+============+
+|rurl |The resulting url of the resource requested by the client |A URL String|
++-----+----------------------------------------------------------+------------+
+
+------------
+
+DNS Specifics
+-------------
+
+Sample Message
+::
+
+  144140678.000 qtype=DNS chi=192.168.10.11 ttms=123 xn=65535 fqdn=www.example.com. type=A class=IN ttl=12345 rcode=NOERROR rtype=CZ rloc="40.252611,58.439389" rdtl=- rerr="-" ans="192.168.1.2 192.168.3.4 0:0:0:0:0:ffff:c0a8:102 0:0:0:0:0:ffff:c0a8:304"
+
+**Request Fields**
+
+.. _qname: http://www.zytrax.com/books/dns/ch15/#qname
+
+.. _qtype: http://www.zytrax.com/books/dns/ch15/#qtype
+
++------+------------------------------------------------------------------+--------------------------------------------------------+
+|Name  |Description                                                       |Data                                                    |
++======+==================================================================+========================================================+
+|xn    |The ID from the client DNS request header                         |a number from 0 to 65535                                |
++------+------------------------------------------------------------------+--------------------------------------------------------+
+|fqdn  |The qname field from the client DNS request message (i.e. The     |A series of DNS labels/domains separated by '.'         |
+|      |fully qualified domain name the client is requesting be resolved) |characters and ending with a '.' character (see qname_) |
++------+------------------------------------------------------------------+--------------------------------------------------------+
+|type  |The qtype field from the client DNS request message (i.e.         |Examples are A (IpV4), AAAA (IpV6), NS (Name Service),  |
+|      |the type of resolution that's requested such as IPv4, IPv6)       |  SOA (Start of Authority), and CNAME, (see qtype_)     |
++------+------------------------------------------------------------------+--------------------------------------------------------+
+|class |The qclass field from the client DNS request message (i.e. The    |Either IN (Internet resource) or ANY (Traffic router    |
+|      |class of resource being requested)                                |  rejects requests with any other value of class)       |
++------+------------------------------------------------------------------+--------------------------------------------------------+
+
+**Response Fields**
+
++------+---------------------------------------------------------------------+-----------------------------------------------------+
+|Name  | Description                                                         | Data                                                |
++======+=====================================================================+=====================================================+
+|ttl   | The 'time to live' in seconds for the answer provided by Traffic    |A number from 0 to 4294967295                        |
+|      | Router (clients can reliably use this answer for this long without  |                                                     |
+|      | re-querying traffic router)                                         |                                                     |
++------+---------------------------------------------------------------------+-----------------------------------------------------+
+|rcode | The result code for the DNS answer provided by Traffic Router       | One of NOERROR (success), NOTIMP (request is not    |
+|      |                                                                     | NOTIMP (request is not  supported),                 |
+|      |                                                                     | REFUSED (request is refused to be answered), or     |
+|      |                                                                     | NXDOMAIN (the domain/name requested does not exist) |
++------+---------------------------------------------------------------------+-----------------------------------------------------+
+
+.. _rl-tr-ngb:
+
+GeoLimit Failure Redirect feature
+=================================
+
+Overview
+--------
+This feature is also called 'National GeoBlock' feature which is short for 'NGB' feature. In this section, the acronym 'NGB' will be used for this feature.
+
+In the past, if the Geolimit check fails (for example, the client ip is not in the 'US' region but the geolimit is set to 'CZF + US'), the router will return 503 response; but with this feature, when the check fails, it will return 302 if the redirect url is set in the delivery service.
+
+The Geolimit check failure has such scenarios:
+1) When the GeoLimit is set to 'CZF + only', if the client ip is not in the the CZ file, the check fails
+2) When the GeoLimit is set to any region, like 'CZF + US', if the client ip is not in such region, and the client ip is not in the CZ file, the check fails
+
+
+Configuration
+-------------
+To enable the NGB feature, the DS must be configured with the proper redirect url. And the setting lays at 'Delivery Services'->Edit->'GeoLimit Redirect URL'. If no url is put in this field, the feature is disabled.
+
+The URL has 3 kinds of formats, which have different meanings:
+
+1. URL with no domain. If no domain is in the URL (like 'vod/dance.mp4'), the router will try to find a proper cache server within the delivery service and return the redirect url with the format like 'http://<cache server name>.<delivery service's FQDN>/<configured relative path>'
+
+2. URL with domain that matches with the delivery service. For this URL, the router will also try to find a proper cache server within the delivery service and return the same format url as point 1.
+
+3. URL with domain that doesn't match with the delivery service. For this URL, the router will return the configured url directly to the client.
+
+.. _rl-tr-steering:
+
+Steering feature
+================
+
+Overview
+--------
+A Steering delivery service is a delivery service that is used to "steer" traffic to other delivery services. A Steering delivery service will have target delivery services configured for it with weights assigned to them.  Traffic Router uses the weights to make a consistent hash ring which it then uses to make sure that requests are routed to a target based on the configured weights.  This consistent hash ring is separate from the consistent hash ring used in cache selection.
+
+Special regular expressions called Filters can also be configured for target delivery services to pin traffic to a specific delivery service.  For example, if a filter called .*/news/.* for a target called target-ds-1 is created, any requests to traffic router with 'news' in them will be routed to target-ds-1.  This will happen regardless of the configured weights.
+
+A client can bypass the steering functionality by providing a header called X-TC-Steering-Option with the xml_id of the target delivery service to route to.  When Traffic Router receives this header it will route to the requested target delivery service regardless of weight configuration.
+
+Some other points of interest:
+- Steering is currently only available for HTTP delivery services that are a part of the same CDN.
+- A new role called STEERING has been added to the traffic ops database.  Only users with Admin or Steering privileges can modify steering assignments for a Delivery Service.
+- A new API has been created in Traffic Ops under /internal.  This API is used by a Steering user to add filters and modify assignments.  (Filters can only be added via the API).
+- Traffic Router uses the steering API in Traffic Ops to poll for steering assignments, the assignments are then used when routing traffic.
+
+A couple simple use cases for steering are:
+
+#. Migrating traffic from one delivery service to another over time.
+#. Trying out new functionality for a subset of traffic with an experimental delivery service.
+#. Load balancing between delivery services.
+
+
+
+Configuration
+-------------
+
+The following needs to be completed for Steering to work correctly:
+
+#. Two target delivery services are created in Traffic Ops.  They must both be HTTP delivery services part of the same CDN.
+#. A delivery service with type STEERING is created in Traffic Ops.
+#. Target delivery services are assigned to the steering delivery service using Traffic Ops.
+#. A user with the role of Steering is created.
+#. Using the API, the steering user assigns weights to the target delivery services.
+#. If desired, the steering user can create filters for the target delivery services.
+
+For more information see the `steering how-to guide <quick_howto/steering.html>`_.
+

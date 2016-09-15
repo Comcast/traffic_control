@@ -38,6 +38,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.net.InetAddresses;
+import org.junit.experimental.categories.Category;
 
 public class NetworkNodeTest {
 	private static final Logger LOGGER = Logger.getLogger(NetworkNodeTest.class);
@@ -47,7 +48,7 @@ public class NetworkNodeTest {
 	@Before
 	public void setUp() throws Exception {
 		final File file = new File(getClass().getClassLoader().getResource("czmap.json").toURI());
-		root = NetworkNode.generateTree(file);
+		root = NetworkNode.generateTree(file, false);
 
 		final JSONObject json = new JSONObject(new JSONTokener(new FileReader(file)));
 		final JSONObject coverageZones = json.getJSONObject("coverageZones");
@@ -94,7 +95,7 @@ public class NetworkNodeTest {
 	public void testNetworkNodePerformance() {
 		final int iterations = 100000;
 		final long startTime = System.currentTimeMillis();
-		final long nnTPS = Long.parseLong(System.getProperty("nnTPS"));
+		final long nnTPS = Long.parseLong(System.getProperty("nnTPS", "12000"));
 
 		for (int i = 0; i < iterations; i++) {
 			for (final String location : netMap.keySet()) {

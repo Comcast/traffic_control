@@ -19,6 +19,7 @@ package com.comcast.cdn.traffic_control.traffic_router.core.dns;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Calendar;
 import java.util.Date;
 
 import javax.xml.bind.DatatypeConverter;
@@ -40,26 +41,26 @@ public class DNSKeyPairWrapper extends DnsKeyPair {
 	private Date expiration;
 	private String name;
 
-	public DNSKeyPairWrapper(final JSONObject keyPair) throws JSONException, IOException {
+	public DNSKeyPairWrapper(final JSONObject keyPair, final long defaultTTL) throws JSONException, IOException {
 		this.inception = new Date(1000L * keyPair.getLong("inceptionDate"));
 		this.effective = new Date(1000L * keyPair.getLong("effectiveDate"));
 		this.expiration = new Date(1000L * keyPair.getLong("expirationDate"));
-		this.ttl = keyPair.getLong("ttl");
+		this.ttl = keyPair.optLong("ttl", defaultTTL);
 		this.name = keyPair.getString("name");
-		//this.status = keyPair.getString("status"); // this field is used by Traffic Ops; we detect expiration by using the above dates
 
 		final byte[] privateKey = DatatypeConverter.parseBase64Binary(keyPair.getString("private"));
 		final byte[] publicKey = DatatypeConverter.parseBase64Binary(keyPair.getString("public"));
-		final InputStream in = new ByteArrayInputStream(publicKey);
 
-		final Master master = new Master(in, new Name(name), ttl);
-		Record record = null;
-		setPrivateKeyString(new String(privateKey));
+		try (InputStream in = new ByteArrayInputStream(publicKey)) {
+			final Master master = new Master(in, new Name(name), ttl);
+			setPrivateKeyString(new String(privateKey));
 
-		while ((record = master.nextRecord()) != null) {
-			if (record.getType() == Type.DNSKEY) {
-				setDNSKEYRecord((DNSKEYRecord) record);
-				break;
+			Record record;
+			while ((record = master.nextRecord()) != null) {
+				if (record.getType() == Type.DNSKEY) {
+					setDNSKEYRecord((DNSKEYRecord) record);
+					break;
+				}
 			}
 		}
 	}
@@ -108,6 +109,27 @@ public class DNSKeyPairWrapper extends DnsKeyPair {
 		return ((getDNSKEYRecord().getFlags() & DNSKEYRecord.Flags.SEP_KEY) != 0);
 	}
 
+	public boolean isExpired() {
+		return getExpiration().before(Calendar.getInstance().getTime());
+	}
+
+	public boolean isUsable() {
+		final Date now = Calendar.getInstance().getTime();
+		return getEffective().before(now);
+	}
+
+	public boolean isKeyCached(final long maxTTL) {
+		return getExpiration().after(new Date(System.currentTimeMillis() - (maxTTL * 1000)));
+	}
+
+	public boolean isOlder(final DNSKeyPairWrapper other) {
+		return getEffective().before(other.getEffective());
+	}
+
+	public boolean isNewer(final DNSKeyPairWrapper other) {
+		return getEffective().after(other.getEffective());
+	}
+
 	@Override
 	@SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
 	public boolean equals(final Object obj) {
@@ -137,12 +159,15 @@ public class DNSKeyPairWrapper extends DnsKeyPair {
 	@Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder();
-		sb.append("name=" + name);
-		sb.append(" ttl=" + getTTL());
-		sb.append(" ksk=" + isKeySigningKey());
-		sb.append(" inception=\"" + getInception() + "\"");
-		sb.append(" effective=\"" + getEffective() + "\"");
-		sb.append(" expiration=\"" + getExpiration() + "\"");
+		sb.append("name=").append(name)
+			.append(" ttl=").append(getTTL())
+			.append(" ksk=").append(isKeySigningKey())
+			.append(" inception=\"");
+		sb.append(getInception());
+		sb.append("\" effective=\"");
+		sb.append(getEffective());
+		sb.append("\" expiration=\"");
+		sb.append(getExpiration()).append('"');
 
 		return sb.toString();
 	}

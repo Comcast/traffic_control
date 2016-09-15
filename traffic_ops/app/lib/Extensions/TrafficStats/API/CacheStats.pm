@@ -96,4 +96,128 @@ sub get_db_name {
 	return $conf->{cache_stats_db_name};
 }
 
+sub get_stat {
+	my $self = shift;
+	my $database = shift;
+	my $query = shift;
+
+	my $response_container = $self->influxdb_query($database, $query);
+	my $response           = $response_container->{'response'};
+	my $content            = $response->{_content};
+	my $summary_content;
+
+	if ( $response->is_success() ) {
+		$summary_content   = decode_json($content);
+		return $summary_content->{results}[0]{series}[0]{values}[0][1];
+	}
+
+	return "";
+}
+
+sub current_stats {
+	my $self = shift;
+	my @stats;
+	my $current_bw = $self->get_current_bandwidth();
+	my $conns = $self->get_current_connections();
+	my $capacity = $self->get_current_capacity();
+	my $rs = $self->db->resultset('Cdn');
+	while ( my $cdn = $rs->next ) {
+		my $cdn_name = $cdn->name;
+		my $bw = $current_bw->{$cdn_name};
+		my $conn = $conns->{$cdn_name};
+		my $cap = $capacity->{$cdn_name};
+		push(@stats, ({cdn => $cdn_name, bandwidth => $bw, connections => $conn, capacity => $cap}));
+	}
+	push(@stats, ({cdn => "total", bandwidth => $current_bw->{"total"}, connections => $conns->{"total"}}));
+	return $self->success({"currentStats" => \@stats});
+}
+
+sub get_current_bandwidth {
+	my $self = shift;
+	my $bw;
+	my $total_bw = 0;
+	my $rs = $self->db->resultset('Cdn');
+	while ( my $cdn = $rs->next ) {
+		my $cdn_name = $cdn->name;
+		my $query = "SELECT last(value) FROM \"monthly\".\"bandwidth.cdn.1min\" WHERE cdn = \'$cdn_name\'";
+		my $bandwidth = $self->get_stat("cache_stats", $query);
+		if ($bandwidth) {
+			$bw->{$cdn_name} = $bandwidth/1000000;
+			$total_bw += $bandwidth;
+		}
+	}
+	$bw->{"total"} = $total_bw/1000000;
+	return $bw;
+}
+
+sub get_current_connections {
+	my $self = shift;
+	my $conn;
+	my $total_conn = 0;
+	my $rs = $self->db->resultset('Cdn');
+	while ( my $cdn = $rs->next ) {
+		my $cdn_name = $cdn->name;
+		my $query = "select last(value) from \"monthly\".\"connections.cdn.1min\" where cdn = \'$cdn_name\'";
+		my $connections = $self->get_stat("cache_stats", $query);
+		if ($connections) {
+			$conn->{$cdn_name} = $connections;
+			$total_conn += $connections;
+		}
+	}
+	$conn->{"total"} = $total_conn;
+	return $conn;
+}
+
+sub get_current_capacity {
+	my $self = shift;
+	my $cap;
+	my $rs = $self->db->resultset('Cdn');
+	while ( my $cdn = $rs->next ) {
+		my $cdn_name = $cdn->name;
+		my $query = "select last(value) from \"monthly\".\"maxkbps.cdn.1min\" where cdn = \'$cdn_name\'";
+		my $capacity = $self->get_stat("cache_stats", $query);
+		if ($capacity) {
+		$capacity = $capacity/1000000; #convert to Gbps
+		$capacity = $capacity * 0.85;    # need a better way to figure out percentage of max besides hard-coding
+		$cap->{$cdn_name} = $capacity;
+		}
+	}
+	return $cap;
+}
+
+sub daily_summary {
+	my $self = shift;
+	my $query = "";
+	my $database = "daily_stats";
+	my $total_bytesserved = 0;
+
+	my $daily_stats;
+	my @max_gbps;
+	my @pb_served;
+	#get cdns
+	my @cdn_names = $self->db->resultset('Server')->search({ 'type.name' => { -like => 'EDGE%' } }, { prefetch => [ 'cdn', 'type' ], group_by => 'cdn.name' } )->get_column('cdn.name')->all();
+	foreach my $cdn (@cdn_names) {
+		my $bytes_served;
+		my $max;
+		#get max bw
+		$max->{"cdn"} = $cdn;
+		$bytes_served->{"cdn"} = $cdn;
+		my $max_bw = $self->get_stat($database, "select max(value) from \"daily_maxgbps\" where cdn = \'$cdn\'");
+		$max->{"highest"} = $max_bw;
+		#get last bw
+		my $last_bw = $self->get_stat($database, "select last(value) from \"daily_maxgbps\" where cdn = \'$cdn\'");
+		$max->{"yesterday"} = $last_bw;
+		push(@max_gbps, $max);
+		#get bytesserved
+		my $bytesserved = $self->get_stat($database, "select sum(value) from \"daily_bytesserved\" where cdn = \'$cdn\'");
+		$bytes_served->{"bytesServed"} = $bytesserved/1000;
+		push(@pb_served, $bytes_served);
+		$total_bytesserved += $bytesserved;
+	}
+	push(@pb_served, ({cdn => "total", bytesServed => $total_bytesserved/1000}));
+	$daily_stats->{"maxGbps"} = \@max_gbps;
+	$daily_stats->{"petaBytesServed"} = \@pb_served;
+	return $self->success({%$daily_stats});
+}
+
 1;

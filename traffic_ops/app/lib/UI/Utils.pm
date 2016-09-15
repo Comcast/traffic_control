@@ -30,7 +30,7 @@ use Data::Dumper;
 # A release gets cut with just a $major.$minor
 # The presence of a $micro means this version (branch) has been patched and released with that patch.
 # Lowest $micro number, when present is 1.
-my $version = "1.2.0";
+my $version = '__VERSION__';
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -42,8 +42,8 @@ use constant ADMIN      => 30;
 
 our %EXPORT_TAGS = (
 	'all' => [
-		qw(trim_whitespace is_admin is_oper log is_ipaddress is_ip6address is_netmask in_same_net is_hostname admin_status_id type_id
-			profile_id profile_ids tm_version tm_url name_version_string is_regexp stash_role navbarpage rascal_hosts_by_cdn)
+		qw(trim_whitespace is_admin is_oper is_ldap is_privileged log is_ipaddress is_ip6address is_netmask in_same_net is_hostname admin_status_id type_id type_ids
+			profile_id profile_ids tm_version tm_url name_version_string is_regexp stash_role navbarpage rascal_hosts_by_cdn is_steering)
 	]
 );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{all} } );
@@ -112,6 +112,18 @@ sub type_id() {
 	my $type_string = shift;
 
 	return $self->db->resultset('Type')->search( { name => $type_string } )->get_column('id')->single();
+}
+
+sub type_ids() {
+	my $self        = shift;
+	my $type_string = shift;
+	my $table       = shift;
+
+	if (defined($table) && $table ne "") {
+		return $self->db->resultset('Type')->search( { name => { -like => $type_string }, use_in_table => $table } )->get_column('id')->all();
+	}
+
+	return $self->db->resultset('Type')->search( { name => { -like => $type_string } } )->get_column('id')->all();
 }
 
 sub profile_id() {
@@ -202,17 +214,10 @@ sub log() {
 
 	# my $user    = $self->tx->req->env->{REMOTE_USER};
 
-	# For testing on local morbo
-	#	if ( !defined($user) ) { $user = "jvando001"; }
 	my $user;
-	if ( $level eq 'CODEBIG' ) {
-		$user = "codebig";
-	}
-	else {
-		$user = $self->current_user()->{username};
-	}
-
+        $user = $self->current_user()->{username};
 	$user = $self->db->resultset('TmUser')->search( { username => $user } )->get_column('id')->single;
+
 	my $insert = $self->db->resultset('Log')->create(
 		{
 			tm_user => 0 + $user,    # the 0 + forces it to be treated as a number, and no ''
@@ -237,11 +242,41 @@ sub is_federation() {
 	return &has_priv( $self, FEDERATION );
 }
 
+sub is_steering() {
+	my $self = shift;
+	return &has_role( $self, "steering" );
+}
+
 # returns true if the user in $self has admin privs
 sub is_admin() {
 	my $self = shift;
 
 	return &has_priv( $self, ADMIN );
+}
+
+# returns true if the user is logged in via LDAP.
+sub is_ldap() {
+	my $self = shift;
+	my $ldap_user = "true";
+
+	my $user = $self->current_user()->{username};
+	my $tm_user = $self->db->resultset('TmUser')->search( { username => $user } )->single;
+	if ( defined($tm_user) ) {
+		$ldap_user = undef;
+	}
+	return $ldap_user;
+}
+
+# Returns true if the user has admin or oper privileges or is logged in via ldap.
+sub is_privileged() {
+	my $self = shift;
+	my $priv_user;
+
+	if ( &is_admin($self) || &is_oper($self) || &is_ldap($self) ) {
+		$priv_user = "true";
+		return $priv_user
+	}
+	return $priv_user;
 }
 
 ## not exported ##
@@ -259,6 +294,24 @@ sub has_priv() {
 		$priv = $user_data->role->priv_level;
 	}
 	return ( $priv >= $checkval );
+}
+
+sub has_role() {
+	my $self     = shift;
+	my $role_checkval = shift;
+
+	my $user      = $self->current_user()->{username};
+
+	my $user_data = $self->db->resultset('TmUser')->search(
+		{ username => $user } ,
+		{ prefetch => [ 'role' ]}
+	)->single;
+
+	if (!defined($user_data)) {
+		return false;
+	}
+
+	return ( $user_data->role->name eq $role_checkval );
 }
 
 sub stash_role {

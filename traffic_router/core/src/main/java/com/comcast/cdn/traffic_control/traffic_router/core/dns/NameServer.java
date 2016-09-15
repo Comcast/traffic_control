@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.ExtendedFlags;
 import org.xbill.DNS.Flags;
@@ -33,6 +32,7 @@ import org.xbill.DNS.OPTRecord;
 import org.xbill.DNS.RRset;
 import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
+import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.Section;
 import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.Type;
@@ -78,48 +78,49 @@ public class NameServer {
 	@SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
 	private void addAnswers(final Message request, final Message response, final InetAddress clientAddress, final DNSAccessRecord.Builder builder) {
 		final Record question = request.getQuestion();
-		final int qclass = question.getDClass();
-		final Name qname = question.getName();
-		final OPTRecord qopt = request.getOPT();
-		boolean dnssecRequest = false;
-		int qtype = question.getType();
-		int flags = 0;
 
-		if ((qopt != null) && (qopt.getVersion() > MAX_SUPPORTED_EDNS_VERS)) {
-			response.getHeader().setRcode(Rcode.NOTIMP);
-			final OPTRecord opt = new OPTRecord(0, Rcode.BADVERS, MAX_SUPPORTED_EDNS_VERS);
-			response.addRecord(opt, Section.ADDITIONAL);
-			return;
-		}
+		if (question != null) {
+			final int qclass = question.getDClass();
+			final Name qname = question.getName();
+			final OPTRecord qopt = request.getOPT();
+			boolean dnssecRequest = false;
+			int qtype = question.getType();
 
-		if ((qclass != DClass.IN) && (qclass != DClass.ANY)) {
-			response.getHeader().setRcode(Rcode.REFUSED);
-			return;
-		}
+			int flags = 0;
 
-		if (qopt != null && (qopt.getFlags() & ExtendedFlags.DO) != 0) {
-			flags = FLAG_DNSSECOK;
-			dnssecRequest = true;
-		}
+			if ((qopt != null) && (qopt.getVersion() > MAX_SUPPORTED_EDNS_VERS)) {
+				response.getHeader().setRcode(Rcode.NOTIMP);
+				final OPTRecord opt = new OPTRecord(0, Rcode.BADVERS, MAX_SUPPORTED_EDNS_VERS);
+				response.addRecord(opt, Section.ADDITIONAL);
+				return;
+			}
 
-		if (qtype == Type.SIG || qtype == Type.RRSIG) {
-			qtype = Type.ANY;
-			flags |= FLAG_SIGONLY;
-		}
+			if ((qclass != DClass.IN) && (qclass != DClass.ANY)) {
+				response.getHeader().setRcode(Rcode.REFUSED);
+				return;
+			}
 
-		final Zone zone = trafficRouterManager.getTrafficRouter().getZone(qname, qtype, clientAddress, dnssecRequest, builder);
+			if (qopt != null && (qopt.getFlags() & ExtendedFlags.DO) != 0) {
+				flags = FLAG_DNSSECOK;
+				dnssecRequest = true;
+			}
 
-		if (zone == null) {
-			response.getHeader().setRcode(Rcode.REFUSED);
-			return;
-		}
+			if (qtype == Type.SIG || qtype == Type.RRSIG) {
+				qtype = Type.ANY;
+				flags |= FLAG_SIGONLY;
+			}
 
-		lookup(qname, qtype, zone, response, 0, flags);
+			lookup(qname, qtype, clientAddress, response, flags, dnssecRequest, builder);
 
-		if (qopt != null && flags == FLAG_DNSSECOK) {
-			final int optflags = ExtendedFlags.DO;
-			final OPTRecord opt = new OPTRecord(1280, (byte) 0, (byte) 0, optflags);
-			response.addRecord(opt, Section.ADDITIONAL);
+			if (response.getHeader().getRcode() == Rcode.REFUSED) {
+				return;
+			}
+
+			if (qopt != null && flags == FLAG_DNSSECOK) {
+				final int optflags = ExtendedFlags.DO;
+				final OPTRecord opt = new OPTRecord(1280, (byte) 0, (byte) 0, optflags);
+				response.addRecord(opt, Section.ADDITIONAL);
+			}
 		}
 	}
 
@@ -133,8 +134,58 @@ public class NameServer {
 		// we locate the SOA this way so that we can ensure we get the RRSIGs rather than just the one SOA Record
 		final SetResponse fsoa = zone.findRecords(zone.getOrigin(), Type.SOA);
 
+		if (!fsoa.isSuccessful()) {
+			return;
+		}
+
 		for (final RRset answer : fsoa.answers()) {
-			addRRset(zone.getOrigin(), response, answer, section, flags);
+			addRRset(zone.getOrigin(), response, setNegativeTTL(answer, flags), section, flags);
+		}
+	}
+
+	@SuppressWarnings({"unchecked", "PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
+	private static void addDenialOfExistence(final Name qname, final Zone zone, final Message response, final int flags) {
+		// The requirements for this are described in RFC 7129
+		if ((flags & (FLAG_SIGONLY | FLAG_DNSSECOK)) == 0) {
+			return;
+		}
+
+		RRset nsecSpan = null;
+		Name candidate = null;
+
+		final Iterator<RRset> zi = zone.iterator();
+
+		while (zi.hasNext()) {
+			final RRset rrset = zi.next();
+
+			if (rrset.getType() != Type.NSEC) {
+				continue;
+			}
+
+			final Iterator<Record> it = rrset.rrs();
+
+			while (it.hasNext()) {
+				final Record r = it.next();
+				final Name name = r.getName();
+
+				if (name.compareTo(qname) < 0 || (candidate != null && name.compareTo(candidate) < 0)) {
+					candidate = name;
+					nsecSpan = rrset;
+				} else if (name.compareTo(qname) > 0 && candidate != null) {
+					break;
+				}
+			}
+		}
+
+		if (candidate != null && nsecSpan != null) {
+			addRRset(candidate, response, nsecSpan, Section.AUTHORITY, flags);
+		}
+
+		final SetResponse nxsr = zone.findRecords(zone.getOrigin(), Type.NSEC);
+		if (nxsr.isSuccessful()) {
+			for (final RRset answer : nxsr.answers()) {
+				addRRset(qname, response, answer, Section.AUTHORITY, flags);
+			}
 		}
 	}
 
@@ -187,9 +238,72 @@ public class NameServer {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	private static RRset setNegativeTTL(final RRset original, final int flags) {
+		/*
+		 * If DNSSEC is enabled/requested, use the SOA and sigs, otherwise
+		 * lower the TTL on the SOA record to the minimum/ncache TTL,
+		 * using whichever is lower. Behavior is defined in RFC 2308.
+		 * In practice we see Vantio using the minimum from the SOA, while BIND
+		 * uses the lowest TTL in the RRset in the authority section. When DNSSEC
+		 * is enabled, the TTL for the RRsigs is derived from the minimum of the
+		 * SOA via the jdnssec library, hence only modifying the TTL of the SOA
+		 * itself in the non-DNSSEC use case below. We would invalidate the existing
+		 * RRsigs if we modified the TTL of a signed RRset.
+		 */
+
+		// signed RRset and DNSSEC requested; return unmodified
+		if (original.sigs().hasNext() && (flags & (FLAG_SIGONLY | FLAG_DNSSECOK)) != 0) {
+			return original;
+		}
+
+		final RRset rrset = new RRset();
+		final Iterator<Record> it = original.rrs();
+
+		while (it.hasNext()) {
+			Record record = it.next();
+
+			if (record instanceof SOARecord) {
+				final SOARecord soa = (SOARecord) record;
+
+				// the value of the minimum field is less than the actual TTL; adjust
+				if (soa.getMinimum() != 0 || soa.getTTL() > soa.getMinimum()) {
+					record = new SOARecord(soa.getName(), DClass.IN, soa.getMinimum(), soa.getHost(), soa.getAdmin(),
+							soa.getSerial(), soa.getRefresh(), soa.getRetry(), soa.getExpire(),
+							soa.getMinimum());
+				} // else use the unmodified record
+			}
+
+			rrset.addRR(record);
+		}
+
+		return rrset;
+	}
+
+	private void lookup(final Name qname, final int qtype, final InetAddress clientAddress, final Message response, final int flags, final boolean dnssecRequest, final DNSAccessRecord.Builder builder) {
+		lookup(qname, qtype, clientAddress, null, response, 0, flags, dnssecRequest, builder);
+	}
+
 	@SuppressWarnings({"unchecked", "PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
-	private static void lookup(final Name qname, final int qtype, final Zone zone, final Message response, final int iteration, final int flags) {
+	private void lookup(final Name qname, final int qtype, final InetAddress clientAddress, final Zone incomingZone, final Message response, final int iteration, final int flags, final boolean dnssecRequest, final DNSAccessRecord.Builder builder) {
 		if (iteration > MAX_ITERATIONS) {
+			return;
+		}
+
+		Zone zone = incomingZone;
+
+		// this allows us to locate zones for which we are authoritative
+		if (zone == null || !qname.subdomain(zone.getOrigin())) {
+			zone = trafficRouterManager.getTrafficRouter().getZone(qname, qtype, clientAddress, dnssecRequest, builder);
+		}
+
+		// null means we did not find a zone for which we are authoritative
+		if (zone == null) {
+			if (iteration == 0) {
+				// refuse the query if we're not authoritative and we're not recursing
+				response.getHeader().setRcode(Rcode.REFUSED);
+			}
+
 			return;
 		}
 
@@ -201,52 +315,28 @@ public class NameServer {
 			}
 
 			addAuthority(zone, response, flags);
+		} else if (sr.isCNAME()) {
+			/*
+			 * This is an ugly hack to work around the answers() method not working for CNAMEs.
+			 * A CNAME results in isSuccessful() being false, and answers() requires isSuccessful()
+			 * to be true. Because of this, we can either use reflection (slow) or use the getNS() method, which
+			 * returns the RRset stored internally in "data" and is not actually specific to NS records.
+			 * Our CNAME and RRSIGs are in this RRset, so use getNS() despite its name.
+			 * Refer to the dnsjava SetResponse code for more information.
+			 */
+			final RRset rrset = sr.getNS();
+			addRRset(qname, response, rrset, Section.ANSWER, flags);
+
+			/*
+			 * Allow recursive lookups for CNAME targets; the logic above allows us to
+			 * ensure that we only recurse for domains for which we are authoritative.
+			 */
+			lookup(sr.getCNAME().getTarget(), qtype, clientAddress, zone, response, iteration + 1, flags, dnssecRequest, builder);
 		} else if (sr.isNXDOMAIN()) {
 			response.getHeader().setRcode(Rcode.NXDOMAIN);
-
-			// The requirements for this are described in RFC 7129
-			if ((flags & (FLAG_SIGONLY | FLAG_DNSSECOK)) != 0) {
-				RRset nsecSpan = null;
-				Name candidate = null;
-
-				final Iterator<RRset> zi = zone.iterator();
-
-				while (zi.hasNext()) {
-					final RRset rrset = zi.next();
-
-					if (rrset.getType() != Type.NSEC) {
-						continue;
-					}
-
-					final Iterator<Record> it = rrset.rrs();
-
-					while (it.hasNext()) {
-						final Record r = it.next();
-						final Name name = r.getName();
-
-						if (name.compareTo(qname) < 0 || (candidate != null && name.compareTo(candidate) < 0)) {
-							candidate = name;
-							nsecSpan = rrset;
-						} else if (name.compareTo(qname) > 0 && candidate != null) {
-							break;
-						}
-					}
-				}
-
-				if (candidate != null && nsecSpan != null) {
-					addRRset(candidate, response, nsecSpan, Section.AUTHORITY, flags);
-				}
-
-				final SetResponse nxsr = zone.findRecords(zone.getOrigin(), Type.NSEC);
-				if (nxsr.isSuccessful()) {
-					for (final RRset answer : nxsr.answers()) {
-						addRRset(qname, response, answer, Section.AUTHORITY, flags);
-					}
-				}
-			}
-
-			addSOA(zone, response, Section.AUTHORITY, flags);
 			response.getHeader().setFlag(Flags.AA);
+			addDenialOfExistence(qname, zone, response, flags);
+			addSOA(zone, response, Section.AUTHORITY, flags);
 		} else if (sr.isNXRRSET()) {
 			/*
 			 * Per RFC 2308 NODATA is inferred by having no records;
@@ -270,11 +360,6 @@ public class NameServer {
 
 			addSOA(zone, response, Section.AUTHORITY, flags);
 			response.getHeader().setFlag(Flags.AA);
-		} else if (sr.isCNAME()) {
-			final CNAMERecord cname = sr.getCNAME();
-			final RRset cnameSet = new RRset(cname);
-			addRRset(qname, response, cnameSet, Section.ANSWER, flags);
-			lookup(cname.getTarget(), qtype, zone, response, iteration + 1, flags);
 		}
 	}
 
@@ -293,7 +378,6 @@ public class NameServer {
 		 * Given that we know we're shutting down and NameServer relies on ZoneManager,
 		 * we'll call destroy while we can without hacking Spring too hard.
 		 */
-		LOGGER.info("Calling destroy on ZoneManager");
 		ZoneManager.destroy();
 	}
 }

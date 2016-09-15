@@ -57,6 +57,12 @@ __PACKAGE__->table("cachegroup");
   is_foreign_key: 1
   is_nullable: 1
 
+=head2 secondary_parent_cachegroup_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
 =head2 type
 
   data_type: 'integer'
@@ -84,6 +90,8 @@ __PACKAGE__->add_columns(
   "longitude",
   { data_type => "double precision", is_nullable => 1 },
   "parent_cachegroup_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "secondary_parent_cachegroup_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "type",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
@@ -180,6 +188,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 cachegroup_secondary_parent_cachegroups
+
+Type: has_many
+
+Related object: L<Schema::Result::Cachegroup>
+
+=cut
+
+__PACKAGE__->has_many(
+  "cachegroup_secondary_parent_cachegroups",
+  "Schema::Result::Cachegroup",
+  { "foreign.secondary_parent_cachegroup_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 cachegroups
 
 Type: has_many
@@ -207,6 +230,26 @@ __PACKAGE__->belongs_to(
   "parent_cachegroup",
   "Schema::Result::Cachegroup",
   { id => "parent_cachegroup_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "NO ACTION",
+    on_update     => "NO ACTION",
+  },
+);
+
+=head2 secondary_parent_cachegroup
+
+Type: belongs_to
+
+Related object: L<Schema::Result::Cachegroup>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "secondary_parent_cachegroup",
+  "Schema::Result::Cachegroup",
+  { id => "secondary_parent_cachegroup_id" },
   {
     is_deferrable => 1,
     join_type     => "LEFT",
@@ -261,9 +304,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07043 @ 2015-09-23 09:00:52
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:F55DlMj08AluZL0Jz6glJQ
-
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2016-06-03 08:58:13
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:wrtmgvbod7oMIUahcjwa/w
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 #

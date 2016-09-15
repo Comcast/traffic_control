@@ -24,6 +24,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -36,16 +40,19 @@ import org.apache.wicket.ajax.json.JSONException;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouterManager;
 
+import static org.apache.commons.codec.digest.DigestUtils.md5Hex;
+
 public abstract class AbstractServiceUpdater {
 	private static final Logger LOGGER = Logger.getLogger(AbstractServiceUpdater.class);
 
 	protected String dataBaseURL;
-	protected String databaseLocation;
+	protected String databaseName;
 	protected ScheduledExecutorService executorService;
 	private long pollingInterval;
 	protected boolean loaded = false;
 	protected ScheduledFuture<?> scheduledService;
 	private TrafficRouterManager trafficRouterManager;
+	protected Path databasesDirectory;
 
 	public void destroy() {
 		executorService.shutdownNow();
@@ -53,7 +60,7 @@ public abstract class AbstractServiceUpdater {
 
 	/**
 	 * Gets dataBaseURL.
-	 * 
+	 *
 	 * @return the dataBaseURL
 	 */
 	public String getDataBaseURL() {
@@ -62,7 +69,7 @@ public abstract class AbstractServiceUpdater {
 
 	/**
 	 * Gets pollingInterval.
-	 * 
+	 *
 	 * @return the pollingInterval
 	 */
 	public long getPollingInterval() {
@@ -72,97 +79,144 @@ public abstract class AbstractServiceUpdater {
 
 	final private Runnable updater = new Runnable() {
 		@Override
+		@SuppressWarnings("PMD.AvoidCatchingThrowable")
 		public void run() {
-			updateDatabase();
+			try {
+				updateDatabase();
+			} catch (Throwable t) {
+				// Catching Throwable prevents this Service Updater thread from silently dying
+				LOGGER.error( "[" + getClass().getSimpleName() +"] Failed updating database!", t);
+			}
 		}
 	};
 
 	public void init() {
-		final long pi = getPollingInterval();
-		LOGGER.warn(getClass().getSimpleName() + " Starting schedule with interval: " + pi + " : " + TimeUnit.MILLISECONDS);
-		scheduledService = executorService.scheduleWithFixedDelay(updater, pi, pi, TimeUnit.MILLISECONDS);
+		final long pollingInterval = getPollingInterval();
+		final Date nextFetchDate = new Date(System.currentTimeMillis() + pollingInterval);
+		LOGGER.info("[" + getClass().getSimpleName() + "] Fetching external resource " + dataBaseURL + " at interval: " + pollingInterval + " : " + TimeUnit.MILLISECONDS + " next update occurrs at " + nextFetchDate);
+		scheduledService = executorService.scheduleWithFixedDelay(updater, pollingInterval, pollingInterval, TimeUnit.MILLISECONDS);
 	}
 
-	@SuppressWarnings("PMD.CyclomaticComplexity")
+	@SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
 	public boolean updateDatabase() {
-		final File existingDB = new File(databaseLocation);
-		File newDB = null;
 		try {
-			if (!isLoaded() || needsUpdating(existingDB)) {
-				boolean isModified = true;
+			if (!Files.exists(databasesDirectory)) {
+				Files.createDirectories(databasesDirectory);
+			}
 
-				try {
-					newDB = downloadDatabase(getDataBaseURL(), existingDB);
-					trafficRouterManager.trackEvent("last" + getClass().getSimpleName() + "Check");
+		} catch (IOException ex) {
+			LOGGER.error(databasesDirectory.toString() + " does not exist and cannot be created!");
+			return false;
+		}
 
-					// if the remote db's timestamp is less than or equal to ours, the above returns existingDB
-					if (newDB == existingDB) {
-						isModified = false;
-					}
-				} catch (Exception e) {
-					LOGGER.fatal("Caught exception while attempting to download: " + getDataBaseURL(), e);
+		final File existingDB = databasesDirectory.resolve(databaseName).toFile();
 
-					if (!isLoaded()) {
-						newDB = existingDB;
-					} else {
-						throw e;
-					}
+		if (!isLoaded()) {
+			try {
+				setLoaded(loadDatabase());
+			} catch (Exception e) {
+				LOGGER.warn("[" + getClass().getSimpleName() + "] Failed to load existing database! " + e.getMessage());
+			}
+		} else if (!needsUpdating(existingDB)) {
+			LOGGER.info("[" + getClass().getSimpleName() + "] Location database does not require updating.");
+			return false;
+		}
+
+		File newDB = null;
+		boolean isModified = true;
+
+		try {
+			try {
+				newDB = downloadDatabase(getDataBaseURL(), existingDB);
+				trafficRouterManager.trackEvent("last" + getClass().getSimpleName() + "Check");
+
+				// if the remote db's timestamp is less than or equal to ours, the above returns existingDB
+				if (newDB == existingDB) {
+					isModified = false;
 				}
+			} catch (Exception e) {
+				LOGGER.fatal("[" + getClass().getSimpleName() + "] Caught exception while attempting to download: " + getDataBaseURL(), e);
+				return false;
+			}
 
-				if ((!isLoaded() || isModified) && newDB != null && newDB.exists()) {
-					verifyDatabase(newDB);
-					final boolean isDifferent = copyDatabaseIfDifferent(existingDB, newDB);
+			if (!isModified || newDB == null || !newDB.exists()) {
+				return false;
+			}
 
-					if (!isLoaded() || isDifferent) {
-						loadDatabase();
-						setLoaded(true);
-						trafficRouterManager.trackEvent("last" + getClass().getSimpleName() + "Update");
-					} else if (isLoaded() && !isDifferent) {
-						LOGGER.info("Removing downloaded temp file " + newDB);
-						newDB.delete();
-					}
-
-					return true;
-				} else {
+			try {
+				if (!verifyDatabase(newDB)) {
+					LOGGER.warn("[" + getClass().getSimpleName() + "] " + newDB.getAbsolutePath() + " from " + getDataBaseURL() + " is invalid!");
 					return false;
 				}
-			} else {
-				LOGGER.info("Location database does not require updating.");
+			} catch (Exception e) {
+				LOGGER.error("[" + getClass().getSimpleName() + "] Failed verifying database " + newDB.getAbsolutePath() + " : " + e.getMessage());
+				return false;
 			}
-		} catch (final Exception e) {
-			LOGGER.error(e.getMessage(), e);
+
+			try {
+				if (copyDatabaseIfDifferent(existingDB, newDB)) {
+					setLoaded(loadDatabase());
+					trafficRouterManager.trackEvent("last" + getClass().getSimpleName() + "Update");
+				} else {
+					newDB.delete();
+				}
+			} catch (Exception e) {
+				LOGGER.error("[" + getClass().getSimpleName() + "] Failed copying and loading new database " + newDB.getAbsolutePath() + " : " + e.getMessage());
+			}
+
+		} finally {
+			if (newDB != null && newDB.exists()) {
+				LOGGER.info("[" + getClass().getSimpleName() + "] Try to delete downloaded temp file");
+				deleteDatabase(newDB);
+			}
 		}
-		return false;
+
+		return true;
 	}
 
-	abstract public void verifyDatabase(final File dbFile) throws IOException;
+	abstract public boolean verifyDatabase(final File dbFile) throws IOException, JSONException;
 	abstract public boolean loadDatabase() throws IOException, JSONException;
 
-	public void setDatabaseLocation(final String databaseLocation) {
-		this.databaseLocation = databaseLocation;
+	public void setDatabaseName(final String databaseName) {
+		this.databaseName = databaseName;
+	}
+
+	public void stopServiceUpdater() {
+		if (scheduledService != null) {
+			LOGGER.info("[" + getClass().getSimpleName() + "] Stopping service updater");
+			scheduledService.cancel(false);
+		}
+	}
+
+	public void cancelServiceUpdater() {
+		this.stopServiceUpdater();
+		pollingInterval = 0;
+		dataBaseURL = null;
 	}
 
 	public void setDataBaseURL(final String url, final long refresh) {
-		if(refresh !=0 && refresh != pollingInterval) {
-			if (scheduledService != null) {
-				scheduledService.cancel(false);
-			}
+		if (refresh !=0 && refresh != pollingInterval) {
 
 			this.pollingInterval = refresh;
-			LOGGER.info("Restarting schedule for " + url + " with interval: "+refresh);
+			LOGGER.info("[" + getClass().getSimpleName() + "] Restarting schedule for " + url + " with interval: "+refresh);
+			stopServiceUpdater();
 			init();
 		}
-		if ((url != null) && !url.equals(dataBaseURL)
-				|| (refresh!=0 && refresh!=pollingInterval)) {
+
+		if ((url != null) && !url.equals(dataBaseURL) || (refresh!=0 && refresh!=pollingInterval)) {
 			this.dataBaseURL = url;
 			this.setLoaded(false);
 			new Thread(updater).start();
 		}
 	}
 
+	public void setDatabaseUrl(final String url) {
+		this.dataBaseURL = url;
+	}
+
 	/**
 	 * Sets executorService.
-	 * 
+	 *
 	 * @param executorService
 	 *            the executorService to set
 	 */
@@ -172,7 +226,7 @@ public abstract class AbstractServiceUpdater {
 
 	/**
 	 * Sets pollingInterval.
-	 * 
+	 *
 	 * @param pollingInterval
 	 *            the pollingInterval to set
 	 */
@@ -183,59 +237,119 @@ public abstract class AbstractServiceUpdater {
 	boolean filesEqual(final File a, final File b) throws IOException {
 		if(!a.exists() && !b.exists()) { return true; }
 		if(!a.exists() || !b.exists()) { return false; }
-		if(a.length() != b.length()) { return false; }
-		FileInputStream fis = new FileInputStream(a);
-		final String md5a = org.apache.commons.codec.digest.DigestUtils.md5Hex(fis);
-		fis.close();
-		fis = new FileInputStream(b);
-		final String md5b = org.apache.commons.codec.digest.DigestUtils.md5Hex(fis);
-		fis.close();
-		if(md5a.equals(md5b)) { return true; }
-		return false;
+		if (a.isDirectory() && b.isDirectory()) {
+			return compareDirectories(a, b);
+		}
+		return compareFiles(a, b);
 	}
-	protected boolean copyDatabaseIfDifferent(final File existingDB, final File newDB) throws IOException {
-		if (!filesEqual(existingDB, newDB)) {
-			LOGGER.info("Unlinking location database and renaming " + newDB + " to " + existingDB);
 
-			if (existingDB != null && existingDB.exists()) {
-				existingDB.setReadable(true, true);
-				existingDB.setWritable(true, false);
-				existingDB.delete();
-			}
+	private boolean compareDirectories(final File a, final File b) throws IOException {
+		final File[] aFileList = a.listFiles();
+		final File[] bFileList = b.listFiles();
 
-			newDB.setReadable(true, true);
-			newDB.setWritable(true, false);
-			final boolean renamed = newDB.renameTo(existingDB);
+		if (aFileList.length != bFileList.length) {
+			return false;
+		}
 
-			if (renamed) {
-				LOGGER.info("Successfully updated location database " + existingDB);
-				return true;
-			} else {
-				LOGGER.fatal("Unable to rename " + newDB + " to " + existingDB + "; current working directory is " + System.getProperty("user.dir"));
+		Arrays.sort(aFileList);
+		Arrays.sort(bFileList);
+
+		for (int i = 0; i < aFileList.length; i++) {
+			if (aFileList[i].length() != bFileList[i].length()) {
 				return false;
 			}
-		} else {
-			LOGGER.info("Location database unchanged.");
+		}
+
+		return true;
+	}
+
+	private String fileMd5(final File file) throws IOException {
+		try (FileInputStream stream = new FileInputStream(file)) {
+			return md5Hex(stream);
+		}
+	}
+
+	private boolean compareFiles(final File a, final File b) throws IOException {
+		if (a.length() != b.length()) {
 			return false;
+		}
+
+		return fileMd5(a).equals(fileMd5(b));
+	}
+
+	protected boolean copyDatabaseIfDifferent(final File existingDB, final File newDB) throws IOException {
+		if (filesEqual(existingDB, newDB)) {
+			LOGGER.info("[" + getClass().getSimpleName() + "] database unchanged.");
+			return false;
+		}
+
+		if (existingDB.isDirectory() && newDB.isDirectory()) {
+			moveDirectory(existingDB, newDB);
+			LOGGER.info("[" + getClass().getSimpleName() + "] Successfully updated database " + existingDB);
+			return true;
+		}
+
+		if (existingDB != null && existingDB.exists()) {
+			deleteDatabase(existingDB);
+		}
+
+		newDB.setReadable(true, true);
+		newDB.setWritable(true, false);
+		final boolean renamed = newDB.renameTo(existingDB);
+
+		if (!renamed) {
+			LOGGER.fatal("[" + getClass().getSimpleName() + "] Unable to rename " + newDB + " to " + existingDB.getAbsolutePath() + "; current working directory is " + System.getProperty("user.dir"));
+			return false;
+		}
+
+		LOGGER.info("[" + getClass().getSimpleName() + "] Successfully updated database " + existingDB);
+		return true;
+	}
+
+	private void moveDirectory(final File existingDB, final File newDB) throws IOException {
+		LOGGER.info("[" + getClass().getSimpleName() + "] Moving Location database from: " + newDB + ", to: " + existingDB);
+
+		for (final File file : existingDB.listFiles()) {
+			file.setReadable(true, true);
+			file.setWritable(true, false);
+			file.delete();
+		}
+
+		existingDB.delete();
+		Files.move(newDB.toPath(), existingDB.toPath(), StandardCopyOption.ATOMIC_MOVE);
+	}
+
+	private void deleteDatabase(final File db) {
+		db.setReadable(true, true);
+		db.setWritable(true, false);
+
+		if (db.isDirectory()) {
+			for (final File file : db.listFiles()) {
+				file.delete();
+			}
+			LOGGER.debug("[" + getClass().getSimpleName() + "] Successfully deleted database under: " + db);
+		} else {
+			db.delete();
 		}
 	}
 
 	protected boolean sourceCompressed = true;
 	protected String tmpPrefix = "loc";
 	protected String tmpSuffix = ".dat";
+
 	protected File downloadDatabase(final String url, final File existingDb) throws IOException {
 		LOGGER.info("[" + getClass().getSimpleName() + "] Downloading database: " + url);
 		final URL dbURL = new URL(url);
 		final HttpURLConnection conn = (HttpURLConnection) dbURL.openConnection();
 
-		if (existingDb != null && existingDb.exists() && existingDb.lastModified() > 0) {
+		if (useModifiedTimestamp(existingDb)) {
 			conn.setIfModifiedSince(existingDb.lastModified());
 		}
 
 		InputStream in = conn.getInputStream();
 
 		if (conn.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
-			LOGGER.info(url + " not modified since our existing database's last update time of " + new Date(existingDb.lastModified()));
+			LOGGER.info("[" + getClass().getSimpleName() + "] " + url + " not modified since our existing database's last update time of " + new Date(existingDb.lastModified()));
 			return existingDb;
 		}
 
@@ -249,9 +363,13 @@ public abstract class AbstractServiceUpdater {
 		IOUtils.copy(in, out);
 		IOUtils.closeQuietly(in);
 		IOUtils.closeQuietly(out);
-		LOGGER.warn("Successfully downloaded location database to temp path " + outputFile);
 
 		return outputFile;
+	}
+
+	private boolean useModifiedTimestamp(final File existingDb) {
+		return existingDb != null && existingDb.exists() && existingDb.lastModified() > 0
+				&& (!existingDb.isDirectory() || existingDb.listFiles().length > 0);
 	}
 
 	protected boolean needsUpdating(final File existingDB) {
@@ -271,5 +389,13 @@ public abstract class AbstractServiceUpdater {
 
 	public void setTrafficRouterManager(final TrafficRouterManager trafficRouterManager) {
 		this.trafficRouterManager = trafficRouterManager;
+	}
+
+	public Path getDatabasesDirectory() {
+		return databasesDirectory;
+	}
+
+	public void setDatabasesDirectory(final Path databasesDirectory) {
+		this.databasesDirectory = databasesDirectory;
 	}
 }

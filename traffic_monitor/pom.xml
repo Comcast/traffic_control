@@ -3,18 +3,17 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
+
 	<groupId>com.comcast.cdn.traffic_control</groupId>
+	<artifactId>traffic_monitor</artifactId>
+	<version>1.7.0</version>
 	<packaging>war</packaging>
-	<version>1.2.1</version>
-	<name>traffic_monitor</name>
-	<description></description>
 
 	<scm>
 		<connection>scm:git:file://</connection>
 		<developerConnection>scm:git:file://</developerConnection>
 	</scm>
 
-	<!-- <organization> <name>company name</name> <url>company url</url> </organization> -->
 	<properties>
 		<deploy.dir>/opt/traffic_monitor</deploy.dir>
 		<wicket.version>6.0.0</wicket.version>
@@ -22,17 +21,11 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	<dependencies>
-		<!-- WICKET DEPENDENCIES -->
 		<dependency>
 			<groupId>org.apache.wicket</groupId>
 			<artifactId>wicket-core</artifactId>
 			<version>${wicket.version}</version>
 		</dependency>
-		<!-- OPTIONAL DEPENDENCY <dependency> <groupId>org.apache.wicket</groupId> 
-			<artifactId>wicket-extensions</artifactId> <version>${wicket.version}</version> 
-			</dependency> -->
-
-		<!-- LOGGING DEPENDENCIES - LOG4J -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-log4j12</artifactId>
@@ -42,14 +35,6 @@
 			<groupId>log4j</groupId>
 			<artifactId>log4j</artifactId>
 			<version>1.2.16</version>
-		</dependency>
-
-		<!-- JUNIT DEPENDENCY FOR TESTING -->
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.10</version>
-			<scope>test</scope>
 		</dependency>
 
 		<!-- JETTY DEPENDENCIES FOR TESTING -->
@@ -86,6 +71,12 @@
 			<artifactId>wicket-examples-war</artifactId>
 			<version>0.2</version>
 			<classifier>test-sources</classifier>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.wicket</groupId>
+					<artifactId>wicket-atmosphere</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.wicket</groupId>
@@ -102,7 +93,34 @@
 			<artifactId>async-http-client</artifactId>
 			<version>1.7.17</version>
 		</dependency>
+
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-all</artifactId>
+			<version>1.3</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- JUNIT DEPENDENCY FOR TESTING -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-api-mockito</artifactId>
+			<version>1.6.4</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-module-junit4</artifactId>
+			<version>1.6.2</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
+
 	<build>
 		<finalName>ROOT</finalName>
 		<resources>
@@ -151,7 +169,7 @@
 				<executions>
 					<execution>
 						<id>PMD</id>
-						<phase>verify</phase>
+						<phase>compile</phase>
 						<goals>
 							<goal>check</goal>
 						</goals>
@@ -187,7 +205,7 @@
 					</execution>
 				</executions>
 				<configuration>
-					<shortRevisionLength>9</shortRevisionLength>
+					<shortRevisionLength>8</shortRevisionLength>
 					<doCheck>false</doCheck>
 					<doUpdate>false</doUpdate>
 					<timestampFormat>
@@ -455,6 +473,9 @@
 							<preremoveScriptlet>
 								<scriptFile>src/main/scripts/preremove.sh</scriptFile>
 							</preremoveScriptlet>
+							<postremoveScriptlet>
+								<scriptFile>src/main/scripts/postremove.sh</scriptFile>
+							</postremoveScriptlet>
 						</configuration>
 					</plugin>
 				</plugins>
@@ -474,5 +495,4 @@
 			</snapshots>
 		</repository>
 	</repositories>
-	<artifactId>traffic_monitor</artifactId>
 </project>

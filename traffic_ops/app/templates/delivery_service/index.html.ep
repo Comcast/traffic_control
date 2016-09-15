@@ -79,7 +79,7 @@ $("a.fancybox").fancybox({
         % if ($priv_level >= 20) {
           return "<a class='fancybox fancybox.iframe' href='/ds/" + id + "'>Edit</a>";
         % } else {
-          return "<a class='fancybox fancybox.iframe' href='/ds/" + id + "'>Details</a>";;
+          return "<a class='fancybox fancybox.iframe' href='/ds/" + id + "'>Details</a>";
         % }
     };
 </script>

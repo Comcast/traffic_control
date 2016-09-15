@@ -552,6 +552,33 @@ my %definition_for = (
 			value       => 'INT 33554432',
 		},
 	},
+	'regex_revalidate.config_snapshot_dir' => {
+		new   => 'Parameter',
+		using => {
+			id          => 62,
+			name        => 'snapshot_dir',
+			config_file => 'regex_revalidate.config',
+			value       => 'public/Trafficserver-Snapshots/',
+		},
+	},
+	'regex_revalidate.config_max_days' => {
+		new   => 'Parameter',
+		using => {
+			id          => 63,
+			name        => 'maxRevalDurationDays',
+			config_file => 'regex_revalidate.config',
+			value       => 3,
+		},
+	},
+	'regex_revalidate.config_maxRevalDurationDays' => {
+		new   => 'Parameter',
+		using => {
+			id          => 64,
+			name        => 'maxRevalDurationDays',
+			config_file => 'regex_revalidate.config',
+			value       => 90,
+		},
+	},
 );
 
 sub get_definition {

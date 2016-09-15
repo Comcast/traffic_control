@@ -35,6 +35,12 @@ __PACKAGE__->table("tm_user");
   is_nullable: 1
   size: 128
 
+=head2 public_ssh_key
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 2048
+
 =head2 role
 
   data_type: 'integer'
@@ -136,12 +142,6 @@ __PACKAGE__->table("tm_user");
   is_nullable: 1
   size: 256
 
-=head2 local_user
-
-  data_type: 'tinyint'
-  default_value: 0
-  is_nullable: 0
-
 =head2 token
 
   data_type: 'varchar'
@@ -162,6 +162,8 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
   "username",
   { data_type => "varchar", is_nullable => 1, size => 128 },
+  "public_ssh_key",
+  { data_type => "varchar", is_nullable => 1, size => 2048 },
   "role",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "uid",
@@ -201,8 +203,6 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 11 },
   "country",
   { data_type => "varchar", is_nullable => 1, size => 256 },
-  "local_user",
-  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "token",
   { data_type => "varchar", is_nullable => 1, size => 50 },
   "registration_sent",
@@ -227,6 +227,18 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("id");
 
 =head1 UNIQUE CONSTRAINTS
+
+=head2 C<tmuser_email_UNIQUE>
+
+=over 4
+
+=item * L</email>
+
+=back
+
+=cut
+
+__PACKAGE__->add_unique_constraint("tmuser_email_UNIQUE", ["email"]);
 
 =head2 C<username_UNIQUE>
 
@@ -323,8 +335,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2015-10-01 13:20:58
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ItqKDNXF30OoTN/XDznBIA
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2016-06-03 08:58:13
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:5ScNDf57+7Av94KOEM/1dw
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

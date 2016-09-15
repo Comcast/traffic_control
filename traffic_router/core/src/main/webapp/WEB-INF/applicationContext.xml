@@ -14,14 +14,278 @@
 	See the License for the specific language governing permissions and
 	limitations under the License.
  -->
-<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:p="http://www.springframework.org/schema/p" xmlns:context="http://www.springframework.org/schema/context"
-    xsi:schemaLocation="
-        http://www.springframework.org/schema/beans 
-        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
-        http://www.springframework.org/schema/context 
-        http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:util="http://www.springframework.org/schema/util"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd"
+	   default-init-method="init" default-destroy-method="destroy">
 
-    <import resource="classpath:/applicationContext.xml" />
+	<import resource="classpath:/applicationProperties.xml" />
+
+	<context:component-scan base-package="com.comcast.cdn.traffic_control.traffic_router" >
+		<context:exclude-filter type="regex" expression="com\.comcast\.cdn\.traffic_control\.traffic_router\.api.*"/>
+	</context:component-scan>
+
+	<bean id="databasesDir" class="java.nio.file.Paths" factory-method="get">
+		<constructor-arg>
+			<value>$[deploy.dir:/opt/traffic_router]/db</value>
+		</constructor-arg>
+		<constructor-arg><array /></constructor-arg>
+	</bean>
+
+	<bean id="propertiesDir" class="java.nio.file.Paths" factory-method="get">
+		<constructor-arg>
+			<value>$[deploy.dir:/opt/traffic_router]/conf</value>
+		</constructor-arg>
+		<constructor-arg><array /></constructor-arg>
+	</bean>
+
+	<bean id="autoZonesDir" class="java.io.File">
+		<constructor-arg>
+			<value>$[dns.zones.dir:/opt/traffic_router/var/auto-zones]</value>
+		</constructor-arg>
+	</bean>
+
+	<bean id="statTracker" class="com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker">
+		<property name="dnsRoutingName" value="$[dns.routing.name:edge]" />
+		<property name="httpRoutingName" value="$[http.routing.name:tr]" />
+	</bean>
+
+	<bean name="staticZoneManagerZoneDirectoryInitializer" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="staticMethod" value="com.comcast.cdn.traffic_control.traffic_router.core.dns.ZoneManager.setZoneDirectory"/>
+		<property name="arguments">
+			<list><ref bean="autoZonesDir"/></list>
+		</property>
+	</bean>
+
+	<bean name="staticZoneManagerHttpRoutingNameInitializer" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="staticMethod" value="com.comcast.cdn.traffic_control.traffic_router.core.dns.ZoneManager.setHttpRoutingName"/>
+		<property name="arguments">
+			<list><value>$[http.routing.name:tr]</value></list>
+		</property>
+	</bean>
+
+	<bean name="staticZoneManagerDnsRoutingNameInitializer" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="staticMethod" value="com.comcast.cdn.traffic_control.traffic_router.core.dns.ZoneManager.setDnsRoutingName"/>
+		<property name="arguments">
+			<list><value>$[dns.routing.name:edge]</value></list>
+		</property>
+	</bean>
+
+	<bean id="trafficRouterManager" class="com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouterManager">
+		<property name="statTracker" ref="statTracker" />
+		<property name="nameServer" ref="NameServer" />
+		<property name="trafficOpsUtils" ref="trafficOpsUtils" />
+		<property name="federationRegistry" ref="federationsRegistry" />
+		<property name="geolocationService" ref="maxmindGeolocationService" />
+		<property name="geolocationService6" ref="maxmindGeolocationService" />
+		<property name="steeringRegistry" ref="steeringRegistry" />
+	</bean>
+
+	<bean id="federationsRegistry" class="com.comcast.cdn.traffic_control.traffic_router.core.loc.FederationRegistry"/>
+
+	<bean id="federationsWatcher" class="com.comcast.cdn.traffic_control.traffic_router.core.loc.FederationsWatcher" init-method="init">
+		<property name="executorService" ref="ScheduledExecutorService" />
+		<property name="databasesDirectory" ref="databasesDir" />
+		<property name="databaseName" value="$[cache.federations.database:federations.json]" />
+		<property name="pollingInterval" value="$[cache.federations.database.refresh.period:300000]" />
+		<property name="trafficOpsUtils" ref="trafficOpsUtils" />
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+		<property name="federationRegistry" ref="federationsRegistry" />
+	</bean>
+
+	<bean id="steeringRegistry" class="com.comcast.cdn.traffic_control.traffic_router.core.ds.SteeringRegistry"/>
+
+	<bean id="steeringWatcher" class="com.comcast.cdn.traffic_control.traffic_router.core.ds.SteeringWatcher">
+		<property name="executorService" ref="ScheduledExecutorService" />
+		<property name="databasesDirectory" ref="databasesDir" />
+		<property name="databaseName" value="$[cache.steering.database:steering.json]" />
+		<property name="trafficOpsUtils" ref="trafficOpsUtils" />
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+		<property name="steeringRegistry" ref="steeringRegistry" />
+	</bean>
+
+
+	<bean name="certificateChecker" class="com.comcast.cdn.traffic_control.traffic_router.core.config.CertificateChecker"/>
+
+	<bean id="ConfigHandler" class="com.comcast.cdn.traffic_control.traffic_router.core.config.ConfigHandler">
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+		<property name="geolocationDatabaseUpdater" ref="geolocationDatabaseUpdater" />
+		<property name="networkUpdater" ref="networkUpdater" />
+		<property name="regionalGeoUpdater" ref="regionalGeoUpdater" />
+		<property name="statTracker" ref="statTracker" />
+		<property name="configDir" value="/opt/traffic_router/conf" />
+		<property name="federationsWatcher" ref="federationsWatcher" />
+		<property name="trafficOpsUtils" ref="trafficOpsUtils" />
+		<property name="steeringWatcher" ref="steeringWatcher" />
+		<property name="certificatesPoller" ref="certificatesPoller"/>
+		<property name="certificateChecker" ref="certificateChecker" />
+	</bean>
+
+	<bean id="trafficOpsUtils" class="com.comcast.cdn.traffic_control.traffic_router.core.util.TrafficOpsUtils">
+		<property name="username" value="$[traffic_ops.username]" />
+		<property name="password" value="$[traffic_ops.password]" />
+	</bean>
+
+	<bean id="maxmindGeolocationService" class="com.comcast.cdn.traffic_control.traffic_router.core.loc.MaxmindGeolocationService"/>
+	
+	<bean id="geolocationDatabaseUpdater" class="com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationDatabaseUpdater" init-method="init">
+		<property name="databasesDirectory" ref="databasesDir"/>
+		<property name="databaseName" value="$[cache.geolocation.database:GeoLite2-City.mmdb]" />
+		<property name="pollingInterval" value="$[cache.geolocation.database.refresh.period:86400000]" />
+		<property name="executorService" ref="ScheduledExecutorService" />
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+		<property name="maxmindGeolocationService" ref="maxmindGeolocationService" />
+	</bean>
+
+	<bean id="networkUpdater" class="com.comcast.cdn.traffic_control.traffic_router.core.loc.NetworkUpdater" init-method="init">
+		<property name="executorService" ref="ScheduledExecutorService" />
+		<property name="databasesDirectory" ref="databasesDir" />
+		<property name="databaseName" value="$[cache.czmap.database:czmap.json]" />
+		<property name="pollingInterval" value="$[cache.czmap.database.refresh.period:10800000]" />
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+	</bean>
+
+	<bean id="regionalGeoUpdater" class="com.comcast.cdn.traffic_control.traffic_router.core.loc.RegionalGeoUpdater"
+		init-method="init">
+		<property name="executorService" ref="ScheduledExecutorService" />
+		<property name="databasesDirectory" ref="databasesDir" />
+		<property name="databaseName" value="$[cache.regionalgeo.database:regional_geoblock.json]" />
+		<property name="pollingInterval" value="$[cache.regionalgeo.database.refresh.period:10800000]" />
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+	</bean>
+
+	<bean id="ScheduledExecutorService" class="java.util.concurrent.Executors"
+		factory-method="newSingleThreadScheduledExecutor" />
+
+	<bean id="MonitorWatcher" class="com.comcast.cdn.traffic_control.traffic_router.core.monitor.TrafficMonitorWatcher">
+		<property name="stateUrl" value="http://[host]/publish/CrStates" />
+		<property name="configUrl" value="http://[host]/publish/CrConfig?json" />
+		<property name="configHandler" ref="ConfigHandler" />
+		<property name="monitorHosts" value="$[traffic_monitor.bootstrap.hosts]" />
+		<property name="monitorProperties" value="$[traffic_monitor.properties]" />
+		<property name="statusFile" value="$[cache.health.json:health.json]" />
+		<property name="statusRefreshPeriod" value="$[cache.health.json.refresh.period:1000]" />
+		<property name="configFile" value="$[cache.config.json:cr-config.json]" />
+		<property name="configRefreshPeriod" value="$[cache.config.json.refresh.period:60000]" />
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+		<property name="databasesDirectory" ref="databasesDir" />
+		<property name="propertiesDirectory" ref="propertiesDir" />
+	</bean>
+
+	<bean id="federationExporter" class="com.comcast.cdn.traffic_control.traffic_router.core.util.FederationExporter">
+		<property name="federationRegistry" ref="federationsRegistry"/>
+	</bean>
+
+	<bean id="dataExporter" class="com.comcast.cdn.traffic_control.traffic_router.core.util.DataExporter">
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+		<property name="statTracker" ref="statTracker" />
+		<property name="federationExporter" ref="federationExporter"/>
+	</bean>
+
+	<bean id="languidState" class="com.comcast.cdn.traffic_control.traffic_router.core.util.LanguidState" init-method="init"
+		depends-on="geolocationDatabaseUpdater, networkUpdater, regionalGeoUpdater, MonitorWatcher, trafficRouterManager, ConfigHandler">
+		<!-- todo: add bean refs that can be validated inside the method called -->
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+	</bean>
+
+	<!-- JMX Configuration -->
+	<bean id="MBeanExporter" class="org.springframework.jmx.export.MBeanExporter">
+		<property name="beans">
+			<map>
+				<entry key="traffic-router:name=GeolocationDatabase"
+					value-ref="geolocationDatabaseUpdater" />
+			</map>
+		</property>
+		<property name="assembler">
+			<bean
+				class="org.springframework.jmx.export.assembler.MethodNameBasedMBeanInfoAssembler">
+				<property name="managedMethods">
+					<value>updateDatabase</value>
+				</property>
+			</bean>
+		</property>
+	</bean>
+	<bean id="LanguidExporter" class="org.springframework.jmx.export.MBeanExporter" lazy-init="false">
+		<property name="beans">
+			<map>
+				<entry key="traffic-router:name=languidState"
+					value-ref="languidState" />
+			</map>
+		</property>
+	</bean>
+	<bean id="DataExporter" class="org.springframework.jmx.export.MBeanExporter">
+		<property name="beans">
+			<map>
+				<entry key="traffic-router:name=dataExporter"
+					value-ref="dataExporter" />
+			</map>
+		</property>
+	</bean>
+
+	<bean id="NameServer" class="com.comcast.cdn.traffic_control.traffic_router.core.dns.NameServer">
+		<property name="trafficRouterManager" ref="trafficRouterManager" />
+	</bean>
+
+	<bean id="RequestHandlerExecutorService" class="java.util.concurrent.Executors"
+		factory-method="newFixedThreadPool">
+		<constructor-arg index="0" value="$[dns.max-threads:1000]" />
+	</bean>
+
+	<bean id="ServerSocket" class="java.net.ServerSocket">
+		<constructor-arg index="0" value="$[dns.tcp.port:53]" />
+		<constructor-arg index="1" value="$[dns.tcp.backlog:0]" />
+	</bean>
+
+	<bean id="TCP" class="com.comcast.cdn.traffic_control.traffic_router.core.dns.protocol.TCP">
+		<property name="serverSocket" ref="ServerSocket" />
+		<property name="executorService" ref="RequestHandlerExecutorService" />
+		<property name="nameServer" ref="NameServer" />
+	</bean>
+
+	<bean id="DatagramSocket" class="java.net.DatagramSocket">
+		<constructor-arg index="0" value="$[dns.udp.port:53]" />
+	</bean>
+
+	<bean id="UDP" class="com.comcast.cdn.traffic_control.traffic_router.core.dns.protocol.UDP">
+		<property name="datagramSocket" ref="DatagramSocket" />
+		<property name="executorService" ref="RequestHandlerExecutorService" />
+		<property name="nameServer" ref="NameServer" />
+	</bean>
+
+	<bean id="ProtocolExecutorService" class="java.util.concurrent.Executors"
+		factory-method="newFixedThreadPool">
+		<constructor-arg index="0" value="2" />
+	</bean>
+
+	<bean id="NameServerMain" class="com.comcast.cdn.traffic_control.traffic_router.core.dns.NameServerMain">
+		<property name="protocolService" ref="ProtocolExecutorService" />
+		<property name="protocols">
+			<list>
+				<ref local="TCP" />
+				<ref local="UDP" />
+			</list>
+		</property>
+	</bean>
+
+	<util:list id="staticContentWhiteList" value-type="java.lang.String">
+		<value>/crossdomain.xml</value>
+		<value>/clientaccesspolicy.xml</value>
+		<value>/index.html</value>
+	</util:list>
+
+	<bean name="routerFilter" class="com.comcast.cdn.traffic_control.traffic_router.core.http.RouterFilter">
+		<property name="doNotLog" value="$[http.access.static.content.donotlog]" />
+		<property name="staticContentWhiteList" ref="staticContentWhiteList" />
+	</bean>
+
+	<bean name="certificatesClient" class="com.comcast.cdn.traffic_control.traffic_router.core.secure.CertificatesClient">
+		<property name="trafficOpsUtils" ref="trafficOpsUtils"/>
+	</bean>
+
+	<bean name="certificatesPoller" class="com.comcast.cdn.traffic_control.traffic_router.core.secure.CertificatesPoller" init-method="start">
+		<property name="certificatesClient" ref="certificatesClient"/>
+	</bean>
 
 </beans>

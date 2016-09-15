@@ -41,9 +41,12 @@ types of proxies in use on the Internet today which are described below.
   it retrieves content from the origin server, acting on behalf of that origin server. The client requests a URL that has 
   a hostname which resolves to the reverse proxy's IP address and, in compliance 
   with the HTTP 1.1 specification, the client sends a ``Host:`` header to the reverse 
-  proxy including the hostname in the URL. The proxy looks up the hostname in a 
-  list of mappings to find the origin hostname; if the origin hostname is not found in the list, the proxy connects to the 
-  origin host and requests the path of the original URL.  The proxy then stores the URL in cache and serves the contents to the client. When there are subsequent requests for 
+  proxy that matches the hostname in the URL. 
+  The proxy looks up this hostname in a 
+  list of mappings to find the origin hostname; if the hostname of the Host header is not found in the list, 
+  the proxy will send an error (``404 Not Found``) to the client. 
+  If the supplied hostname is found in this list of mappings, the proxy checks the cache, and when the content is not already present, connects to the 
+  origin the requested ``Host:`` maps to and requests the path of the original URL, providing the origin hostname in the ``Host`` header.  The proxy then stores the URL in cache and serves the contents to the client. When there are subsequent requests for 
   the same URL, a caching proxy serves the content out of cache thereby reducing 
   latency and network traffic.
 
@@ -148,8 +151,8 @@ The client is given the URL ``http://www-origin-cache.cdn.com/foo/bar/fun.html``
   A forward proxy acts on behalf of the client. The origin server is mostly 
   unaware of the proxy, the client requests the proxy to retrieve content from a 
   particular origin server. All MID caches in a Traffic Control based CDN are 
-  forward proxies. In a forward proxy scenario, the client configuration is with 
-  the proxy's IP address and port. The client always connects to the forward 
+  forward proxies. In a forward proxy scenario, the client is explicitely configured  to use the
+  the proxy's IP address and port as a forward proxy. The client always connects to the forward 
   proxy for content. The content provider does not have to change the URL the 
   client obtains, and is unaware of the proxy in the middle. 
 

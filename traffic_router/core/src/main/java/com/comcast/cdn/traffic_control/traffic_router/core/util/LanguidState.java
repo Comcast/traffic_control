@@ -22,7 +22,6 @@ import java.net.UnknownHostException;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheRegister;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouter;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouterManager;
 
@@ -32,42 +31,57 @@ public class LanguidState {
 	private TrafficRouterManager trafficRouterManager;
 	private int port = 0;
 	private int apiPort = 0;
+	private int securePort = 0;
 
-	@SuppressWarnings("PMD.AvoidDeeplyNestedIfStmts")
 	public void init() {
-		if (trafficRouterManager != null && trafficRouterManager.getTrafficRouter() != null) {
-			final TrafficRouter tr = trafficRouterManager.getTrafficRouter();
-
-			if (tr.getCacheRegister() != null) {
-				final CacheRegister r = tr.getCacheRegister();
-				final JSONObject routers = r.getTrafficRouters();
-
-				try {
-					final String hostname = InetAddress.getLocalHost().getHostName().replaceAll("\\..*", "");
-
-					for (String key : JSONObject.getNames(routers)) {
-						final JSONObject rj = routers.optJSONObject(key);
-
-						if (hostname.equalsIgnoreCase(key)) { // this is us
-							if (rj.has("port")) {
-								this.setPort(rj.optInt("port"));
-							}
-
-							if (rj.has("api.port")) {
-								this.setApiPort(rj.optInt("api.port"));
-							}
-
-							break;
-						}
-					}
-				} catch (UnknownHostException e) {
-					LOGGER.error(e, e);
-				}
-			}
+		if (trafficRouterManager == null || trafficRouterManager.getTrafficRouter() == null) {
+			return;
 		}
 
-		LOGGER.debug("Setting ready to true");
-		this.setReady(true);
+		final TrafficRouter tr = trafficRouterManager.getTrafficRouter();
+
+		if (tr.getCacheRegister() == null) {
+			return;
+		}
+
+		final String hostname;
+
+		try {
+			hostname = InetAddress.getLocalHost().getHostName().replaceAll("\\..*", "");
+		} catch (UnknownHostException e) {
+			LOGGER.error("Cannot lookup hostname of this traffic router!: " + e.getMessage());
+			return;
+		}
+
+		final JSONObject routers = tr.getCacheRegister().getTrafficRouters();
+
+		for (final String key : JSONObject.getNames(routers)) {
+			final JSONObject routerJson = routers.optJSONObject(key);
+
+			if (! hostname.equalsIgnoreCase(key)) {
+				continue;
+			}
+
+			initPorts(routerJson);
+			break;
+		}
+
+		setReady(true);
+	}
+
+	private void initPorts(final JSONObject routerJson) {
+		if (routerJson.has("port")) {
+			setPort(routerJson.optInt("port"));
+		}
+
+		if (routerJson.has("api.port")) {
+			setApiPort(routerJson.optInt("api.port"));
+			trafficRouterManager.setApiPort(apiPort);
+		}
+
+		if (routerJson.has("secure.port")) {
+			setSecurePort(routerJson.optInt("secure.port"));
+		}
 	}
 
 	public boolean isReady() {
@@ -100,5 +114,13 @@ public class LanguidState {
 
 	public void setTrafficRouterManager(final TrafficRouterManager trafficRouterManager) {
 		this.trafficRouterManager = trafficRouterManager;
+	}
+
+	public int getSecurePort() {
+		return securePort;
+	}
+
+	public void setSecurePort(final int securePort) {
+		this.securePort = securePort;
 	}
 }

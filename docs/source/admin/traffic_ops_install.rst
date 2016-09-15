@@ -68,13 +68,14 @@ The user must have the following for a successful install:
 
 .. Note:: The above versions are known to work on CentOS 6.5. Higher versions may work.
 
-.. Note:: Although Traffic Ops supports both MySQL and Postgres as a database, support for MySQL is more mature and better tested. It is best to use MySQL when first getting started, and the rest of this quide assumes MySQL as the database.
+.. Note:: Although Traffic Ops supports both MySQL and Postgres as a database, support for MySQL is more mature and better tested. It is best to use MySQL when first getting started, and the rest of this guide assumes MySQL as the database.
 
 Navigating the Install
 -----------------------
 To begin the install:
 
 1. Install Traffic Ops: 
+
   Download the traffic_ops rpm package from http://traffic-control-cdn.net/downloads/index.html
   
   ``sudo rpm -ivh traffic_ops-1.*.*-****.x86_64.rpm``
@@ -128,7 +129,7 @@ To begin the install:
 
   The next phase of the install will ask you about the local environment for your CDN.
 
-  .. Note:: before proceeding to this step, the database has to have at least a root password, and needs to be started. When using mysql, please type ``service mysqld start`` as root in another terminal and follow the instructions on the screen to set the root passwd.
+  .. Note:: Before proceeding to this step, the database has to have at least a root password, and needs to be started. When using mysql, please type ``service mysqld start`` as root in another terminal and follow the instructions on the screen to set the root password.
 
   .. Note:: CentOS files note.
 
@@ -176,7 +177,7 @@ To begin the install:
       CoverageZone Polling URL: https://traffic-ops.kabletown.net/routing/coverage-zone.json
 
       Is the above information correct (y/n) [n]:  y
-      Parameter information has been saved to /opt/traffic_ops/install/data/json/parameters.json
+      Install information has been saved to /opt/traffic_ops/install/data/json/post_install.json
 
 
       Adding an administration user to the Traffic Ops database.
@@ -227,11 +228,11 @@ To begin the install:
     +----------------------------------------------------+-----------------------------------------------------------------------------------------------+
     | Traffic Ops database user                          | The username Traffic Ops will use to read/write from the database                             |
     +----------------------------------------------------+-----------------------------------------------------------------------------------------------+
-    | password for traffic ops                           | The passwdord for the above database user                                                     |
+    | Password for traffic ops                           | The password for the above database user                                                      |
     +----------------------------------------------------+-----------------------------------------------------------------------------------------------+
-    | Database server root (admin) user name             | Priviledged database user that has permission to create the database and user for Traffic Ops |
+    | Database server root (admin) user name             | Privileged database user that has permission to create the database and user for Traffic Ops  |
     +----------------------------------------------------+-----------------------------------------------------------------------------------------------+
-    | Database server root (admin) user password         | The password for the above priviledged database user                                          |
+    | Database server root (admin) user password         | The password for the above privileged database user                                           |
     +----------------------------------------------------+-----------------------------------------------------------------------------------------------+
     | Traffic Ops url                                    | The URL to connect to this instance of Traffic Ops, usually https://<traffic ops host FQDN>/  |
     +----------------------------------------------------+-----------------------------------------------------------------------------------------------+
@@ -244,7 +245,7 @@ To begin the install:
     | Administration username for Traffic Ops            | The Administration (highest privilege) Traffic Ops user to create;                            |
     |                                                    | use this user to login for the first time and create other users                              |
     +----------------------------------------------------+-----------------------------------------------------------------------------------------------+
-    | Password for the admin user                        | The passwd for the above user                                                                 |
+    | Password for the admin user                        | The password for the above user                                                               |
     +----------------------------------------------------+-----------------------------------------------------------------------------------------------+
 
 

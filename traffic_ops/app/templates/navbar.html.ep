@@ -19,8 +19,7 @@
 	  	<li><a id="nav-eh">Health</a>
 	  		<ul>
 	  			<li><a href="/rascalstatus">Table View</a></li>
-	  			<li><a href="/visualstatus/all:all:all">Graph View (new)</a></li>
-	  			<li><a href="/visualstatus_redis/all:all:all">Graph View (old)</a></li>
+	  			<li><a href="/visualstatus/all:all:all">Graph View</a></li>
 			  	<li><a href="/server_check">Server Checks</a></li>
 	  		    <li><a href="/dailysummary">Daily Summary</a></li>
 
@@ -28,7 +27,7 @@
 	  	</li>
 	  	<li><a id="nav-ds" href="/delivery_services">Delivery Services</a>
                         <ul>
-	  		                    <li><a href="/federation">Federation</a></li>
+	  		                    <li><a href="/federation">Federations</a></li>
                         </ul>
         </li>
 	  	<li><a id="nav-s" href="/servers">Servers</a>
@@ -44,11 +43,13 @@
   			<li><a href="/profiles">Select Profile</a></li>
   			<li><a href="/parameters/profile/ORPHANS">Orphaned Parameters</a></li>
 		</ul>
-	</li>  
+	</li>
  	<li><a id="nav-t">Tools</a>
  		<ul>
  			<li><a title="Generate a bootable ISO" href="/geniso">Generate ISO</a></li>
+ 			<% if ($priv_level >= 20) { %>  <!-- oper and above only!! -->
  			<li><a title="Queue updates for edge caches" href="/tools/queue_updates">Queue Updates</a></li>
+ 			<% } %>
  			<li><a title="Download a copy of the 12M database" href="/tools/db_dump">DB Dump</a></li>
  			<li><a title="Push new CRConfig.json to CCR 3+" href="/tools/snapshot_crconfig">Snapshot CRConfig</a></li>
  			<li><a title="Invalidate Content" href="/tools/invalidate_content">Invalidate Content</a></li>
@@ -81,7 +82,7 @@
 	  		<li><a href="/logout" id="nav-lo">Logout</a></li>
 	  	</ul>
 	  </li>
-	  <li><a id="nav-us"><div id="utcclock">loading...</div></a> 
+	  <li><a id="nav-us"><div id="utcclock">loading...</div></a>
 	  </li>
 	</ul>
 

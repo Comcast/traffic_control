@@ -45,7 +45,8 @@ sub define {
 
 	# Traffic Stats Extension
 	$self->traffic_stats_routes( $r, $version );
-	$self->catch_all( $r, $namespace );
+
+    $self->catch_all( $r, $namespace );
 }
 
 sub ui_routes {
@@ -90,7 +91,7 @@ sub ui_routes {
 
 	# Cdn - Special JSON format for datatables widget
 	$r->get('/aadata/:table')->over( authenticated => 1 )->to( 'Cdn#aadata', namespace => $namespace );
-	$r->get('/aadata/:table/:filter/:value')->over( authenticated => 1 )->to( 'Cdn#aadata', namespace => $namespace );
+	$r->get('/aadata/:table/:filter/#value')->over( authenticated => 1 )->to( 'Cdn#aadata', namespace => $namespace );
 
 	# -- Changelog
 	$r->get('/log')->over( authenticated => 1 )->to( 'ChangeLog#changelog', namespace => $namespace );
@@ -159,6 +160,10 @@ sub ui_routes {
 
 	# -- Keys - SSL Key management
 	$r->get('/ds/:id/urlsigkeys/add')->to( 'UrlSigKeys#add', namespace => $namespace );
+
+	# -- Steering DS assignment
+	$r->get('/ds/:id/steering')->to( 'Steering#index', namespace => $namespace );
+	$r->post('/ds/:id/steering/update')->over( authenticated => 1 )->to( 'Steering#update', namespace => $namespace );
 
 	# JvD: ded route?? # $r->get('/ds_by_id/:id')->over( authenticated => 1 )->to('DeliveryService#ds_by_id', namespace => $namespace );
 	$r->get('/healthdatadeliveryservice')->to( 'DeliveryService#readdeliveryservice', namespace => $namespace );
@@ -249,7 +254,7 @@ sub ui_routes {
 	$r->get('/parameter/:id/delete')->over( authenticated => 1 )->to( 'Parameter#delete', namespace => $namespace );
 	$r->post('/parameter/:id/update')->over( authenticated => 1 )->to( 'Parameter#update', namespace => $namespace );
 	$r->get('/parameters')->over( authenticated => 1 )->to( 'Parameter#index', namespace => $namespace );
-	$r->get('/parameters/:filter/:byvalue')->over( authenticated => 1 )->to( 'Parameter#index', namespace => $namespace );
+	$r->get('/parameters/:filter/#byvalue')->over( authenticated => 1 )->to( 'Parameter#index', namespace => $namespace );
 	$r->get('/parameter/add')->over( authenticated => 1 )->to( 'Parameter#add', namespace => $namespace );
 	$r->route('/parameter/:id')->via('GET')->over( authenticated => 1 )->to( 'Parameter#view', namespace => $namespace );
 
@@ -299,7 +304,6 @@ sub ui_routes {
 	# -- Server
 	$r->post('/server/:name/status/:state')->over( authenticated => 1 )->to( 'Server#rest_update_server_status', namespace => $namespace );
 	$r->get('/server/:name/status')->over( authenticated => 1 )->to( 'Server#get_server_status', namespace => $namespace );
-	$r->get('/server/:key/key')->over( authenticated => 1 )->to( 'Server#get_redis_key', namespace => $namespace );
 	$r->get('/servers')->over( authenticated => 1 )->to( 'Server#index', namespace => $namespace );
 	$r->get('/server/add')->over( authenticated => 1 )->to( 'Server#add', namespace => $namespace );
 	$r->post('/server/:id/update')->over( authenticated => 1 )->to( 'Server#update', namespace => $namespace );
@@ -362,22 +366,11 @@ sub ui_routes {
 
 	# -- Visualstatus
 	$r->get('/visualstatus/:matchstring')->over( authenticated => 1 )->to( 'VisualStatus#graphs', namespace => $namespace );
-	$r->get('/visualstatus_redis/:matchstring')->over( authenticated => 1 )->to( 'VisualStatus#graphs_redis', namespace => $namespace );
-	$r->get('/redis/#match/:start/:end/:interval')->over( authenticated => 1 )->to( 'Redis#stats', namespace => 'UI' );
 	$r->get('/dailysummary')->over( authenticated => 1 )->to( 'VisualStatus#daily_summary', namespace => $namespace );
 
 	# deprecated - see: /api/$version/servers.json and /api/1.1/servers/hostname/:host_name/details.json
 	# duplicate route
 	$r->get('/healthdataserver')->to( 'Server#index_response', namespace => $namespace );
-
-	# deprecated - see: /api/$version/traffic_monitor/stats.json
-	# $r->get('/rascalstatus/getstats')->over( authenticated => 1 )->to( 'RascalStatus#get_host_stats', namespace => $namespace );
-
-	# deprecated - see: /api/$version/redis/info/#shortname
-	$r->get('/redis/info/#shortname')->over( authenticated => 1 )->to( 'Redis#info', namespace => $namespace );
-
-	# deprecated - see: /api/$version/redis/match/#match/start_date/:start
-	$r->get('/redis/#match/:start_date/:end_date/:interval')->over( authenticated => 1 )->to( 'Redis#stats', namespace => $namespace );
 
 	# select * from table where id=ID;
 	$r->get('/server_by_id/:id')->over( authenticated => 1 )->to( 'Server#server_by_id', namespace => $namespace );
@@ -420,6 +413,9 @@ sub api_routes {
 	# -- CDN -- #NEW
 	$r->get( "/api/$version/cdns"            => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Cdn#index', namespace => $namespace );
 	$r->get( "/api/$version/cdns/name/:name" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Cdn#name',  namespace => $namespace );
+	$r->post( "/api/$version/cdns" )->over( authenticated => 1 )->to( 'Cdn#create',  namespace => $namespace );
+	$r->put( "/api/$version/cdns/:id" )->over( authenticated => 1 )->to( 'Cdn#update',  namespace => $namespace );
+	$r->delete( "/api/$version/cdns/:id" )->over( authenticated => 1 )->to( 'Cdn#delete',  namespace => $namespace );
 
 	# -- CHANGE LOG - #NEW
 	$r->get( "/api/$version/logs"            => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'ChangeLog#index', namespace => $namespace );
@@ -428,10 +424,12 @@ sub api_routes {
 		->to( 'ChangeLog#newlogcount', namespace => $namespace );
 
 	# -- CRANS - #NEW
-	$r->get( "/api/$version/asns" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Asn#index', namespace => $namespace );
+	$r->get( "/api/1.1/asns" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Asn#v11_index', namespace => $namespace );
+	$r->get( "/api/1.2/asns" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Asn#index',     namespace => $namespace );
 
 	# -- HWINFO - #NEW
 	# Supports: ?orderby=key
+	$r->get( "/api/$version/hwinfo/dtdata" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'HwInfo#data', namespace => $namespace );
 	$r->get("/api/$version/hwinfo")->over( authenticated => 1 )->to( 'HwInfo#index', namespace => $namespace );
 
 	# -- KEYS
@@ -444,33 +442,30 @@ sub api_routes {
 		->to( 'Riak#get', namespace => $namespace );
 
 	# -- DELIVERY SERVICE
-	# USED TO BE - GET /api/$version/services
 	$r->get( "/api/$version/deliveryservices" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'DeliveryService#delivery_services', namespace => $namespace );
 
-	# USED TO BE - GET /api/$version/services/:id
 	$r->get( "/api/$version/deliveryservices/:id" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'DeliveryService#delivery_services', namespace => $namespace );
 
 	# -- DELIVERY SERVICE: Health
-	# USED TO BE - GET /api/$version/services/:id/health
 	$r->get( "/api/$version/deliveryservices/:id/health" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'DeliveryService#health', namespace => $namespace );
 
 	# -- DELIVERY SERVICE: Capacity
-	# USED TO BE - GET /api/$version/services/:id/capacity
 	$r->get( "/api/$version/deliveryservices/:id/capacity" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'DeliveryService#capacity', namespace => $namespace );
 
 	# -- DELIVERY SERVICE: Routing
-	# USED TO BE - GET /api/$version/services/:id/routing
 	$r->get( "/api/$version/deliveryservices/:id/routing" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'DeliveryService#routing', namespace => $namespace );
 
 	# -- DELIVERY SERVICE: State
-	# USED TO BE - GET /api/$version/services/:id/state
 	$r->get( "/api/$version/deliveryservices/:id/state" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'DeliveryService#state', namespace => $namespace );
+
+	# -- DELIVERY SERVICE: Request
+	$r->post("/api/$version/deliveryservices/request")->over( authenticated => 1 )->to( 'DeliveryService#request', namespace => $namespace );
 
 	## -- DELIVERY SERVICE: SSL Keys
 	## Support for SSL private keys, certs, and csrs
@@ -497,6 +492,14 @@ sub api_routes {
 		->to( 'KeysUrlSig#generate', namespace => 'API::DeliveryService' );
 	$r->get( "/api/$version/deliveryservices/xmlId/:xmlId/urlkeys" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'KeysUrlSig#view_by_xmlid', namespace => 'API::DeliveryService' );
+
+	# -- DELIVERY SERVICE REGEXES
+	$r->get( "/api/$version/deliveryservices_regexes" => [ format => [qw(json)] ] )->over( authenticated => 1 )
+		->to( 'DeliveryServiceRegexes#index', namespace => $namespace );
+
+	# -- DELIVERY SERVICE MATCHES
+	$r->get( "/api/$version/deliveryservice_matches" => [ format => [qw(json)] ] )->over( authenticated => 1 )
+		->to( 'DeliveryServiceMatches#index', namespace => $namespace );
 
 	#       ->over( authenticated => 1 )->to( 'DeliveryService#get_summary', namespace => $namespace );
 	# -- DELIVERY SERVICE SERVER - #NEW
@@ -540,11 +543,12 @@ sub api_routes {
 	$r->get("/api/$version/roles")->over( authenticated => 1 )->to( 'Role#index', namespace => $namespace );
 
 	# -- SERVER #NEW
-	$r->get( "/api/$version/servers"         => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Server#index',   namespace => $namespace );
-	$r->get( "/api/$version/servers/summary" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Server#summary', namespace => $namespace );
+	$r->get( "/api/$version/servers"        => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Server#index',  namespace => $namespace );
+	$r->get( "/api/$version/servers/totals" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Server#totals', namespace => $namespace );
 	$r->get( "/api/$version/servers/hostname/:name/details" => [ format => [qw(json)] ] )->over( authenticated => 1 )
-		->to( 'Server#details', namespace => $namespace );
-	$r->get( "/api/$version/servers/checks" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'ServerCheck#read', namespace => $namespace );
+		->to( 'Server#details_v11', namespace => $namespace );
+	$r->get( "/api/$version/servers/details" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Server#details',   namespace => $namespace );
+	$r->get( "/api/$version/servers/checks"  => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'ServerCheck#read', namespace => $namespace );
 	$r->get( "/api/$version/servercheck/aadata" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'ServerCheck#aadata', namespace => $namespace );
 	$r->post("/api/$version/servercheck")->over( authenticated => 1 )->to( 'ServerCheck#update', namespace => $namespace );
@@ -572,20 +576,15 @@ sub api_routes {
 	$r->get("/api/$version/types/trimmed")->over( authenticated => 1 )->to( 'Types#index_trimmed', namespace => $namespace );
 
 	# -- CDN
-	# USED TO BE - Nothing, this is new
 	$r->get( "/api/$version/cdns/:name/health" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Cdn#health', namespace => $namespace );
 
-	# USED TO BE - GET /api/$version/health.json
 	$r->get( "/api/$version/cdns/health" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Cdn#health', namespace => $namespace );
 
-	# USED TO BE - GET /api/$version/capacity.json
 	$r->get( "/api/$version/cdns/capacity" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Cdn#capacity', namespace => $namespace );
 
-	# USED TO BE - GET /api/$version/routing.json
 	$r->get( "/api/$version/cdns/routing" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Cdn#routing', namespace => $namespace );
 
 	#WARNING: this is an intentionally "unauthenticated" route for the Portal Home Page.
-	# USED TO BE - GET /api/$version/metrics/g/:metric/:start/:end/s.json
 	$r->get( "/api/$version/cdns/metric_types/:metric_type/start_date/:start_date/end_date/:end_date" => [ format => [qw(json)] ] )
 		->to( 'Cdn#metrics', namespace => $namespace );
 
@@ -602,12 +601,17 @@ sub api_routes {
 	$r->get( "/api/$version/cdns/name/:name/dnsseckeys/delete" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'Cdn#delete_dnssec_keys', namespace => $namespace );
 
+	#checks expiration of keys and re-generates if necessary.  Used by Cron.
+	$r->get( "/internal/api/$version/cdns/dnsseckeys/refresh" => [ format => [qw(json)] ] )->to( 'Cdn#dnssec_keys_refresh', namespace => $namespace );
+
+	#-- CDN:  SSL Keys
+	$r->get( "/api/$version/cdns/name/:name/sslkeys" => [ format => [qw(json)] ] )->over( authenticated => 1 )
+		->to( 'Cdn#ssl_keys', namespace => $namespace );
+
 	# -- CDN: Topology
-	# USED TO BE - GET /api/$version/configs/cdns
 	$r->get( "/api/$version/cdns/configs" => [ format => [qw(json)] ] )->via('GET')->over( authenticated => 1 )
 		->to( 'Cdn#get_cdns', namespace => $namespace );
 
-	# USED TO BE - GET /api/$version/configs/routing/:cdn_name
 	$r->get( "/api/$version/cdns/:name/configs/routing" => [ format => [qw(json)] ] )->via('GET')->over( authenticated => 1 )
 		->to( 'Cdn#configs_routing', namespace => $namespace );
 
@@ -622,20 +626,13 @@ sub api_routes {
 	$r->post("/api/$version/user/login/token")->to( 'User#token_login', namespace => $namespace );
 	$r->post("/api/$version/user/logout")->over( authenticated => 1 )->to( 'Cdn#tool_logout', namespace => $namespace );
 
-	# TO BE REFACTORED TO /api/$version/deliveryservices/:id/jobs/keyword/PURGE
-	# USED TO BE - GET /api/$version/user/jobs/purge.json
-
-	# USED TO BE - POST /api/$version/user/password/reset
 	$r->post("/api/$version/user/reset_password")->to( 'User#reset_password', namespace => $namespace );
 
-	# USED TO BE - GET /api/$version/user/profile.json
 	$r->get( "/api/$version/user/current" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'User#current', namespace => $namespace );
 
-	# USED TO BE - POST /api/$version/user/job/purge
 	$r->get( "/api/$version/user/current/jobs" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'Job#index', namespace => $namespace );
 	$r->post("/api/$version/user/current/jobs")->over( authenticated => 1 )->to( 'Job#create', namespace => $namespace );
 
-	# USED TO BE - POST /api/$version/user/profile.json
 	$r->post("/api/$version/user/current/update")->over( authenticated => 1 )->to( 'User#update_current', namespace => $namespace );
 
 	$r->get( "/api/$version/cdns/:name/configs/monitoring" => [ format => [qw(json)] ] )->via('GET')->over( authenticated => 1 )
@@ -643,6 +640,26 @@ sub api_routes {
 
 	$r->get( "/api/$version/stats_summary" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'StatsSummary#index', namespace => $namespace );
 	$r->post("/api/$version/stats_summary/create")->over( authenticated => 1 )->to( 'StatsSummary#create', namespace => $namespace );
+
+    $r->post( "/api/$version/profiles" )->over( authenticated => 1 )->to( 'Profile#create', namespace => $namespace );
+    $r->post( "/api/$version/profiles/name/:profile_name/copy/:profile_copy_from" )->over( authenticated => 1 )->to( 'Profile#copy', namespace => $namespace );
+    $r->post("/api/$version/divisions")->over( authenticated => 1 )->to( 'Division#create', namespace => $namespace );
+    $r->post("/api/$version/divisions/:division_name/regions")->over( authenticated => 1 )->to( 'Region#create', namespace => $namespace );
+    $r->post("/api/$version/regions/:region_name/phys_locations")->over( authenticated => 1 )->to( 'PhysLocation#create', namespace => $namespace );
+	$r->post("/api/$version/servers")->over( authenticated => 1 )->to( 'Server#create',   namespace => $namespace );
+	$r->put("/api/$version/servers/:id")->over( authenticated => 1 )->to( 'Server#update',   namespace => $namespace );
+	$r->delete("/api/$version/servers/:id")->over( authenticated => 1 )->to( 'Server#delete',   namespace => $namespace );
+	$r->post("/api/$version/servers/:id/queue_update")->over( authenticated => 1 )->to( 'Server#postupdatequeue',   namespace => $namespace );
+    $r->post("/api/$version/cachegroups")->over( authenticated => 1 )->to( 'Cachegroup#create', namespace => $namespace );
+    $r->put("/api/$version/cachegroups/:id")->over( authenticated => 1 )->to( 'Cachegroup#update', namespace => $namespace );
+    $r->delete("/api/$version/cachegroups/:id")->over( authenticated => 1 )->to( 'Cachegroup#delete', namespace => $namespace );
+	$r->post("/api/$version/cachegroups/:id/queue_update")->over( authenticated => 1 )->to( 'Cachegroup#postupdatequeue',   namespace => $namespace );
+	$r->post("/api/$version/cachegroups/:id/deliveryservices")->over( authenticated => 1 )->to( 'DeliveryServiceServer#assign_ds_to_cachegroup',   namespace => $namespace );
+    $r->post("/api/$version/deliveryservices")->over( authenticated => 1 )->to( 'DeliveryService#create', namespace => $namespace );
+    $r->put("/api/$version/deliveryservices/:id")->over( authenticated => 1 )->to( 'DeliveryService#update', namespace => $namespace );
+    $r->delete("/api/$version/deliveryservices/:id")->over( authenticated => 1 )->to( 'DeliveryService#delete', namespace => $namespace );
+    $r->post("/api/$version/deliveryservices/:xml_id/servers")->over( authenticated => 1 )->to( 'DeliveryService#assign_servers', namespace => $namespace );
+    $r->put("/api/$version/snapshot/:cdn_name")->over( authenticated => 1 )->to( 'Topology#SnapshotCRConfig', namespace => $namespace );
 
 	# -- Ping - health check for CodeBig
 	$r->get(
@@ -656,6 +673,11 @@ sub api_routes {
 		}
 	);
 
+	# -- Steering
+	$r->get("/internal/api/$version/steering" => [format => [qw(json)] ] )->over( authenticated => 1)->to('Steering#index', namespace => 'API::DeliveryService' );
+	$r->get("/internal/api/$version/steering/:xml_id" => [format => [qw(json)] ] )->over( authenticated => 1)->to('Steering#index', namespace => 'API::DeliveryService' );
+	$r->post("/internal/api/$version/steering")->over( authenticated => 1 )->to( 'Steering#add', namespace => 'API::DeliveryService' );
+	$r->put("/internal/api/$version/steering/:xml_id")->over( authenticated => 1 )->to( 'Steering#update', namespace => 'API::DeliveryService' );
 }
 
 sub api_1_0_routes {
@@ -756,7 +778,6 @@ sub api_1_0_routes {
 	$r->get('/datatype')->over( authenticated => 1 )->to( 'Types#readtype', namespace => $namespace );
 	$r->get('/datatypetrimmed')->over( authenticated => 1 )->to( 'Types#readtypetrimmed', namespace => $namespace );
 	$r->get('/datatype/orderby/:orderby')->over( authenticated => 1 )->to( 'Types#readtype', namespace => $namespace );
-
 }
 
 sub traffic_stats_routes {
@@ -769,6 +790,8 @@ sub traffic_stats_routes {
 	$r->get( "/api/$version/deliveryservice_stats" => [ format => [qw(json)] ] )->over( authenticated => 1 )
 		->to( 'DeliveryServiceStats#index', namespace => $namespace );
 	$r->get( "/api/$version/cache_stats" => [ format => [qw(json)] ] )->over( authenticated => 1 )->to( 'CacheStats#index', namespace => $namespace );
+	$r->get( "internal/api/$version/daily_summary" => [ format => [qw(json)] ] )->to( 'CacheStats#daily_summary', namespace => $namespace );
+	$r->get( "internal/api/$version/current_stats" => [ format => [qw(json)] ] )->to( 'CacheStats#current_stats', namespace => $namespace );
 }
 
 sub catch_all {

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2015 Comcast Cable Communications Management, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.util.CidrAddress;
@@ -32,4 +48,24 @@ public class FederationMappingBuilderTest {
         assertThat(federationMapping.getResolve6(),
                 containsInAnyOrder(CidrAddress.fromString("fd12:3456:789a:1::/64"), CidrAddress.fromString("fdfe:dcba:9876:5::/64")));
     }
+
+    @Test
+    public void itConsumesJSONWithoutResolvers() throws Exception {
+        FederationMappingBuilder federationMappingBuilder = new FederationMappingBuilder();
+
+        String json = "{ " +
+                "'cname' : 'cname1', " +
+                "'ttl' : '86400' " +
+                "}";
+
+        FederationMapping federationMapping = federationMappingBuilder.fromJSON(json);
+
+        assertThat(federationMapping, not(nullValue()));
+        assertThat(federationMapping.getCname(), equalTo("cname1"));
+        assertThat(federationMapping.getTtl(), equalTo(86400));
+
+        assertThat(federationMapping.getResolve4(), not(nullValue()));
+        assertThat(federationMapping.getResolve6(), not(nullValue()));
+    }
+
 }

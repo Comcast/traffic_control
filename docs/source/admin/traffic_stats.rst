@@ -31,7 +31,10 @@ Installation
 
 **Installing InfluxDB:**
 
-	In order to store traffic stats data you will need to install InfluxDB.  It is recommended InfluxDB be installed in a 3 server cluster; VMs are acceptable. The documentation for installing InfluxDB can be found on the InfluxDB `website <https://influxdb.com/docs/v0.9/introduction/installation.html>`_.
+	**As of Traffic Stats 1.4.0, InfluxDb 0.9.6 or higher is required.  For InfluxDb versions less than 0.9.6 use Traffic Stats 1.3.0**
+
+	In order to store traffic stats data you will need to install InfluxDB.  It is recommended InfluxDB be installed in a 3 server cluster; VMs are acceptable. The documentation for installing InfluxDB can be found on the InfluxDB `website <https://docs.influxdata.com/influxdb/latest/introduction/installation/>`_.
+
 
 **Installing Grafana:**
 
@@ -60,26 +63,11 @@ Configuration
 
 **Configuring InfluxDB:**
 
-	It is HIGHLY recommended that InfluxDB be configured for clustering.  Documentation on clustering configuration can be found on the clustering page of the `InfluxDB Website <https://influxdb.com/docs/v0.9/concepts/clustering.html>`_.
+	It is HIGHLY recommended that InfluxDB be configured for clustering.  Documentation on clustering configuration can be found on the clustering page of the `InfluxDB Website <https://docs.influxdata.com/influxdb/latest/clustering/>`_.
 
 	Once InfluxDB is installed and clustering is configured, Databases and Retention Policies need to be created.  Traffic Stats writes to three different databases: cache_stats, deliveryservice_stats, and daily_stats.  More information about the databases and what data is stored in each can be found on the `overview <../overview/traffic_stats.html>`_ page.
 
-	By default the cache_stats and deliveryservice_stats databases are set to store raw data for 26 hours with a retention policy called "daily"; the daily_stats database is set to store data infinitely with a retention policy called "daily_stats".The following commands can be completed via the InfluxDB `client <https://influxdb.com/download/index.html>`_ or via the admin user interface (http://influxdb_url:8083).
-
-	*Creating Databases:*
-		``create database cache_stats``
-
-		``create database deliveryservice_stats``
-
-		``create database daily_stats``
-
-	*Creating Retention Policies:*
-		``create retention policy daily on cache_stats duration 26h replication 3 DEFAULT``
-
-		``create retention policy daily on deliveryservice_stats duration 26h replication 3 DEFAULT``
-
-		``create retention policy daily_stats on daily_stats duration INF replication 3 DEFAULT``
-
+	To easily create databases, retention policies, and continuous queries, run create_ts_databases.go from the influxdb_tools directory.  See the `InfluxDb Tools <traffic_stats.html#influxdb-tools>`_ section below for more information.
 
 **Configuring Grafana:**
 
@@ -87,66 +75,22 @@ Configuration
 
 		- Login to grafana as an admin user http://grafana_url:3000/login
 		- Choose Data Sources and then Add New
-		- Name your data source (we name our data sources to match the database name, cache_stats and delivery_service stats)
-		- Change the type to InfluxDB 0.9.x
-		- For URL use https://grafana_url (see below on setting up the httpd proxy)
-		- For Access choose 'direct'
-		- Under the InfluxDB Details section enter the name of your database and enter a username and password for InfluxDB if you created one. If you did not create a username and password for influxdb just enter anything.
-		- Click the 'Add' button to save the Data Source
+		- Enter the necessary information to configure your data source
 		- Click on the 'Home' dropdown at the top of the screen and choose New at the bottom
 		- Click on the green menu bar (with 3 lines) at the top and choose Add Panel -> Graph
 		- Where it says 'No Title (click here)' click and choose edit
 		- Choose your data source at the bottom
 		- You can have grafana help you create a query, or you can create your own.  Here is a sample query:
 
-			``SELECT sum(value)*1000/6 FROM "bandwidth" WHERE $timeFilter and time < now() - 60s GROUP BY time(60s), cdn``
+			``SELECT sum(value)*1000 FROM "monthly"."bandwidth.cdn.1min" WHERE $timeFilter GROUP BY time(60s), cdn``
 		- Once you have the graph the way you want it, click the 'Save Dashboard' button at the top
 		- You should now have a new saved graph
 
 	In order for Traffic Ops users to see Grafana graphs, Grafana will need to allow anonymous access.  Information on how to configure anonymous access can be found on the configuration page of the `Grafana Website  <http://docs.grafana.org/installation/configuration/#authanonymous>`_.
 
-	Traffic Ops uses custom dashboards to display information about individual delivery services or cache groups.  In order for the custom graphs to display correctly, the `traffic_ops_*.js <https://github.com/Comcast/traffic_control/blob/master/traffic_stats/grafana/>`_ files need to be in the ``/usr/share/grafana/public/dashboards/`` directory on the grafana server.  If your Grafana server is the same as your Traffic Stats server the RPM install process will take care of putting the files in place.  If your grafana server is different from your Traffic Stats server, you will need to manually copy the files to the correct directory.  
+	Traffic Ops uses custom dashboards to display information about individual delivery services or cache groups.  In order for the custom graphs to display correctly, the `traffic_ops_*.js <https://github.com/Comcast/traffic_control/blob/master/traffic_stats/grafana/>`_ files need to be in the ``/usr/share/grafana/public/dashboards/`` directory on the grafana server.  If your Grafana server is the same as your Traffic Stats server the RPM install process will take care of putting the files in place.  If your grafana server is different from your Traffic Stats server, you will need to manually copy the files to the correct directory.
 
 	More information on custom scripted graphs can be found in the `scripted dashboards <http://docs.grafana.org/reference/scripting/>`_ section of the Grafana documentation.
-
-**Configuring httpd proxying for SSL**
-
-	Currently InfluxDB does not support HTTPS for queries (should be implemented very soon).  Since Traffic Ops is HTTPS, we need to be able to make HTTPS requests to grafana and influxdb.  We can accomplish the need to use HTTPS by installing httpd with the mod_ssl plugin and then configuring proxying of grafana and influxdb HTTPS calls to HTTP. Below are the steps for setting up the HTTPS to HTTP proxy.  This should be performed on the same server that is running grafana. This is also useful if you are running InfluxDB with Private IP addresses.
-
-	1. Download and install httpd  `from here <http://httpd.apache.org/download.cgi>`_
-	2. Create SSL certs
-	3. Install and configure mod_ssl per `this link <http://dev.antoinesolutions.com/apache-server/mod_ssl>`_
-	4. Create a file called grafana_proxy.conf in the /etc/httpd/conf.d directory
-	5. Add the following information to grafana_proxy.conf:
-
-	::
-
-				ProxyPass /dashboard http://localhost:3000/dashboard
-				ProxyPass /css http://localhost:3000/css
-				ProxyPass /app http://localhost:3000/app
-				ProxyPass /api http://localhost:3000/api
-				ProxyPass /img http://localhost:3000/img
-				ProxyPass /fonts http://localhost:3000/fonts
-				ProxyPass /public http://localhost:3000/public
-				ProxyPass /login http://localhost:3000/login
-				ProxyPass /logout http://localhost:3000/logout
-				
-				# The following ProxyPassReverse doesn't work for some.
-				ProxyPassReverse / http://localhost:3000/
-
-				<Proxy balancer://influxDb>
-				BalancerMember http://<influxDb1>:8086
-				BalancerMember http://<influxDb2>:8086
-				BalancerMember http://<influxDb3>:8086
-				</Proxy>
-				ProxyPass /query balancer://influxDb/query
-				
-				# This works better for some
-				ProxyPass / http://localhost:3000/
-
-	6. Restart httpd ``service httpd restart``
-	7. Test grafana works by connect to grafana via https ``https://grafanaUrl``
-
 
 **Configuring Traffic Ops for Traffic Stats:**
 
@@ -156,7 +100,7 @@ Configuration
 
 **Configuring Traffic Ops to use Grafana Dashboards**
 
-	To configure Traffic Ops to use Grafana Dashboards, you need to enter the following parameters and assign them to the GLOBAL profile.  This assumes you followed the above instructions to install and configure InfluxDB and Grafana.  You will need to place 'cdn-stats' and 'deliveryservice-stats' with the name of your dashboards.
+	To configure Traffic Ops to use Grafana Dashboards, you need to enter the following parameters and assign them to the GLOBAL profile.  This assumes you followed the above instructions to install and configure InfluxDB and Grafana.  You will need to place 'cdn-stats','deliveryservice-stats', and 'daily-summary' with the name of your dashboards.
 
 	+---------------------------+------------------------------------------------------------------------------------------------+
 	|       parameter name      |                                        parameter value                                         |
@@ -169,7 +113,75 @@ Configuration
 	+---------------------------+------------------------------------------------------------------------------------------------+
 	| server_graph_url          | https://<grafanaHost>/dashboard/script/traffic_ops_server.js?which=                            |
 	+---------------------------+------------------------------------------------------------------------------------------------+
-	| visual_status_panel_1     | https://<grafanaHost>/dashboard/solo/db/cdn-stats?panelId=2&fullscreen&from=now-24h&to=now-60s |
+	| visual_status_panel_1     | https://<grafanaHost>/dashboard-solo/db/cdn-stats?panelId=2&fullscreen&from=now-24h&to=now-60s |
 	+---------------------------+------------------------------------------------------------------------------------------------+
-	| visual_status_panel_2     | https://<grafanaHost>/dashboard/solo/db/cdn-stats?panelId=1&fullscreen&from=now-24h&to=now-60s |
+	| visual_status_panel_2     | https://<grafanaHost>/dashboard-solo/db/cdn-stats?panelId=1&fullscreen&from=now-24h&to=now-60s |
 	+---------------------------+------------------------------------------------------------------------------------------------+
+	| daily_bw_url              | https://<grafanaHost>/dashboard-solo/db/daily-summary?panelId=1&fullscreen&from=now-3y&to=now  |
+	+---------------------------+------------------------------------------------------------------------------------------------+
+	| daily_served_url          | https://<grafanaHost>/dashboard-solo/db/daily-summary?panelId=2&fullscreen&from=now-3y&to=now  |
+	+---------------------------+------------------------------------------------------------------------------------------------+
+
+InfluxDb Tools
+=========================
+
+Under the Traffic Stats source directory there is a directory called influxdb_tools.  These tools are meant to be used as one-off scripts to help a user quickly get new databases and continuous queries setup in influxdb.
+They are specific for traffic stats and are not meant to be generic to influxdb.  Below is an brief description of each script along with how to use it.
+
+**create_ts_databases**
+	This script creates all `databases <https://docs.influxdata.com/influxdb/latest/concepts/key_concepts/#database>`_, `retention policies <https://docs.influxdata.com/influxdb/latest/concepts/key_concepts/#retention-policy>`_, and `continuous queries <https://docs.influxdata.com/influxdb/v0.11/query_language/continuous_queries/>`_ required by traffic stats.
+
+	**How to use create_ts_databases:**
+
+	Pre-Requisites:
+
+		1. Go 1.4 or later
+		2. configured $GOPATH (e.g. export GOPATH=~/go)
+
+	Using create_ts_databases.go
+
+		1. go get github.com/influxdata/influxdb
+
+		2. go build create_ts_databases.go
+
+		3. Run it:
+			- ./create_ts_databases -help
+			- optional flags:
+				- influxUrl -  The influxdb url and port
+				- replication -  The number of nodes in the cluster
+				- user - The user to use
+				- password - The password to use
+			- example: ./create_ts_databases -influxUrl=localhost:8086 -replication=3 -user=joe -password=mysecret
+
+**sync_ts_databases**
+	This script is used to sync one influxdb environment to another.  Only data from continuous queries is synced as it is downsampled data and much smaller in size than syncing raw data.  Possible use cases are syncing from Production to Development or Syncing a new cluster once brought online.
+
+	**How to use sync_ts_databases:**
+
+	Pre-Requisites:
+
+		1. Go 1.4 or later
+		2. configured $GOPATH (e.g. export GOPATH=~/go)
+
+	Using sync_ts_databases.go:
+
+		1. go get github.com/influxdata/influxdb
+
+		2. go build sync_ts_databases.go
+
+		3. Run it
+			- ./sync_ts_databases -help
+			- required flags:
+				- sourceUrl - The URL of the source database
+				- targetUrl - The URL of the target database
+
+			-optional flags:
+				- database - The database to sync (default = sync all databases)
+				- days - Days in the past to sync (default = sync all data)
+				- sourceUser - The user of the source database
+				- sourcePass - The password for the source database
+				- targetUser - The user of the target database
+				- targetPass - The password for the target database
+
+			- example: ./sync_ts_databases -sourceUrl=http://influxdb-production-01.kabletown.net:8086 -targetUrl=http://influxdb-dev-01.kabletown.net:8086 -database=cache_stats -days=7 -sourceUser=joe sourcePass=mysecret
+

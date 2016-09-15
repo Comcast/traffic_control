@@ -19,26 +19,34 @@ package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.log4j.Logger;
 import org.apache.wicket.ajax.json.JSONException;
 
 public class NetworkUpdater extends AbstractServiceUpdater {
-	private static final Logger LOGGER = Logger.getLogger(NetworkUpdater.class);
 
 	public NetworkUpdater() {
-		LOGGER.debug("init...");
 		sourceCompressed = false;
 		tmpPrefix = "czf";
 		tmpSuffix = ".json";
 	}
 
-	public void verifyDatabase(final File dbFile) throws IOException {
+	@Override
+	public boolean loadDatabase() throws IOException, JSONException {
+		final File existingDB = databasesDirectory.resolve(databaseName).toFile();
+
+		if (!existingDB.exists() || !existingDB.canRead()) {
+			return false;
+		}
+
+		return NetworkNode.generateTree(existingDB, false) != null;
 	}
 
-	public boolean loadDatabase() throws IOException, JSONException {
-		final File existingDB = new File(databaseLocation);
-		NetworkNode.generateTree(existingDB);
-		setLoaded(true);
-		return true;
+	@Override
+	public boolean verifyDatabase(final File dbFile) throws IOException, JSONException {
+		if (!dbFile.exists() || !dbFile.canRead()) {
+			return false;
+		}
+
+		return NetworkNode.generateTree(dbFile, true) != null;
 	}
+
 }

@@ -28,6 +28,24 @@ use Common::ReturnCodes qw(SUCCESS ERROR);
 sub register {
 	my ( $self, $app, $conf ) = @_;
 
+	my $no_instance_message = "Call on an instance of MojoPlugins::DeliveryService!";
+	
+	$app->renderer->add_helper(
+
+		# ensure param returned as a scalar no matter the context,  and allow default value to be provided
+		paramAsScalar => sub {
+			my $self    = shift;
+			my $p       = shift;
+			my $default = shift;
+
+			my $v = $self->param($p);
+			if ( !defined $v || $v eq '' ) {
+				$v = $default;
+			}
+			return scalar($v);
+		},
+	);
+
 	$app->renderer->add_helper(
 		hr_string_to_mbps => sub {
 			my $self = shift;
@@ -46,7 +64,7 @@ sub register {
 
 	$app->renderer->add_helper(
 		is_delivery_service_assigned => sub {
-			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $self = shift || confess($no_instance_message);
 			my $id   = shift || confess("Please supply a delivery service ID");
 
 			my $user_id =
@@ -66,7 +84,7 @@ sub register {
 			elsif ($user_id) {
 				my $result = $self->db->resultset("Deliveryservice")->search( { id => $id } )->single();
 
-				if ( exists( $ds_hash{ $result->id } ) ) {
+				if ( defined($result) && exists( $ds_hash{ $result->id } ) ) {
 					return (1);
 				}
 			}
@@ -77,7 +95,7 @@ sub register {
 
 	$app->renderer->add_helper(
 		is_delivery_service_name_assigned => sub {
-			my $self    = shift || confess("Call on an instance of Utils::Helper");
+			my $self    = shift || confess($no_instance_message);
 			my $ds_name = shift || confess("Please supply a delivery service name (xml_id)");
 
 			my $user_id =
@@ -108,7 +126,7 @@ sub register {
 
 	$app->renderer->add_helper(
 		is_valid_delivery_service => sub {
-			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $self = shift || confess($no_instance_message);
 			my $id   = shift || confess("Please supply a delivery service ID");
 
 			my $result = $self->db->resultset("Deliveryservice")->find( { id => $id } );
@@ -124,7 +142,7 @@ sub register {
 
 	$app->renderer->add_helper(
 		is_valid_delivery_service_name => sub {
-			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $self = shift || confess($no_instance_message);
 			my $name = shift || confess("Please supply a delivery service 'name' (xml_id)");
 
 			my $result = $self->db->resultset("Deliveryservice")->find( { xml_id => $name } );
@@ -140,7 +158,7 @@ sub register {
 
 	$app->renderer->add_helper(
 		get_delivery_service_name => sub {
-			my $self = shift || confess("Call on an instance of Utils::Helper");
+			my $self = shift || confess($no_instance_message);
 			my $id   = shift || confess("Please supply a delivery service ID");
 
 			my $result = $self->db->resultset("Deliveryservice")->search( { id => $id } )->single();
@@ -154,6 +172,92 @@ sub register {
 		}
 	);
 
+	$app->renderer->add_helper(
+		find_existing_host_regex => sub {
+			my $self = shift || confess($no_instance_message);
+			my $regex_type = shift || confess("Please supply a regex type");
+			my $host_regex = shift || confess("Please supply a host regular expression");
+			my $cdn_domain = shift || confess("Please supply a cdn domain");
+			my $cdn_id = shift || confess("Please supply a cdn_name");
+			my $ds_id = shift;
+
+			if ($regex_type ne 'HOST_REGEXP') {
+				return undef;
+			}
+
+			my $new_regex = $host_regex . $cdn_domain;
+			my $rs = $self->db->resultset('DeliveryserviceRegex')->search(undef, {prefetch => [{regex => undef}, {deliveryservice => undef}]} );
+
+			while (my $row = $rs->next) {
+				my $other_cdn_id = $self->db->resultset('Deliveryservice')->search( { 'me.id' => $row->deliveryservice->id })->single->cdn_id;
+
+				if (defined($cdn_id) && $other_cdn_id != $cdn_id) {
+					next;
+				}
+
+				if (defined($ds_id) && $ds_id == $row->deliveryservice->id) {
+					next;
+				}
+
+				my $existing_regex = $row->regex->pattern . $cdn_domain;
+
+				if ($existing_regex eq $new_regex) {
+					return $existing_regex;
+				}
+			}
+
+			return undef;
+		}
+	);
+
+	$app->renderer->add_helper(
+		get_cdn_domain_by_ds_id => sub {
+			my $self = shift || confess($no_instance_message);
+			my $ds_id = shift || confess("Please supply a delivery service id!");
+
+			my $cdn_domain = $self->db->resultset('Parameter')->search(
+				{ -and => [ 'me.name' => 'domain_name', 'deliveryservices.id' => $ds_id ] },
+				{
+					join     => { profile_parameters => { profile => { deliveryservices => undef } } },
+					distinct => 1
+				}
+			)->get_column('value')->single();
+
+			return $cdn_domain;
+		}
+	);
+
+	$app->renderer->add_helper(
+		get_cdn_domain_by_profile_id => sub {
+			my $self = shift || confess($no_instance_message);
+			my $profile_id = shift || confess("Please Supply a profile id");
+
+			return $self->db->resultset('Parameter')->search(
+				{
+					'Name'                       => 'domain_name',
+					'Config_file'                => 'CRConfig.json',
+					'profile_parameters.profile' => $profile_id,
+				},
+				{ join => 'profile_parameters', }
+			)->get_column('value')->single();
+		}
+	);
+
+	$app->renderer->add_helper(
+		get_profile_id_for_name => sub {
+			my $self = shift || confess($no_instance_message);
+			my $profile_name = shift || confess("Please Supply a profile name");
+			return $self->db->resultset('Profile')->search({'me.name' => $profile_name})->single->id;
+		}
+	);
+
+	$app->renderer->add_helper(
+		get_id_for_cdn_name => sub {
+			my $self = shift || confess($no_instance_message);
+			my $cdn_name = shift || confess("Please Supply a CDN name");
+			return $self->db->resultset('Cdn')->search({'me.name' => $cdn_name})->single->id;
+		}
+	);
 }
 
 1;

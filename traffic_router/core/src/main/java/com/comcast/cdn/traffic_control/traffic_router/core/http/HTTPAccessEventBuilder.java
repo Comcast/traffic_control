@@ -1,11 +1,28 @@
+/*
+ * Copyright 2015 Comcast Cable Communications Management, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.comcast.cdn.traffic_control.traffic_router.core.http;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.Geolocation;
+import com.comcast.cdn.traffic_control.traffic_router.core.request.HTTPRequest;
+import com.comcast.cdn.traffic_control.traffic_router.geolocation.Geolocation;
 
 import javax.servlet.http.HttpServletRequest;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
-import java.util.Date;
+import java.util.Map;
 
 public class HTTPAccessEventBuilder {
     private static String formatRequest(final HttpServletRequest request) {
@@ -29,6 +46,34 @@ public class HTTPAccessEventBuilder {
         return (o == null) ? "-" : o.toString();
     }
 
+    private static String formatRequestHeaders(final Map<String, String> requestHeaders) {
+        if (requestHeaders == null || requestHeaders.isEmpty()) {
+            return "rh=\"-\"";
+        }
+
+        final StringBuilder stringBuilder = new StringBuilder();
+        boolean first = true;
+        for (final Map.Entry<String, String> entry : requestHeaders.entrySet()) {
+            if (entry.getValue() == null || entry.getValue().isEmpty()) {
+                continue;
+            }
+
+            if (!first) {
+                stringBuilder.append(' ');
+            }
+            else {
+                first = false;
+            }
+
+            stringBuilder.append("rh=\"");
+            stringBuilder.append(entry.getKey()).append(": ");
+            stringBuilder.append(entry.getValue().replaceAll("\"", "'"));
+            stringBuilder.append('"');
+        }
+
+        return stringBuilder.toString();
+    }
+
     @SuppressWarnings("PMD.UseStringBufferForStringAppends")
     public static String create(final HTTPAccessRecord httpAccessRecord) {
         final long start = httpAccessRecord.getRequestDate().getTime();
@@ -36,7 +81,7 @@ public class HTTPAccessEventBuilder {
 
         final HttpServletRequest httpServletRequest = httpAccessRecord.getRequest();
 
-        final String chi = formatObject(httpServletRequest.getRemoteAddr());
+        String chi = formatObject(httpServletRequest.getRemoteAddr());
         final String url = formatRequest(httpServletRequest);
         final String cqhm = formatObject(httpServletRequest.getMethod());
         final String cqhv = formatObject(httpServletRequest.getProtocol());
@@ -53,31 +98,44 @@ public class HTTPAccessEventBuilder {
         final Geolocation resultLocation = httpAccessRecord.getResultLocation();
 
         if (resultLocation != null) {
-            final DecimalFormat decimalFormat = new DecimalFormat(".##");
+            final DecimalFormat decimalFormat = new DecimalFormat("0.00");
             decimalFormat.setRoundingMode(RoundingMode.DOWN);
             rloc = decimalFormat.format(resultLocation.getLatitude()) + "," + decimalFormat.format(resultLocation.getLongitude());
         }
 
+
+        final String xMmClientIpHeader = httpServletRequest.getHeader(HTTPRequest.X_MM_CLIENT_IP);
+        final String fakeIpParameter = httpServletRequest.getParameter(HTTPRequest.FAKE_IP);
+
+        if (xMmClientIpHeader != null) {
+            chi = xMmClientIpHeader;
+        } else if (fakeIpParameter != null) {
+            chi = fakeIpParameter;
+        }
+
+        final String rgb = formatObject(httpAccessRecord.getRegionalGeoResult());
+
         final StringBuilder stringBuilder = new StringBuilder(timeString)
-            .append(" qtype=HTTP")
-            .append(" chi=" + chi)
-            .append(" url=\"" + url + "\"")
-            .append(" cqhm=" + cqhm)
-            .append(" cqhv=" + cqhv)
-            .append(" rtype=" + resultType)
-            .append(" rloc=\"" + rloc + "\"")
-            .append(" rdtl=" + resultDetails)
-            .append(" rerr=\"" + rerr + "\"");
+            .append(" qtype=HTTP chi=").append(chi)
+            .append(" url=\"").append(url)
+            .append("\" cqhm=").append(cqhm)
+            .append(" cqhv=").append(cqhv)
+            .append(" rtype=").append(resultType)
+            .append(" rloc=\"").append(rloc)
+            .append("\" rdtl=").append(resultDetails)
+            .append(" rerr=\"").append(rerr)
+            .append("\" rgb=\"").append(rgb).append('"');
 
         if (httpAccessRecord.getResponseCode() != -1) {
             final String pssc = formatObject(httpAccessRecord.getResponseCode());
-            final long ttms = new Date().getTime() - start;
-            stringBuilder.append(" pssc=").append(pssc).append(" ttms=").append(ttms);
+            final double ttms = (System.nanoTime() - httpAccessRecord.getRequestNanoTime()) / 1000000.0;
+            stringBuilder.append(" pssc=").append(pssc).append(" ttms=").append(String.format("%.03f",ttms));
         }
 
-        final String respurl = " rurl=\"" + formatObject(httpAccessRecord.getResponseURL()) + "\"";
+        final String respurl = " rurl=\"" + formatObject(httpAccessRecord.getResponseURL()) + "\" ";
         stringBuilder.append(respurl);
 
+        stringBuilder.append(formatRequestHeaders(httpAccessRecord.getRequestHeaders()));
         return stringBuilder.toString();
     }
 }

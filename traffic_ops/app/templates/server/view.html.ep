@@ -14,12 +14,13 @@
      limitations under the License.
  -->
 % if (defined (flash 'alertmsg')) {
-<script> 
-    var alertmsg = "<%= flash 'alertmsg' %>"; 
+<script>
+    var alertmsg = "<%= flash 'alertmsg' %>";
     alertmsg = alertmsg.replace(/__NEWLINE__/g, "\n");
     alert(alertmsg);
 </script>
 % }
+
 <script>
 $(function () {
 	$("#edit_button").click( function() {
@@ -46,6 +47,16 @@ $(function () {
 		$("#cachegroup").html("<select id=\"cachegroupselect\" name=\"cachegroup\"></select>");
 		$("#phys_location").html("<select id=\"phys_locationselect\" name=\"phys_location\"></select>");
 		$("#status").html("<select id=\"statusselect\" name=\"status\"></select>");
+		$("#statusselect").on("change", function(event) {
+		    var newStatus = $("#statusselect option:selected").text();
+		    if (newStatus == "OFFLINE" || newStatus == "ADMIN_DOWN") {
+                $("#editserver_form input[name=offline_reason]").val("");
+                $("#editserver_form input[name=offline_reason]").css( { "border-color": "red" });
+		    } else {
+		        $("#editserver_form input[name=offline_reason]").val("N/A");
+                $("#editserver_form input[name=offline_reason]").css( { "border-color": "black" });
+		    }
+		});
 		$.get("/datatype/orderby/id", function(data){
 			$.each(data, function(idx, val) {
 				if (data[idx].name == "<%= $server_data->type->name %>") {
@@ -117,7 +128,7 @@ $(function () {
 	});
 });
 
-	
+
 
 	function deleteFunction() {
 	var r=confirm("Are you sure?");
@@ -127,14 +138,14 @@ $(function () {
 	}
 
 	function cloneDsAssignments() {
-		$.fancybox({ 
-			type: 'iframe', 
-			href: "/cpdssiframe/view/<%= $server_data->id %>", 
+		$.fancybox({
+			type: 'iframe',
+			href: "/cpdssiframe/view/<%= $server_data->id %>",
 			afterClose: function() {
     		    location.reload();
 
     		},
-			padding: 0, autosize: true, fitToView: true, width: 600, minHeight: 20 
+			padding: 0, autosize: true, fitToView: true, width: 600, minHeight: 20
 		});
 	}
 
@@ -144,10 +155,12 @@ $(function () {
 
 	function queueupdate() {
 		$.post("/postupdatequeue/<%= $id %>", { setqueue: 1 });
+		window.alert("updates queued for <%= $server_data->host_name %>");
 	}
-	
+
 	function unqueueupdate() {
 		$.post("/postupdatequeue/<%= $id %>", { setqueue: 0 });
+		window.alert("updates have been unqueued for <%= $server_data->host_name %>");
 	}
 
 	function openPhysLocation() {
@@ -159,6 +172,8 @@ $(function () {
 <div id="accordion">
 	<div>
 		<h3><a href="#">Server Detail</a></h3>
+		%= include 'common/_errors'
+		%= include 'common/_flash'
 		<div>
 			<form method="POST" action="/server/<%= $server_data->id %>/update" id="editserver_form">
 				<table width=100%>
@@ -173,6 +188,10 @@ $(function () {
 					<tr>
 						<td>TCP Port</td>
 						<td class="editable" id="tcp_port"><%= $server_data->tcp_port %></td>
+					</tr>
+					<tr>
+						<td>HTTPS Port</td>
+						<td class="editable" id="https_port"><%= $server_data->https_port %></td>
 					</tr>
 					<tr>
 						<td>Interface Name</td>
@@ -219,6 +238,10 @@ $(function () {
 						<td class="editable" id="rack"><%= $server_data->rack %></td>
 					</tr>
 					<tr>
+						<td>Cloud ID</td>
+						<td class="editable" id="rack"><%= $server_data->guid %></td>
+					</tr>
+					<tr>
 						<td>Service Tag (as discovered)</td>
 						<td id="stag"><a href="/hardware/serverid/<%= $server_data->id %>" target="_parent"><%= $service_tag %></a></td>
 					</tr>
@@ -230,6 +253,10 @@ $(function () {
 						<td>Status</td>
 						<td class="editable" id="status"><%= $server_data->status->name %></td>
 					</tr>
+                    <tr>
+                        <td>Offline Reason</td>
+                        <td class="editable" id="offline_reason"><%= $server_data->offline_reason %></td>
+                    </tr>
 					<tr>
 						<td>Profile</td>
 						<td class="editable" id="profile"><%= $server_data->profile->name %></td>
@@ -246,7 +273,7 @@ $(function () {
 						<td>1G (management) Gateway</td>
 						<td class="editable" id="mgmt_ip_gateway"><%= $server_data->mgmt_ip_gateway %></td>
 					</tr>
-	
+
 					<tr>
 						<td>ILO IP</td>
 						<td class="editable" id="ilo_ip_address"><%= $server_data->ilo_ip_address %></td>
@@ -294,17 +321,17 @@ $(function () {
 
 % if ($priv_level >= 20 ) {
 <button class="button" onclick="deleteFunction()">Delete</button>
-% if ($server_data->type->name eq 'EDGE') {
+% if ($server_data->type->name =~ m/^EDGE/) {
 <button class="button" onclick="cloneDsAssignments()">Clone DS assignments</button>
 % }
 % }
 
-% if ($server_data->type->name eq 'EDGE' || $server_data->type->name eq 'MID') {
+% if ($server_data->type->name =~ m/^EDGE/ || $server_data->type->name =~ m/^MID/) {
 <button class="button" id="downloadCfgButton" onclick="downloadconfigsFunction()">Get Config Files</button>
 % }
 
 % if ($priv_level >= 20) {
-% if ($server_data->type->name eq 'EDGE' || $server_data->type->name eq 'MID') {
+% if ($server_data->type->name =~ m/^EDGE/ || $server_data->type->name =~ m/^MID/) {
 <button class="button" id="qUpdateButton" onclick="queueupdate()">Queue Update</button>
 <button class="button" id="dqUpdateButton" onclick="unqueueupdate()">Unqueue Update</button>
 % }
@@ -316,9 +343,9 @@ $(function () {
 % }
 
 <!--
-Edges flip from REPORTED TO ADMIN_DOWN. 
-All other servers (MID, CCR, RASCAL) flip from ONLINE to OFFLINE. 
-When a MID flips, all edges get the update bit set. 
+Edges flip from REPORTED TO ADMIN_DOWN.
+All other servers (MID, CCR, RASCAL) flip from ONLINE to OFFLINE.
+When a MID flips, all edges get the update bit set.
 -->
 <script>
 var offline_status = 'OFFLINE';
@@ -326,38 +353,46 @@ var online_status = 'ONLINE';
 var queue_updates = false;
 var last_part = "?";
 
-% if ($server_data->type->name eq 'MID') {
-  queue_updates = true;
-  last_part = " *AND* queue updates on all edges?"
-% } 
-
-% if ( $server_data->type->name eq 'EDGE' ) {
+% if ( $server_data->type->name =~ m/^EDGE/ || $server_data->type->name =~ m/^MID/ ) {
   online_status = 'REPORTED';
   offline_status = 'ADMIN_DOWN';
+  queue_updates = true;
+  last_part = " *AND* queue updates on all child caches?"
 % }
 
 function offline_confirm() {
 	var r=confirm("Set status of this machine to " + offline_status + last_part);
 	if (r==true) {
-		$.post("/server/updatestatus", { status: offline_status, id: <%= $id %> });	
+		var ask="A reason is required.\nWhy are you setting Status = " + offline_status + "?";
+		var y=prompt(ask,"");
+		if (y == null || y == "") {
+			r=false;
+		} else {
+			y="<%= $user %>: " + y;
+		}
+	}
+	if (r==true) {
+		$.post("/server/updatestatus", { status: offline_status, id: <%= $id %>, offlineReason: y });
 		if ( queue_updates == true )
-			$.post('/postupdatequeue/edges', { setqueue: 1 });
+			$.post('/postupdatequeue/<%= $id %>', { setqueue: 1, status: offline_status });
 		parent.$.fancybox.close();
 	}
 }
+
 function online_confirm() {
 	var r=confirm("Set status of this machine to " + online_status + last_part);
 	if (r==true) {
-		$.post("/server/updatestatus", { status: online_status, id: <%= $id %> });
+		$.post("/server/updatestatus", { status: online_status, id: <%= $id %>, offlineReason: "N/A" });
 		if ( queue_updates == true )
-			$.post('/postupdatequeue/edges', { setqueue: 1 });
+			$.post('/postupdatequeue/<%= $id %>', { setqueue: 1, status: online_status });
 		parent.$.fancybox.close();
 	}
 }
+
 </script>
 % } # if ($priv_level >= 20) {
 
-% if ($server_data->type->name eq 'EDGE') {
+% if ($server_data->type->name =~ m/^EDGE/) {
 <h2>Member of Delivery Services:</h2>
     <table width=100% id='deliveryserviceTable'>
 % my $i = 0;
@@ -365,13 +400,13 @@ function online_confirm() {
 % for my $id (sort {$a <=> $b} (keys %{$delivery_services})) {
 % if ($i % 3 == 0 ) {
 	</tr><tr>
-% }    
+% }
     <td><a href="/ds/<%= $id %>"><%= $$delivery_services{$id} %></a></td>
 % $i++;
 % } # for my $id (sort {$a <=> $b} (keys %{$delivery_services})) {
 </tr>
 </table>
-% }  # if ($server_data->type->name eq 'EDGE') {
+% }
 </div>
 </div>
 </div>

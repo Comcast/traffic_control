@@ -33,8 +33,8 @@ use UI::ConfigFiles;
 use UI::Tools;
 
 sub login {
-	my $self    = shift;
-	my $options = shift;
+	my $self     = shift;
+	my $options  = shift;
 
 	my $u     = $self->req->json->{u};
 	my $p     = $self->req->json->{p};
@@ -63,14 +63,25 @@ sub token_login {
 sub index {
 	my $self = shift;
 	my @data;
+	my $username = $self->param('username');
+
 	my $orderby = "username";
 	$orderby = $self->param('orderby') if ( defined $self->param('orderby') );
-	my $dbh = $self->db->resultset("TmUser")->search( undef, { prefetch => [ { 'role' => undef } ], order_by => 'me.' . $orderby } );
+
+	my $dbh;
+	if ( defined $username ) {
+		$dbh = $self->db->resultset("TmUser")->search( { username => $username }, { prefetch => [ { 'role' => undef } ], order_by => 'me.' . $orderby } );
+	}
+	else {
+		$dbh = $self->db->resultset("TmUser")->search( undef, { prefetch => [ { 'role' => undef } ], order_by => 'me.' . $orderby } );
+	}
+
 	while ( my $row = $dbh->next ) {
 		push(
 			@data, {
 				"id"              => $row->id,
 				"username"        => $row->username,
+				"publicSshKey"    => $row->public_ssh_key,
 				"role"            => $row->role->id,
 				"uid"             => $row->uid,
 				"gid"             => $row->gid,
@@ -79,7 +90,7 @@ sub index {
 				"email"           => $row->email,
 				"fullName"        => $row->full_name,
 				"newUser"         => \$row->new_user,
-				"localUser"       => \$row->local_user,
+				"localUser"       => \1,
 				"addressLine1"    => $row->address_line1,
 				"addressLine2"    => $row->address_line2,
 				"city"            => $row->city,
@@ -145,32 +156,62 @@ sub current {
 	my $self = shift;
 	my @data;
 	my $current_username = $self->current_user()->{username};
-	# $self->app->log->debug( "current_username #-> " . $current_username );
-	my $dbh = $self->db->resultset('TmUser')->search( { username => $current_username } );
-	while ( my $row = $dbh->next ) {
+
+	if ( &is_ldap($self) ) {
+		my $role = $self->db->resultset('Role')->search( { name => "read-only" } )->get_column('id')->single;
 		push(
 			@data, {
-				"id"              => $row->id,
-				"username"        => $row->username,
-				"role"            => $row->role->id,
-				"uid"             => $row->uid,
-				"gid"             => $row->gid,
-				"company"         => $row->company,
-				"email"           => $row->email,
-				"fullName"        => $row->full_name,
-				"newUser"         => \$row->new_user,
-				"localUser"       => \$row->local_user,
-				"addressLine1"    => $row->address_line1,
-				"addressLine2"    => $row->address_line2,
-				"city"            => $row->city,
-				"stateOrProvince" => $row->state_or_province,
-				"phoneNumber"     => $row->phone_number,
-				"postalCode"      => $row->postal_code,
-				"country"         => $row->country,
+				"id"              => "0",
+				"username"        => $current_username,
+				"publicSshKey"  => "",
+				"role"            => $role,
+				"uid"             => "0",
+				"gid"             => "0",
+				"company"         => "",
+				"email"           => "",
+				"fullName"        => "",
+				"newUser"         => \0,
+				"localUser"       => \0,
+				"addressLine1"    => "",
+				"addressLine2"    => "",
+				"city"            => "",
+				"stateOrProvince" => "",
+				"phoneNumber"     => "",
+				"postalCode"      => "",
+				"country"         => "",
 			}
 		);
+
+		return $self->success( @data );
 	}
-	return $self->success(@data);
+	else {
+		my $dbh = $self->db->resultset('TmUser')->search( { username => $current_username } );
+		while ( my $row = $dbh->next ) {
+			push(
+				@data, {
+					"id"              => $row->id,
+					"username"        => $row->username,
+					"publicSshKey"    => $row->public_ssh_key,
+					"role"            => $row->role->id,
+					"uid"             => $row->uid,
+					"gid"             => $row->gid,
+					"company"         => $row->company,
+					"email"           => $row->email,
+					"fullName"        => $row->full_name,
+					"newUser"         => \$row->new_user,
+					"localUser"       => \1,
+					"addressLine1"    => $row->address_line1,
+					"addressLine2"    => $row->address_line2,
+					"city"            => $row->city,
+					"stateOrProvince" => $row->state_or_province,
+					"phoneNumber"     => $row->phone_number,
+					"postalCode"      => $row->postal_code,
+					"country"         => $row->country,
+				}
+			);
+		}
+		return $self->success(@data);
+	}
 }
 
 # Update
@@ -178,6 +219,10 @@ sub update_current {
 	my $self = shift;
 
 	my $user = $self->req->json->{user};
+	if ( &is_ldap($self) ) {
+		return $self->alert("Profile cannot be updated because '" . $user->{username} ."' is logged in as LDAP.");
+	}
+
 	my $db_user;
 
 	# Prevent these from getting updated
@@ -196,7 +241,11 @@ sub update_current {
 	my ( $is_valid, $result ) = $self->is_valid($user);
 
 	if ($is_valid) {
-		my $dbh = $self->db->resultset('TmUser')->find( { username => $self->current_user()->{username} } );
+		my $username = $self->current_user()->{username};
+		my $dbh = $self->db->resultset('TmUser')->find( { username => $username } );
+
+		# Updating a user implies it is no longer new
+		$db_user->{"new_user"} = 0;
 
 		# These if "defined" checks allow for partial user updates, otherwise the entire
 		# user would need to be passed through.
@@ -211,6 +260,9 @@ sub update_current {
 		}
 		if ( defined( $user->{"username"} ) ) {
 			$db_user->{"username"} = $user->{"username"};
+		}
+		if ( defined( $user->{"public_ssh_key"} ) ) {
+			$db_user->{"public_ssh_key"} = $user->{"public_ssh_key"};
 		}
 		if ( &is_admin($self) && defined( $user->{"role"} ) ) {
 			$db_user->{"role"} = $user->{"role"};
@@ -232,9 +284,6 @@ sub update_current {
 		}
 		if ( defined( $user->{"newUser"} ) ) {
 			$db_user->{"new_user"} = $user->{"newUser"};
-		}
-		if ( defined( $user->{"localUser"} ) ) {
-			$db_user->{"local_user"} = $user->{"localUser"};
 		}
 		if ( defined( $user->{"addressLine1"} ) ) {
 			$db_user->{"address_line1"} = $user->{"addressLine1"};
@@ -271,14 +320,14 @@ sub is_valid {
 
 	my $rules = {
 		fields => [
-			qw/fullName username role uid gid localPasswd confirmLocalPasswd company email newUser addressLine1 addressLine2 city stateOrProvince phoneNumber postalCode country localUser/
+			qw/fullName username public_ssh_key email role uid gid localPasswd confirmLocalPasswd company newUser addressLine1 addressLine2 city stateOrProvince phoneNumber postalCode country/
 		],
 
 		# Checks to perform on all fields
 		checks => [
 
 			# All of these are required
-			[qw/full_name email/] => is_required("is required"),
+			[qw/full_name username email/] => is_required("is required"),
 
 			# pass2 must be equal to pass
 			localPasswd => sub {
@@ -289,11 +338,29 @@ sub is_valid {
 				}
 			},
 
+			# pass2 must be equal to pass
+			email => sub {
+				my $value  = shift;
+				my $params = shift;
+				if ( defined( $params->{'email'} ) ) {
+					return $self->is_email_taken( $value, $params );
+				}
+			},
+
 			# custom sub validates an email address
 			email => sub {
 				my ( $value, $params ) = @_;
-				Email::Valid->address($value) ? undef : 'Invalid email format';
-			}
+				Email::Valid->address($value) ? undef : 'email is not a valid format';
+			},
+
+			# pass2 must be equal to pass
+			username => sub {
+				my $value  = shift;
+				my $params = shift;
+				if ( defined( $params->{'username'} ) ) {
+					return $self->is_username_taken( $value, $params );
+				}
+			},
 
 		]
 	};
@@ -311,6 +378,56 @@ sub is_valid {
 		return ( 0, $result->{error} );
 	}
 
+}
+
+sub is_username_taken {
+	my $self     = shift;
+	my $username = shift;
+	my $params   = shift;
+
+	my $dbh = $self->db->resultset('TmUser')->search( { username => $username } );
+	my $user_data = $dbh->single;
+	if ( defined($user_data) ) {
+		my $user_id = $user_data->id;
+
+		# Allow the current user to be modified
+		my $current_user = $self->db->resultset('TmUser')->search( { username => $self->current_user()->{username} } )->single;
+		my $current_userid = $current_user->id;
+
+		my %condition = ( -and => [ { username => $username }, { id => { '!=' => $current_userid } } ] );
+		my $count = $self->db->resultset('TmUser')->search( \%condition )->count();
+
+		if ( $count > 0 ) {
+			return "is already taken";
+		}
+	}
+
+	return undef;
+}
+
+sub is_email_taken {
+	my $self   = shift;
+	my $email  = shift;
+	my $params = shift;
+
+	my $dbh = $self->db->resultset('TmUser')->search( { email => $email } );
+	my $user_data = $dbh->single;
+	if ( defined($user_data) ) {
+		my $user_id = $user_data->id;
+
+		# Allow the current user to be modified
+		my $current_user = $self->db->resultset('TmUser')->search( { username => $self->current_user()->{username} } )->single;
+		my $current_userid = $current_user->id;
+
+		my %condition = ( -and => [ { email => $email }, { id => { '!=' => $current_userid } } ] );
+		my $count = $self->db->resultset('TmUser')->search( \%condition )->count();
+
+		if ( $count > 0 ) {
+			return "is already taken";
+		}
+	}
+
+	return undef;
 }
 
 sub is_good_password {

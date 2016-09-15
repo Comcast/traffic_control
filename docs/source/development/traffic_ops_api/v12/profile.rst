@@ -25,9 +25,11 @@ Profiles
 /api/1.2/profiles
 +++++++++++++++++
 
-**GET /api/1.2/profiles**
+**GET /api/1.2/profiles.json**
 
 	Authentication Required: Yes
+
+	Role(s) Required: None
 
 	**Response Properties**
 
@@ -43,34 +45,145 @@ Profiles
 	| ``description`` | string | The description for the profile                    |
 	+-----------------+--------+----------------------------------------------------+
 
+  **Response Example** ::
 
-	**Response Example** ::
+    {
+     "response": [
+        {
+            "lastUpdated": "2012-10-08 19:34:45",
+            "name": "CCR_TOP",
+            "id": "8",
+            "description": "Content Router for top.foobar.net"
+        }
+     ]
+    }
 
-		TBD
-  
-
-| 
-
+|
 
 **GET /api/1.2/profiles/trimmed.json**
 
 	Authentication Required: Yes
 
+	Role(s) Required: None
+
 	**Response Properties**
 
-	+-------------+--------+-------------+
-	|  Parameter  |  Type  | Description |
-	+=============+========+=============+
-	| ``alerts``  | array  |             |
-	+-------------+--------+-------------+
-	| ``>level``  | string |             |
-	+-------------+--------+-------------+
-	| ``>text``   | string |             |
-	+-------------+--------+-------------+
-	| ``version`` | string |             |
-	+-------------+--------+-------------+
+	+-----------------+--------+----------------------------------------------------+
+	|    Parameter    |  Type  |                    Description                     |
+	+=================+========+====================================================+
+	| ``name``        | string | The name for the profile                           |
+	+-----------------+--------+----------------------------------------------------+
 
-	**Response Example** ::
+  **Response Example** ::
 
-	 	TBD 
+    {
+     "response": [
+        {
+            "name": "CCR_TOP"
+        }
+     ]
+    }
 
+|
+
+**POST /api/1.2/profiles**
+    Create a new empty  profile. 
+
+	Authentication Required: Yes
+
+	Role(s) Required: admin or oper
+
+	**Request Properties**
+
+	+-----------------------+--------+----------------------------------------------------+
+	|    Parameter          |  Type  |                    Description                     |
+	+=======================+========+====================================================+
+	| ``name``              | string | The name of the new profile                        |
+	+-----------------------+--------+----------------------------------------------------+
+	| ``description``       | string | new profile description                            |
+	+-----------------------+--------+----------------------------------------------------+
+
+  **Request Example** ::
+
+    {
+      "name": "CCR_COPY",
+      "description": "CCR_COPY description",
+    }
+
+|
+
+	**Response Properties**
+
+	+-----------------------+--------+----------------------------------------------------+
+	|    Parameter          |  Type  |                    Description                     |
+	+=======================+========+====================================================+
+	| ``id``                | string | Id of the new profile                              |
+	+-----------------------+--------+----------------------------------------------------+
+	| ``name``              | string | The name of the new profile                        |
+	+-----------------------+--------+----------------------------------------------------+
+	| ``description``       | string | new profile description                            |
+	+-----------------------+--------+----------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+     "response": [
+        {
+            "id": "66",
+            "name": "CCR_COPY",
+            "description": "CCR_COPY description",
+        }
+     ]
+    }
+
+|
+
+**POST /api/1.2/profiles/name/:profile_name/copy/:profile_copy_from**
+    Copy profile to a new profile. The new profile name must not exist. 
+
+	Authentication Required: Yes
+
+	Role(s) Required: admin or oper
+
+	**Request Route Parameters**
+   
+	+-----------------------+----------+-------------------------------+
+	| Name                  | Required | Description                   |
+	+=======================+==========+===============================+
+	| ``profile_name``      | yes      | The name of profile to copy   |
+	+-----------------------+----------+-------------------------------+
+	| ``profile_copy_from`` | yes      | The name of profile copy from |
+	+-----------------------+----------+-------------------------------+
+
+
+	**Response Properties**
+
+	+-----------------------+--------+----------------------------------------------------+
+	|    Parameter          |  Type  |                    Description                     |
+	+=======================+========+====================================================+
+	| ``id``                | string | Id of the new profile                              |
+	+-----------------------+--------+----------------------------------------------------+
+	| ``name``              | string | The name of the new profile                        |
+	+-----------------------+--------+----------------------------------------------------+
+	| ``profileCopyFrom``   | string | The name of profile to copy                        |
+	+-----------------------+--------+----------------------------------------------------+
+	| ``idCopyFrom``        | string | The id of profile to copy                          |
+	+-----------------------+--------+----------------------------------------------------+
+	| ``description``       | string | new profile's description (copied)                 |
+	+-----------------------+--------+----------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+     "response": [
+        {
+            "id": "66",
+            "name": "CCR_COPY",
+            "profileCopyFrom": "CCR1",
+            "description": "CCR_COPY description",
+            "idCopyFrom": "3"
+        }
+     ]
+    }
+
+|

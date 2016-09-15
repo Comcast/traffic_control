@@ -17,85 +17,92 @@
 package com.comcast.cdn.traffic_control.traffic_monitor.config;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
-import org.apache.wicket.ajax.json.JSONException;
 import org.apache.wicket.ajax.json.JSONObject;
 
 public class ConfigHandler {
 	private static final Logger LOGGER = Logger.getLogger(ConfigHandler.class);
-	private static final Object lok = new Object();
+	private static final String CONFIG_FILEPATH = "/opt/traffic_monitor/conf/traffic_monitor_config.js";
+	private static final String DB_FILEPATH = "/opt/traffic_monitor/db";
+	public static final String CONFIG_PROPERTY = "traffic_monitor.path.config";
+	public static final String DB_PROPERTY = "traffic_monitor.path.db";
 
-	static MonitorConfig config = null;
+	private final Object lok = new Object();
+	private MonitorConfig config = null;
+	private boolean shutdown;
+	private final File configFile = new File(getFilePath(CONFIG_PROPERTY, CONFIG_FILEPATH));
+	private final String dbPath = getFilePath(DB_PROPERTY, DB_FILEPATH);
 
-	private static boolean shutdown;
-	public static void destroy() {
+	// Recommended Singleton Pattern implementation
+	// https://community.oracle.com/docs/DOC-918906
+
+	private ConfigHandler() { }
+
+	public static ConfigHandler getInstance() {
+		return ConfigHandlerHolder.CONFIG_HANDLER;
+	}
+
+	private static class ConfigHandlerHolder {
+		private static final ConfigHandler CONFIG_HANDLER = new ConfigHandler();
+	}
+
+	public void destroy() {
 		shutdown = true;
 	}
-	public static MonitorConfig getConfig() {
-		if(shutdown) { return null; }
 
-		synchronized(lok) {
-			if(config != null) {return config; }
-			try {
-				final String str = IOUtils.toString(new FileReader(getConfFile()));
-				final JSONObject o = new JSONObject(str);
-				config = new MonitorConfig(o.getJSONObject("traffic_monitor_config"));
-			} catch (Exception e) {
-				LOGGER.warn(e,e);
+	public MonitorConfig getConfig() {
+		if (shutdown) {
+			return null;
+		}
+
+		synchronized (lok) {
+			if (config != null) {
+				return config;
 			}
-			if(config == null) {
+
+			if (!configFileExists()) {
+				config = new MonitorConfig();
+				return config;
+			}
+
+			try {
+				final JSONObject jsonConfig = new JSONObject(IOUtils.toString(new FileReader(configFile)));
+				config = new MonitorConfig(jsonConfig.getJSONObject("traffic_monitor_config"));
+			} catch (FileNotFoundException e) {
+				LOGGER.error("Failed to find traffic monitor configuration file " + configFile.toString());
+			} catch (Exception e) {
+				LOGGER.warn(e, e);
+			}
+
+			if (config == null) {
 				config = new MonitorConfig();
 			}
 		}
+
 		return config;
 	}
-	public static void saveConfig() {
-//		try {
-//			saveToXml(config, Config.getDbDir()+ CONFIG_FILENAME);
-//		} catch (JAXBException e) {
-//			e.printStackTrace();
-//		}
-	}
-	public static void saveBaseConfig(final Map<String, String> baseconfig) throws JSONException, IOException {
-		final JSONObject o = new JSONObject();
-		o.put("traffic_monitor_config", baseconfig);
-		final FileWriter w = new FileWriter(getConfFile());
-		IOUtils.write(o.toString(2), w);
-		w.flush();
-		w.close();
-		config.userOverrideBaseConfig(o.getJSONObject("traffic_monitor_config"));
+
+	public File getDbFile(final String filename) {
+		return new File(dbPath, filename);
 	}
 
+	public File getConfigFile() {
+		return configFile;
+	}
 
-	private static String confDir = null;
-	private static String confFile = null;
+	public boolean configFileExists() {
+		return configFile.exists();
+	}
 
-	public static String getDbDir() {
-		synchronized(lok) {
-			if(confDir != null) { return confDir; }
-			confDir = "target/test-classes/var/";
-			if(new File("/opt/traffic_monitor/var").exists()) {
-				confDir = "/opt/traffic_monitor/db/";
-			}
-			return confDir;
+	private String getFilePath(final String property, final String staticFilePath) {
+		if (property != null && System.getProperty(property) != null) {
+			return System.getProperty(property);
 		}
-	}
-	public static String getConfFile() {
-		synchronized(lok) {
-			if(confFile != null) { return confFile; }
 
-			confFile = "target/test-classes/conf/traffic_monitor_config.js";
-			if(new File("/opt/traffic_monitor/conf/traffic_monitor_config.js").exists()) {
-				confFile = "/opt/traffic_monitor/conf/traffic_monitor_config.js";
-			}
-			return confFile;
-		}
+		return staticFilePath;
 	}
-
 }

@@ -16,60 +16,86 @@
 
 package com.comcast.cdn.traffic_control.traffic_router.core.cache;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.HashSet;
-import java.util.Set;
-
+import com.comcast.cdn.traffic_control.traffic_router.core.ds.DeliveryService;
+import com.comcast.cdn.traffic_control.traffic_router.core.ds.DeliveryServiceMatcher;
+import com.comcast.cdn.traffic_control.traffic_router.core.request.HTTPRequest;
+import com.comcast.cdn.traffic_control.traffic_router.core.request.Request;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheRegister;
+import java.util.TreeSet;
+
+import static com.comcast.cdn.traffic_control.traffic_router.core.ds.DeliveryServiceMatcher.Type.HOST;
+import static com.comcast.cdn.traffic_control.traffic_router.core.ds.DeliveryServiceMatcher.Type.PATH;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class CacheRegisterTest {
+	private final CacheRegister cacheRegister = new CacheRegister();
+	@Before
+	public void before() {
+		DeliveryService deliveryService1 = mock(DeliveryService.class);
+		when(deliveryService1.getId()).thenReturn("delivery service 1");
 
-    private CacheRegister cacheRegister;
+		DeliveryService deliveryService2 = mock(DeliveryService.class);
+		when(deliveryService2.getId()).thenReturn("delivery service 2");
 
-    @Before
-    public void setUp() throws Exception {
-        cacheRegister = new CacheRegister();
-    }
+		DeliveryServiceMatcher deliveryServiceMatcher1 = new DeliveryServiceMatcher(deliveryService1);
+		deliveryServiceMatcher1.addMatch(HOST, ".*\\.service01-kabletown\\..*", "");
+		deliveryServiceMatcher1.addMatch(PATH, ".*abc.*", "");
 
+		DeliveryServiceMatcher deliveryServiceMatcher2 = new DeliveryServiceMatcher(deliveryService2);
+		deliveryServiceMatcher2.addMatch(HOST, ".*\\.service01-kabletown\\..*", "");
+		deliveryServiceMatcher2.addMatch(PATH, ".*abcde.*", "");
 
-    @Test
-    public void testSetCacheLocations() {
-//        final Set<CacheLocation> update1 = new HashSet<CacheLocation>();
-//        final Set<CacheLocation> update2 = new HashSet<CacheLocation>();
-//
-//        final CacheLocation loc1 = new CacheLocation("loc1", null, null);
-//        final CacheLocation loc2 = new CacheLocation("loc2", null, null);
-//        final Cache cache = new Cache("cache");
-//        cache.setAdminStatus(AdminStatus.ONLINE);
-//        loc2.addCache(cache);
-//        final CacheLocation loc3 = new CacheLocation("loc3", null, null);
-//
-//        update1.add(loc1);
-//        update1.add(loc2);
-//        update1.add(loc3);
-//
-//        final CacheLocation loc4 = new CacheLocation("loc2", null, null);
-//        final CacheLocation loc5 = new CacheLocation("loc3", null, null);
-//        final CacheLocation loc6 = new CacheLocation("loc4", null, null);
-//
-//        update2.add(loc4);
-//        update2.add(loc5);
-//        update2.add(loc6);
-//
-//        cacheRegister.setConfiguredLocations(update1);
-//        assertEquals(update1, cacheRegister.getCacheLocations());
-//        assertNotNull(cacheRegister.getCacheLocation("loc2").getCache("cache"));
-//
-//        cacheRegister.setConfiguredLocations(update2);
-//        assertEquals(update2, cacheRegister.getCacheLocations());
-//        assertNotNull(cacheRegister.getCacheLocation("loc2").getCache("cache"));
-    }
+		DeliveryServiceMatcher deliveryServiceMatcher3 = new DeliveryServiceMatcher(deliveryService2);
+		deliveryServiceMatcher3.addMatch(HOST, ".*\\.service01-kabletown\\..*", "");
+		deliveryServiceMatcher3.addMatch(PATH, ".*abcd.*", "");
 
+		TreeSet<DeliveryServiceMatcher> deliveryServiceMatchers = new TreeSet<DeliveryServiceMatcher>();
+		deliveryServiceMatchers.add(deliveryServiceMatcher1);
+		deliveryServiceMatchers.add(deliveryServiceMatcher2);
+		deliveryServiceMatchers.add(deliveryServiceMatcher3);
+
+		cacheRegister.setHttpDeliveryServiceMatchers(deliveryServiceMatchers);
+
+		DeliveryServiceMatcher dnsMatcher1 = new DeliveryServiceMatcher(deliveryService1);
+		dnsMatcher1.addMatch(HOST, ".*\\.service01-kabletown\\..*", "");
+
+		TreeSet<DeliveryServiceMatcher> dnsMatchers = new TreeSet<DeliveryServiceMatcher>();
+		dnsMatchers.add(dnsMatcher1);
+
+		cacheRegister.setDnsDeliveryServiceMatchers(dnsMatchers);
+	}
+
+	@Test
+	public void itPicksTheMostSpecificDeliveryService() {
+		HTTPRequest httpRequest = new HTTPRequest();
+		httpRequest.setHostname("foo.service01-kabletown.com");
+		httpRequest.setPath("foo/abcde/bar");
+
+		assertThat(cacheRegister.getDeliveryService(httpRequest, true).getId(), equalTo("delivery service 2"));
+
+		Request request = new Request();
+		request.setHostname("foo.service01-kabletown.com");
+		assertThat(cacheRegister.getDeliveryService(request, false).getId(), equalTo("delivery service 1"));
+	}
+
+	@Test
+	public void itReturnsNullForDeliveryServiceWhenItHasNoMatchers() {
+		cacheRegister.setHttpDeliveryServiceMatchers(null);
+
+		HTTPRequest httpRequest = new HTTPRequest();
+		httpRequest.setHostname("foo.service01-kabletown.com");
+		httpRequest.setPath("foo/abcde/bar");
+		assertThat(cacheRegister.getDeliveryService(httpRequest, true), nullValue());
+
+		cacheRegister.setDnsDeliveryServiceMatchers(null);
+		Request request = new Request();
+		request.setHostname("foo.service01-kabletown.com");
+		assertThat(cacheRegister.getDeliveryService(request, false), nullValue());
+	}
 }

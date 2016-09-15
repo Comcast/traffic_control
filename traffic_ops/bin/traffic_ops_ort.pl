@@ -22,13 +22,25 @@ use File::Basename;
 use File::Path;
 use Fcntl qw(:flock);
 use MIME::Base64;
-use Data::Dumper;
+use LWP::UserAgent;
+use Crypt::SSLeay;
+use Getopt::Long;
 
 $| = 1;
-my $script_version = "0.55b";
 my $date           = `/bin/date`;
 chomp($date);
-print "$date\nVersion of this script: $script_version\n";
+print "$date\n";
+
+# supported redhat/centos releases
+my %supported_el_release = ( "EL6" => 1, "EL7" => 1);
+
+my $dispersion = 300;
+my $retries = 5;
+my $wait_for_parents = 1;
+
+GetOptions( "dispersion=i"       => \$dispersion, # dispersion (in seconds)
+            "retries=i"          => \$retries,
+            "wait_for_parents=i" => \$wait_for_parents );
 
 if ( $#ARGV < 1 ) {
 	&usage();
@@ -91,6 +103,9 @@ my $ERROR = 2;
 my $FATAL = 1;
 my $NONE  = 0;
 
+my $RELEASE = &os_version();
+( $log_level >> $DEBUG ) && print "DEBUG OS release is $RELEASE.\n";
+
 my $script_mode = &check_script_mode();
 &check_run_user();
 &check_only_copy_running();
@@ -116,21 +131,23 @@ my $CFG_FILE_CHANGED           = 2;
 my $CFG_FILE_PREREQ_FAILED     = 3;
 my $CFG_FILE_ALREADY_PROCESSED = 4;
 
+#### LWP globals
+my $lwp_conn                   = &setup_lwp();
+
 my $unixtime       = time();
 my $hostname_short = `/bin/hostname -s`;
 chomp($hostname_short);
+
 my $domainname = &set_domainname();
+$lwp_conn->agent("$hostname_short-$unixtime");
 
 my $TMP_BASE  = "/tmp/ort";
 my $cookie    = &get_cookie( $traffic_ops_host, $TM_LOGIN );
-my $CURL_OPTS = "-w %{response_code} -k -L -s -S --connect-timeout 5 --retry 5 --retry-delay 5 --basic";
-if ($cookie) {
-	$CURL_OPTS = "-H 'Cookie:" . $cookie . "' " . $CURL_OPTS;
-}
-( $log_level >> $DEBUG ) && print "DEBUG CURL_OPTS: $CURL_OPTS.\n";
+
 # add any special yum options for your environment here; this variable is used with all yum commands
 my $YUM_OPTS = "";
 ( $log_level >> $DEBUG ) && print "DEBUG YUM_OPTS: $YUM_OPTS.\n";
+
 my $TS_HOME      = "/opt/trafficserver";
 my $TRAFFIC_LINE = $TS_HOME . "/bin/traffic_line";
 
@@ -182,6 +199,7 @@ if ( $script_mode == $BADASS || $script_mode == $INTERACTIVE || $script_mode == 
 my $header_comment = &get_header_comment($traffic_ops_host);
 
 &process_packages( $hostname_short, $traffic_ops_host );
+
 &process_chkconfig( $hostname_short, $traffic_ops_host );
 
 #### First time
@@ -197,7 +215,7 @@ foreach my $file ( keys ( %{$cfg_file_tracker} ) ) {
 			last;
 		}
 	}
-} 
+}
 
 if ( ($installed_new_ssl_keys) && !$cfg_file_tracker->{'ssl_multicert.config'}->{'change_applied'} ) {
 	my $return = &touch_file('ssl_multicert.config');
@@ -228,9 +246,19 @@ if ( $script_mode != $REPORT ) {
 ####-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-####
 #### Subroutines
 ####-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-####
+
+sub os_version {
+  my $release = "UNKNOWN";
+  if (`uname -r` =~ m/.+(el\d)\.x86_64/)  {
+    $release = uc $1;
+  }
+  exists $supported_el_release{$release} ? return $release
+      : die("unsupported el_version: $release");
+}
+
 sub usage {
 	print "====-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-====\n";
-	print "Usage: ./traffic_ops_ort.pl <Mode> <Log_Level> <Traffic_Ops_URL> <Traffic_Ops_Login>\n";
+	print "Usage: ./traffic_ops_ort.pl <Mode> <Log_Level> <Traffic_Ops_URL> <Traffic_Ops_Login> [optional flags]\n";
 	print "\t<Mode> = interactive - asks questions during config process.\n";
 	print "\t<Mode> = report - prints config differences and exits.\n";
 	print "\t<Mode> = badass - attempts to fix all config differences that it can.\n";
@@ -241,6 +269,10 @@ sub usage {
 	print "\t<Traffic_Ops_URL> = URL to Traffic Ops host. Example: https://trafficops.company.net\n";
 	print "\n";
 	print "\t<Traffic_Ops_Login> => Example: 'username:password' \n";
+	print "\n\t[optional flags]:\n";
+	print "\t\tdispersion=<time>      => wait a random number between 0 and <time> before starting. Default = 300.\n";
+	print "\t\tretries=<number>       => retry connection to Traffic Ops URL <number> times. Default = 3.\n";
+	print "\t\twait_for_parents=<0|1> => do not update if parent_pending = 1 in the update json. Default = 1, wait for parents.\n";
 	print "====-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-====\n";
 	exit 1;
 }
@@ -260,12 +292,12 @@ sub process_cfg_file {
 	( $log_level >> $INFO ) && print "\nINFO: ======== Start processing config file: $cfg_file ========\n";
 
 	my $config_dir = $cfg_file_tracker->{$cfg_file}->{'location'};
-	
+
 	$url = &set_url($cfg_file);
 
 	&smart_mkdir($config_dir);
 
-	$result = &curl_me($url) if ( !defined($result) && defined($url) );
+	$result = &lwp_get($url) if ( !defined($result) && defined($url) );
 
 	return $CFG_FILE_NOT_PROCESSED if ( !&validate_result( \$url, \$result ) );
 
@@ -311,9 +343,73 @@ sub process_cfg_file {
 	return $return_code;
 }
 
+sub systemd_service_set {
+	my $systemd_service = shift;
+	my $systemd_service_enable = shift;
+
+	my $command = "/bin/systemctl $systemd_service_enable $systemd_service";
+	`$command 2>/dev/null`;
+	if ($? == 0) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+sub systemd_service_chk {
+	my $service = shift;
+
+	my $status = "disabled";
+	open(FH, "/bin/systemctl list-unit-files ${service}.service|") or die ("/bin/systemctl: $!");
+	while(<FH>) {
+		chomp($_);
+		if ($_ =~ m/$service\.service\s(\w+)/) {
+			$status = $1;
+		}
+	}
+	close(FH);
+	return $status;
+}
+
+sub systemd_service_status {
+	my $pkg_name = shift;
+	my $running_string;
+	my $running = 0;
+	my $pid;
+	my $prog;
+
+	open(FH, "/bin/systemctl status $pkg_name|") or die ("/bin/systemctl $!");
+	while(<FH>) {
+		chomp ($_);
+		if ($_ =~ m/\s+Active:\s+active\s\(running\)/) {
+			$running = 1;
+		}
+		if ($_ =~ m/\s+Main\sPID:\s(\d+)\s+\((\w+)\)/) {
+			$pid = $1;
+			$prog = $2
+		}
+	}
+	close(FH);
+	if ($running) {
+		$running_string = "$prog (pid $pid) is running...";
+	} else {
+		$running_string = "$pkg_name is stopped";
+	}
+
+	return $running_string;
+}
+
 sub start_service {
 	my $pkg_name = shift;
-	( my $pkg_running ) = `/sbin/service $pkg_name status`;
+
+	( $log_level >> $DEBUG ) && print "DEBUG start_service called for $pkg_name.\n";
+
+	my $pkg_running;
+	if ($RELEASE eq "EL7") {
+		$pkg_running = &systemd_service_status($pkg_name);
+	} else {
+		$pkg_running  = `/sbin/service $pkg_name status`;
+	}
 	my $running_string = "";
 	if ( $pkg_name eq "trafficserver" ) {
 		$running_string = "traffic_cop";
@@ -330,11 +426,18 @@ sub start_service {
 			elsif ( $script_mode == $BADASS ) {
 				( $log_level >> $ERROR ) && print "ERROR $pkg_name needs started. Trying to do that now.\n";
 				my $pkg_start_output = `/sbin/service $pkg_name start`;
-				( my @output_lines ) = split( /\n/, $pkg_start_output );
 				my $pkg_started = 0;
-				foreach my $ol (@output_lines) {
-					if ( $ol =~ m/\[.*\]/ && $ol =~ m/OK/ ) {
+				if ($RELEASE eq "EL7") {
+					my $_st = &systemd_service_status($pkg_name);
+					if ($_st =~ m/\(pid\s+(\d+)\) is running.../) {
 						$pkg_started++;
+					}
+				} else {
+					( my @output_lines ) = split( /\n/, $pkg_start_output );
+					foreach my $ol (@output_lines) {
+						if ( $ol =~ m/\[.*\]/ && $ol =~ m/OK/ ) {
+							$pkg_started++;
+						}
 					}
 				}
 				if ($pkg_started) {
@@ -356,11 +459,18 @@ sub start_service {
 				if ( $select =~ m/Y/ ) {
 					( $log_level >> $ERROR ) && print "ERROR $pkg_name needs started. Trying to do that now.\n";
 					my $pkg_start_output = `/sbin/service $pkg_name start`;
-					( my @output_lines ) = split( /\n/, $pkg_start_output );
 					my $pkg_started = 0;
-					foreach my $ol (@output_lines) {
-						if ( $ol =~ m/\[.*\]/ && $ol =~ m/OK/ ) {
+					if ($RELEASE eq "EL7") {
+						my $_st = &systemd_service_status($pkg_name);
+						if ($_st =~ m/\(pid\s+(\d+)\) is running.../) {
 							$pkg_started++;
+						}
+					} else {
+						( my @output_lines ) = split( /\n/, $pkg_start_output );
+						foreach my $ol (@output_lines) {
+							if ( $ol =~ m/\[.*\]/ && $ol =~ m/OK/ ) {
+								$pkg_started++;
+							}
 						}
 					}
 					if ($pkg_started) {
@@ -376,7 +486,7 @@ sub start_service {
 			}
 		}
 		else {
-			( $log_level >> $DEBUG ) && print "DEBUG $pkg_name is running.\n";
+			( $log_level >> $ERROR ) && print "ERROR $pkg_name is running.\n";
 			$pkg_running = $ALREADY_RUNNING;
 		}
 	}
@@ -388,7 +498,13 @@ sub start_service {
 
 sub restart_service {
 	my $pkg_name = $_[0];
-	( my $pkg_running ) = `/sbin/service $pkg_name status`;
+
+	my $pkg_running;
+	if ($RELEASE eq "EL7") {
+		$pkg_running = &systemd_service_status($pkg_name);
+	} else {
+		$pkg_running  = `/sbin/service $pkg_name status`;
+	}
 	my $running_string = "";
 	if ( $pkg_name eq "trafficserver" ) {
 		$running_string = "traffic_cop";
@@ -540,15 +656,13 @@ sub send_update_to_trops {
 	my $status = shift;
 	my $url    = "$traffic_ops_host\/update/$hostname_short";
 	( $log_level >> $DEBUG ) && print "DEBUG Setting update flag in Traffic Ops to $status.\n";
-	my $cmd = undef;
-	if ($cookie) {
-		$cmd = "/usr/bin/curl -k -L -s -H 'Cookie: $cookie' -X POST -d 'updated=$status' --basic $url 2>&1";
-	}
-	else {
-		$cmd = "/usr/bin/curl -k -L -s -X POST -d 'updated=$status' --basic $url 2>&1";
-	}
-	my $result = `$cmd`;
-	( $log_level >> $DEBUG ) && print "DEBUG Response from Traffic Ops is: $result.\n";
+
+	my %headers = ( 'Cookie' => $cookie );
+	my $response = $lwp_conn->post( $url, [ 'updated' => $status ], %headers );
+
+	&check_lwp_response_code($response, $ERROR);
+
+	( $log_level >> $DEBUG ) && print "DEBUG Response from Traffic Ops is: " . $response->content() . ".\n";
 }
 
 sub get_print_current_client_connections {
@@ -565,10 +679,10 @@ sub check_syncds_state {
 	( $log_level >> $DEBUG ) && print "DEBUG Checking syncds state.\n";
 	if ( $script_mode == $SYNCDS || $script_mode == $BADASS || $script_mode == $REPORT ) {
 		## The herd is about to get /update/<hostname>
-		&sleep_rand(5);
+		( $dispersion > 0 ) && &sleep_rand($dispersion);
 
 		my $url     = "$traffic_ops_host\/update/$hostname_short";
-		my $upd_ref = &curl_me($url);
+		my $upd_ref = &lwp_get($url);
 		if ( $upd_ref =~ m/^\d{3}$/ ) {
 			( $log_level >> $ERROR ) && print "ERROR Update URL: $url returned $upd_ref. Exiting, not sure what else to do.\n";
 			exit 1;
@@ -602,16 +716,19 @@ sub check_syncds_state {
 					exit 1;
 				}
 			}
-			if ( $parent_pending == 1 ) {
+			if ( $parent_pending == 1 && $wait_for_parents == 1) {
 				( $log_level >> $ERROR ) && print "ERROR Traffic Ops is signaling that my parents need an update.\n";
 				if ( $script_mode == $SYNCDS ) {
-					( $log_level >> $WARN ) && print "WARN In syncds mode, sleeping for 60s to see if the update my parents need is cleared.\n";
-					for ( my $i = 60; $i > 0; $i-- ) {
-						( $log_level >> $WARN ) && print ".";
-						sleep 1;
+					if ( $dispersion > 0 ) {
+						( $log_level >> $WARN ) && print "WARN In syncds mode, sleeping for " . $dispersion . "s to see if the update my parents need is cleared.\n";
+						for ( my $i = $dispersion; $i > 0; $i-- ) {
+							( $log_level >> $WARN ) && print ".";
+							sleep 1;
+						}
 					}
+
 					( $log_level >> $WARN ) && print "\n";
-					$upd_ref = &curl_me($url);
+					$upd_ref = &lwp_get($url);
 					if ( $upd_ref =~ m/^\d{3}$/ ) {
 						( $log_level >> $ERROR ) && print "ERROR Update URL: $url returned $upd_ref. Exiting, not sure what else to do.\n";
 						exit 1;
@@ -628,17 +745,11 @@ sub check_syncds_state {
 					}
 					else {
 						( $log_level >> $DEBUG ) && print "DEBUG The update on my parents cleared; continuing.\n";
-						## At least a portion of the herd is about to check in with Traffic Ops, so need to space things out a bit.
-						#&sleep_rand(5);
 					}
 				}
 			}
 			else {
-				( $log_level >> $DEBUG ) && print "DEBUG Traffic Ops is signaling that my parents do not need an update.\n";
-				if ( $script_mode == $SYNCDS ) {
-					## The herd is about to check in with Traffic Ops, need to space things out a bit.
-					&sleep_rand(15);
-				}
+				( $log_level >> $DEBUG ) && print "DEBUG Traffic Ops is signaling that my parents do not need an update, or wait_for_parents == 0.\n";
 			}
 		}
 		elsif ( $script_mode == $SYNCDS && $upd_pending != 1 ) {
@@ -646,10 +757,10 @@ sub check_syncds_state {
 			exit 0;
 		}
 		else {
-			( $log_level >> $DEBUG ) && print "DEBUG Traffic Ops is signaling that no update is waiting to be applied.\n";
+			( $log_level >> $ERROR ) && print "ERROR Traffic Ops is signaling that no update is waiting to be applied.\n";
 		}
 
-		my $stj = &curl_me("$traffic_ops_host\/datastatus");
+		my $stj = &lwp_get("$traffic_ops_host\/datastatus");
 		if ( $stj =~ m/^\d{3}$/ ) {
 			( $log_level >> $ERROR ) && print "Statuses URL: $url returned $stj! Skipping creation of status file.\n";
 		}
@@ -733,7 +844,6 @@ sub process_config_files {
 				|| $file =~ m/url\_sig\_(.*)\.config$/
 				|| $file =~ m/hdr\_rw\_(.*)\.config$/
 				|| $file eq "regex_revalidate.config"
-				|| $file eq "ip_allow.config"
 				|| $file eq "astats.config"
 				|| $file =~ m/cacheurl\_(.*)\.config$/
 				|| $file =~ m/regex\_remap\_(.*)\.config$/
@@ -921,14 +1031,17 @@ sub check_plugins {
 			( my @parts ) = split( /\@plugin\=/, $liner );
 			foreach my $i ( 1..$#parts ) {
 				( my $plugin_name, my $plugin_config_file ) = split( /\@pparam\=/, $parts[$i] );
-				($plugin_config_file) = split( /\s+/, $plugin_config_file);
 				if (defined( $plugin_config_file ) ) {
+					($plugin_config_file) = split( /\s+/, $plugin_config_file);
 					( my @parts ) = split( /\//, $plugin_config_file );
 					$plugin_config_file = $parts[$#parts];
 					$plugin_config_file =~ s/\s+//g;
 					if ( !exists($cfg_file_tracker->{$plugin_config_file}->{'remap_plugin_config_file'}) ) {
-						$cfg_file_tracker->{$plugin_config_file}->{'remap_plugin_config_file'} = 1; 
+						$cfg_file_tracker->{$plugin_config_file}->{'remap_plugin_config_file'} = 1;
 					}
+				}
+				else {
+					($plugin_name) = split(/\s/, $plugin_name);
 				}
 				$plugin_name =~ s/\s//g;
 				( $log_level >> $DEBUG ) && print "DEBUG Found plugin $plugin_name in $cfg_file.\n";
@@ -1040,53 +1153,57 @@ sub check_this_plugin {
 	}
 }
 
-sub curl_me {
+sub lwp_get {
 	my $url           = shift;
-	my $retry_counter = 5;
-	my $result        = `/usr/bin/curl $CURL_OPTS $url 2>&1`;
-	( $log_level >> $TRACE ) && print "TRACE result for $url is: ...$result....\n";
+	my $retry_counter = $retries;
 
-	while ( $result =~ m/^curl\: \(\d+\)/ && $retry_counter > 0 ) {
-		$result =~ s/(\r|\c|\f|\t|\n)/ /g;
-		( $log_level >> $ERROR ) && print "ERROR Error receiving $url from Traffic Ops: $result\n";
-		$retry_counter--;
-		sleep 5;
-		$result = `/usr/bin/curl $CURL_OPTS $url 2>&1`;
-	}
-	if ( $result =~ m/^curl\: \(\d+\)/ && $retry_counter == 0 ) {
-		( $log_level >> $FATAL ) && print "FATAL $url returned in error from Traffic Ops five times!\n";
-		exit 1;
-	}
-	else {
-		( $log_level >> $INFO ) && print "INFO Success receiving $url from Traffic Ops.\n";
-	}
+	( $log_level >> $DEBUG ) && print "DEBUG Total connections in LWP cache: " . $lwp_conn->conn_cache->get_connections("https") . "\n";
+	my %headers = ( 'Cookie' => $cookie );
 
-	my (@chars) = split( //, $result );
-	my $response_code = pop(@chars) . pop(@chars) . pop(@chars);
-	$response_code = reverse($response_code);
-	( $log_level >> $DEBUG ) && print "DEBUG Received $response_code for $url from Traffic Ops.\n";
-	if ( $response_code >= 400 ) {
-		( $log_level >> $ERROR ) && print "ERROR Received error code $response_code for $url from Traffic Ops!\n";
-		return $response_code;
-	}
-	for ( 0 .. 2 ) { chop($result) }
+	my $response;
+	my $response_content;
 
-	if ( $url =~ m/\.json$/ ) {
-		eval {
-			decode_json($result);
-			1;
-		} or do {
-			my $error = $@;
-			( $log_level >> $FATAL ) && print "FATAL $url did not return valid JSON: $result | error: $error\n";
+	while( $retry_counter > 0 ) {
+
+		$response = $lwp_conn->get($url, %headers);
+		$response_content = $response->content;
+
+		if ( &check_lwp_response_code($response, $ERROR) || &check_lwp_response_content_length($response, $ERROR) ) {
+			( $log_level >> $ERROR ) && print "ERROR result for $url is: ..." . $response->content . "...\n";
+			sleep 2**( $retries - $retry_counter );
+			$retry_counter--;
+		}
+		# https://github.com/Comcast/traffic_control/issues/1168
+		elsif ( $url =~ m/url\_sig\_(.*)\.config$/ && $response->content =~ m/No RIAK servers are set to ONLINE/ ) {
+			( $log_level >> $FATAL ) && print "FATAL result for $url is: ..." . $response->content . "...\n";
 			exit 1;
-			}
+		}
+		else {
+			( $log_level >> $DEBUG ) && print "DEBUG result for $url is: ..." . $response->content . "...\n";
+			last;
+		}
+
 	}
-	my $size = length($result);
-	if ( $size == 0 ) {
-		( $log_level >> $FATAL ) && print "FATAL URL: $url returned empty!! Bailing!\n";
+
+	( &check_lwp_response_code($response, $FATAL) || &check_lwp_response_content_length($response, $FATAL) ) if ( $retry_counter == 0 );
+
+	&eval_json($response) if ( $url =~ m/\.json$/ );
+
+	return $response_content;
+
+}
+
+sub eval_json {
+	my $lwp_response = shift;
+	eval {
+		decode_json($lwp_response->content());
+		1;
+	} or do {
+		my $error = $@;
+		( $log_level >> $FATAL ) && print "FATAL " . $lwp_response->request->uri . " did not return valid JSON: " . $lwp_response->content() . " | Error: $error\n";
 		exit 1;
 	}
-	return $result;
+
 }
 
 sub replace_cfg_file {
@@ -1189,23 +1306,74 @@ sub check_output {
 }
 
 sub get_cookie {
-	my $tm_host  = shift;
-	my $tm_login = shift;
-	my ( $u, $p ) = split( /:/, $tm_login );
+	my $to_host     = shift;
+	my $to_login    = shift;
+	my ( $u, $p ) = split( /:/, $to_login );
+	my %headers;
 
-	my $cmd = "curl -vLks -X POST -d 'u=" . $u . "' -d 'p=" . $p . "' " . $tm_host . "/login -o /dev/null 2>&1 | grep Set-Cookie | awk '{print \$3}'";
-	( $log_level >> $DEBUG ) && print "DEBUG Getting cookie with $cmd.\n";
-	my $cookie = `$cmd`;
-	chomp $cookie;
-	$cookie =~ s/;$//;
+	my $url = $to_host . "/login";
+	my $response = $lwp_conn->post( $url, [ 'u' => $u, 'p' => $p ], %headers );
+
+	&check_lwp_response_code($response, $FATAL);
+
+	my $cookie;
+	if ( $response->header('Set-Cookie') ) {
+		($cookie) = split(/\;/, $response->header('Set-Cookie'));
+	}
+
 	if ( $cookie =~ m/mojolicious/ ) {
 		( $log_level >> $DEBUG ) && print "DEBUG Cookie is $cookie.\n";
 		return $cookie;
 	}
 	else {
-		( $log_level >> $ERROR ) && print "ERROR Cookie not found from Traffic Ops!\n";
+		( $log_level >> $FATAL ) && print "FATAL mojolicious cookie not found from Traffic Ops!\n";
+		exit 1;
+	}
+}
+
+sub check_lwp_response_code {
+	my $lwp_response  = shift;
+	my $panic_level   = shift;
+	my $log_level_str = &log_level_to_string($panic_level);
+	my $url           = $lwp_response->request->uri;
+
+	if ( !defined($lwp_response->code()) ) {
+		( $log_level >> $panic_level ) && print $log_level_str . " $url failed!\n";
+		exit 1 if ($log_level_str eq 'FATAL');
+		return 1;
+	}
+	elsif ( $lwp_response->code() >= 400 ) {
+		( $log_level >> $panic_level ) && print $log_level_str . " $url returned HTTP " . $lwp_response->code() . "!\n";
+		exit 1 if ($log_level_str eq 'FATAL');
+		return 1;
+	}
+	else {
+		( $log_level >> $DEBUG ) && print "DEBUG $url returned HTTP " . $lwp_response->code() . ".\n";
 		return 0;
 	}
+}
+
+sub check_lwp_response_content_length {
+	my $lwp_response  = shift;
+	my $panic_level   = shift;
+	my $log_level_str = &log_level_to_string($panic_level);
+	my $url           = $lwp_response->request->uri;
+
+	if ( !defined($lwp_response->header('Content-Length')) ) {
+		( $log_level >> $panic_level ) && print $log_level_str . " $url did not return a Content-Length header!\n";
+		exit;
+		return 1;
+	}
+	elsif ( $lwp_response->header('Content-Length') != length($lwp_response->content()) ) {
+		( $log_level >> $panic_level ) && print $log_level_str . " $url returned a Content-Length of " . $lwp_response->header('Content-Length') . ", however actual content length is " . length($lwp_response->content()) . "!\n";
+		exit 1 if ($log_level_str eq 'FATAL');
+		return 1;
+	}
+	else {
+		( $log_level >> $DEBUG ) && print "DEBUG $url returned a Content-Length of " . $lwp_response->header('Content-Length') . ", and actual content length is " . length($lwp_response->content()). "\n";
+		return 0;
+	}
+
 }
 
 sub check_script_mode {
@@ -1258,7 +1426,15 @@ sub check_log_level {
 }
 
 sub set_domainname {
-	my $hostname = `cat /etc/sysconfig/network | grep HOSTNAME`;
+	my $hostname;
+	if ($RELEASE eq "EL7") {
+		$hostname = `cat /etc/hostname`;
+		chomp($hostname);
+	} else {
+		$hostname = `cat /etc/sysconfig/network | grep HOSTNAME`;
+		chomp($hostname);
+		$hostname =~ s/HOSTNAME\=//g;
+	}
 	chomp($hostname);
 	$hostname =~ s/HOSTNAME\=//g;
 	my $domainname;
@@ -1278,12 +1454,7 @@ sub get_cfg_file_list {
 	my $cdn_name;
 	my $url = "$tm_host/ort/$host_name/ort1";
 
-	my $result = &curl_me($url);
-
-	if ( $result =~ m/^\d{3}$/ ) {
-		( $log_level >> $FATAL ) && print "FATAL ORT URL: $url returned $result. Cannot continue; bailing.\n";
-		exit 1;
-	}
+	my $result = &lwp_get($url);
 
 	my $ort_ref = decode_json($result);
 	$profile_name = $ort_ref->{'profile'}->{'name'};
@@ -1311,12 +1482,7 @@ sub get_header_comment {
 	my $toolname;
 
 	my $url    = "$to_host/api/1.1/system/info.json";
-	my $result = &curl_me($url);
-
-	if ( $result =~ m/^\d{3}$/ ) {
-		( $log_level >> $ERROR ) && print "ERROR System Info URL: $url returned $result.\n";
-		return "";
-	}
+	my $result = &lwp_get($url);
 
 	my $result_ref = decode_json($result);
 	if ( defined( $result_ref->{'response'}->{'parameters'}->{'tm.toolname'} ) ) {
@@ -1483,7 +1649,7 @@ sub process_packages {
 
 	my $proceed = 0;
 	my $url     = "$tm_host/ort/$host_name/packages";
-	my $result  = &curl_me($url);
+	my $result  = &lwp_get($url);
 
 	if ( defined($result) && $result ne "" && $result !~ m/^(\d){3}$/ ) {
 		my %package_map;
@@ -1678,25 +1844,50 @@ sub chkconfig_matches {
 
 	( $log_level >> $TRACE ) && print "TRACE Checking whether ${service}'s chkconfig output matches $service_settings.\n";
 
-	my $command = "/sbin/chkconfig --list $service";
-	my $output  = `$command 2>&1`;
-	chomp($output);
+	# systemd check.
+	# This will work for now as  it trys to map from chkconfig run level settings to systemd enabled/disabled state.
+	# I think that a new generic endpoint should be added to traffic opts for chkconfig and systemd state settings and that functions
+	# here in the ort script should abstract the checking of chkconfig/systemd states with traffic ops.
+	if ($RELEASE eq "EL7") {
+		my $service_state = systemd_service_chk($service);
+		if ($service_state eq "enabled") {
+			if ($service_settings =~ m/on/) {
+				( $log_level >> $INFO ) && print "INFO chkconfig output for $service matches $service_settings.\n";
+				return 1;
+			} else {
+				( $log_level >> $ERROR ) && print "ERROR chkconfig output for $service does not match what we expect...\n";
+				return 0;
+			}
+		} else {
+			if ($service_settings =~ m/on/) {
+				( $log_level >> $ERROR ) && print "ERROR chkconfig output for $service does not match what we expect...\n";
+				return 0;
+			} else {
+				( $log_level >> $INFO ) && print "INFO chkconfig output for $service matches $service_settings.\n";
+				return 1;
+			}
+		}
+	} else {
+		my $command = "/sbin/chkconfig --list $service";
+		my $output  = `$command 2>&1`;
+		chomp($output);
 
-	if ( $? == 0 ) {
-		if ( $output =~ m/^$service\s+$service_settings$/ ) {
-			( $log_level >> $INFO ) && print "INFO chkconfig output for $service matches $service_settings.\n";
-			return (1);
+		if ( $? == 0 ) {
+			if ( $output =~ m/^$service\s+$service_settings$/ ) {
+				( $log_level >> $INFO ) && print "INFO chkconfig output for $service matches $service_settings.\n";
+				return (1);
+			}
+			else {
+				( $log_level >> $ERROR ) && print "ERROR chkconfig output for $service does not match what we expect...\n";
+				( $log_level >> $TRACE ) && print "TRACE $output != $service_settings.\n";
+				return (0);
+			}
 		}
 		else {
-			( $log_level >> $ERROR ) && print "ERROR chkconfig output for $service does not match what we expect...\n";
-			( $log_level >> $TRACE ) && print "TRACE $output != $service_settings.\n";
+			( $log_level >> $ERROR ) && print "ERROR $command returned non-zero ($?), output: $output.\n";
+
 			return (0);
 		}
-	}
-	else {
-		( $log_level >> $ERROR ) && print "ERROR $command returned non-zero ($?), output: $output.\n";
-
-		return (0);
 	}
 }
 
@@ -1706,7 +1897,7 @@ sub process_chkconfig {
 
 	my $proceed = 0;
 	my $url     = "$tm_host/ort/$host_name/chkconfig";
-	my $result  = &curl_me($url);
+	my $result  = &lwp_get($url);
 
 	if ( defined($result) && $result ne "" && $result !~ m/^\d{3}$/ ) {
 		my @chkconfig_list = @{ decode_json($result) };
@@ -1727,35 +1918,48 @@ sub process_chkconfig {
 						}
 
 						if ($fixit) {
-							my (@levels) = split( /\s+/, $chkconfig->{"value"} );
+							#use systemd commands by mapping chkconfig runlrvrld to either enable or disable.
+							if ($RELEASE eq "EL7") {
+								my $systemd_service_enable = "disable";
+								if ($chkconfig->{"value"} =~ m/on/) {
+									$systemd_service_enable = "enable";
+								}
+								if (&systemd_service_set($chkconfig->{"name"}, $systemd_service_enable)) {
+									( $log_level >> $ERROR ) && print "ERROR $chkconfig->{name}: has been set to $systemd_service_enable\n";
+								} else {
+									( $log_level >> $ERROR ) && print "ERROR failed to set the systemd service for $chkconfig->{name} to $systemd_service_enable\n";
+								}
+							} else {
+								my (@levels) = split( /\s+/, $chkconfig->{"value"} );
 
-							if ( scalar(@levels) == 7 ) {
-								( $log_level >> $TRACE ) && print "TRACE $chkconfig->{name}: Split chkconfig into " . join( ", ", @levels ) . "\n";
+								if ( scalar(@levels) == 7 ) {
+									( $log_level >> $TRACE ) && print "TRACE $chkconfig->{name}: Split chkconfig into " . join( ", ", @levels ) . "\n";
 
-								for my $level (@levels) {
-									my ( $run_level, $setting ) = split( /:/, $level );
+									for my $level (@levels) {
+										my ( $run_level, $setting ) = split( /:/, $level );
 
-									if ( defined($run_level) && defined($setting) ) {
-										( $log_level >> $TRACE ) && print "TRACE $chkconfig->{name}: Setting run level $run_level to $setting\n";
+										if ( defined($run_level) && defined($setting) ) {
+											( $log_level >> $TRACE ) && print "TRACE $chkconfig->{name}: Setting run level $run_level to $setting\n";
 
-										if ( !set_chkconfig( $chkconfig->{"name"}, $run_level, $setting ) ) {
-											( $log_level >> $ERROR ) && print "ERROR $chkconfig->{name}: Unable to set run level $run_level to $setting!\n";
+											if ( !set_chkconfig( $chkconfig->{"name"}, $run_level, $setting ) ) {
+												( $log_level >> $ERROR ) && print "ERROR $chkconfig->{name}: Unable to set run level $run_level to $setting!\n";
+											}
+										}
+										else {
+											( $log_level >> $ERROR ) && print "ERROR $chkconfig->{name}: $level is not what we expected!\n";
 										}
 									}
+
+									if ( chkconfig_matches( $chkconfig->{"name"}, $chkconfig->{"value"} ) ) {
+										( $log_level >> $INFO ) && print "INFO Successfully set chkconfig for $chkconfig->{name}.\n";
+									}
 									else {
-										( $log_level >> $ERROR ) && print "ERROR $chkconfig->{name}: $level is not what we expected!\n";
+										( $log_level >> $ERROR ) && print "FATAL Unable to set chkconfig values for $chkconfig->{name}!\n";
 									}
 								}
-
-								if ( chkconfig_matches( $chkconfig->{"name"}, $chkconfig->{"value"} ) ) {
-									( $log_level >> $INFO ) && print "INFO Successfully set chkconfig for $chkconfig->{name}.\n";
-								}
 								else {
-									( $log_level >> $ERROR ) && print "FATAL Unable to set chkconfig values for $chkconfig->{name}!\n";
+									( $log_level >> $ERROR ) && print "ERROR $chkconfig->{name}: $chkconfig->{value} is not what we expected!\n";
 								}
-							}
-							else {
-								( $log_level >> $ERROR ) && print "ERROR $chkconfig->{name}: $chkconfig->{value} is not what we expected!\n";
 							}
 						}
 					}
@@ -1928,7 +2132,7 @@ sub validate_result {
 	my $result = ${ $_[1] };
 
 	if ( $result =~ m/^\d{3}$/ ) {
-		( $log_level >> $ERROR ) && print "ERROR Result from curling $url is HTTP $result!\n";
+		( $log_level >> $ERROR ) && print "ERROR Result from getting $url is HTTP $result!\n";
 		return 0;
 	}
 
@@ -2295,57 +2499,77 @@ sub adv_processing_udev {
 sub adv_processing_ssl {
 
 	my @db_file_lines = @{ $_[0] };
-
-	( $log_level >> $DEBUG ) && print "DEBUG Entering advanced processing for ssl_multicert.config.\n";
-	foreach my $line (@db_file_lines) {
-		( $log_level >> $DEBUG ) && print "DEBUG line in ssl_multicert.config from Traffic Ops: $line \n";
-		if ( $line =~ m/^\s*ssl_cert_name\=(.*)\s+ssl_key_name\=(.*)\s*$/ ) {
-			push( @{ $ssl_tracker->{'db_config'} }, { cert_name => $1, key_name => $2 } );
-		}
-	}
-
-	foreach my $keypair ( @{ $ssl_tracker->{'db_config'} } ) {
-		( $log_level >> $DEBUG ) && print "DEBUG Processing SSL key: " . $keypair->{'key_name'} . "\n";
-
-		my $remap = $keypair->{'key_name'};
-		$remap =~ s/\.key$//;
-
-		my $url = $traffic_ops_host . "/api/1.1/deliveryservices/hostname/" . $remap . "/sslkeys.json";
-
-		my $result = &curl_me($url);
+	if (@db_file_lines > 1) { #header line is always present, so look for 2 lines or more
+		( $log_level >> $DEBUG ) && print "DEBUG Entering advanced processing for ssl_multicert.config.\n";
+		my $url = $traffic_ops_host . "/api/1.2/cdns/name/$my_cdn_name/sslkeys.json";
+		my $result = &lwp_get($url);
 		if ( $result =~ m/^\d{3}$/ ) {
 			if ( $script_mode == $REPORT ) {
 				( $log_level >> $ERROR ) && print "ERROR SSL URL: $url returned $result.\n";
 				return 1;
-			}
-			else {
+			} else {
 				( $log_level >> $FATAL ) && print "FATAL SSL URL: $url returned $result. Exiting.\n";
 				exit 1;
 			}
 		}
 		my $result_json = decode_json($result);
+		my $certs = $result_json->{'response'};
 
-		my $ssl_key_base64  = $result_json->{'response'}->{'certificate'}->{'key'};
-		my $ssl_key         = decode_base64($ssl_key_base64);
-		my $ssl_cert_base64 = $result_json->{'response'}->{'certificate'}->{'crt'};
-		my $ssl_cert        = decode_base64($ssl_cert_base64);
-		( $log_level >> $DEBUG ) && print "DEBUG private key for $remap is:\n$ssl_key\n";
-		( $log_level >> $DEBUG ) && print "DEBUG certificate for $remap is:\n$ssl_cert\n";
+		foreach my $line (@db_file_lines) {
+				( $log_level >> $DEBUG ) && print "DEBUG line in ssl_multicert.config from Traffic Ops: $line \n";
+				if ( $line =~ m/^\s*ssl_cert_name\=(.*)\s+ssl_key_name\=(.*)\s*$/ ) {
+						push( @{ $ssl_tracker->{'db_config'} }, { cert_name => $1, key_name => $2 } );
+				}
+		}
 
-		$cfg_file_tracker->{ $keypair->{'key_name'} }->{'location'}  = "/opt/trafficserver/etc/trafficserver/ssl/";
-		$cfg_file_tracker->{ $keypair->{'key_name'} }->{'service'}   = "trafficserver";
-		$cfg_file_tracker->{ $keypair->{'key_name'} }->{'component'} = "SSL";
-		$cfg_file_tracker->{ $keypair->{'key_name'} }->{'contents'}  = $ssl_key;
-		$cfg_file_tracker->{ $keypair->{'key_name'} }->{'fname-in-TO'}  = $keypair->{'key_name'};
+		foreach my $keypair ( @{ $ssl_tracker->{'db_config'} } ) {
+			( $log_level >> $DEBUG ) && print "DEBUG Processing SSL key: " . $keypair->{'key_name'} . "\n";
 
-		$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'location'}  = "/opt/trafficserver/etc/trafficserver/ssl/";
-		$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'service'}   = "trafficserver";
-		$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'component'} = "SSL";
-		$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'contents'}  = $ssl_cert;
-		$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'fname-in-TO'}  = $keypair->{'cert_name'};
+			my $remap = $keypair->{'key_name'};
+			$remap =~ s/\.key$//;
+			foreach my $record (@$certs){
+				if ($record->{'hostname'} eq $remap){
+					my $ssl_key         = decode_base64($record->{'certificate'}->{'key'});
+					my $ssl_cert        = decode_base64($record->{'certificate'}->{'crt'});
+					( $log_level >> $DEBUG ) && print "DEBUG private key for $remap is:\n$ssl_key\n";
+					( $log_level >> $DEBUG ) && print "DEBUG certificate for $remap is:\n$ssl_cert\n";
 
+					$cfg_file_tracker->{ $keypair->{'key_name'} }->{'location'}  = "/opt/trafficserver/etc/trafficserver/ssl/";
+					$cfg_file_tracker->{ $keypair->{'key_name'} }->{'service'}   = "trafficserver";
+					$cfg_file_tracker->{ $keypair->{'key_name'} }->{'component'} = "SSL";
+					$cfg_file_tracker->{ $keypair->{'key_name'} }->{'contents'}  = $ssl_key;
+					$cfg_file_tracker->{ $keypair->{'key_name'} }->{'fname-in-TO'}  = $keypair->{'key_name'};
+
+					$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'location'}  = "/opt/trafficserver/etc/trafficserver/ssl/";
+					$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'service'}   = "trafficserver";
+					$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'component'} = "SSL";
+					$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'contents'}  = $ssl_cert;
+					$cfg_file_tracker->{ $keypair->{'cert_name'} }->{'fname-in-TO'}  = $keypair->{'cert_name'};
+				}
+			}
+		}
 	}
 	return 0;
+}
+
+sub setup_lwp {
+	my $browser = LWP::UserAgent->new( keep_alive => 100, ssl_opts => { verify_hostname => 0, SSL_verify_mode => 0x00 } );
+
+	my $lwp_cc = $browser->conn_cache(LWP::ConnCache->new());
+	$browser->timeout(15);
+
+	return $browser;
+}
+
+sub log_level_to_string {
+	return "ALL"   if ( $_[0] == 7 );
+	return "TRACE" if ( $_[0] == 6 );
+	return "DEBUG" if ( $_[0] == 5 );
+	return "INFO"  if ( $_[0] == 4 );
+	return "WARN"  if ( $_[0] == 3 );
+	return "ERROR" if ( $_[0] == 2 );
+	return "FATAL" if ( $_[0] == 1 );
+	return "NONE"  if ( $_[0] == 0 );
 }
 
 {

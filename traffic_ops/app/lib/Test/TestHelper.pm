@@ -56,6 +56,15 @@ use constant PORTAL_USER_PASSWORD => 'password';
 use constant FEDERATION_USER          => 'federation';
 use constant FEDERATION_USER_PASSWORD => 'password';
 
+use constant CODEBIG_USER     => 'codebig';
+use constant CODEBIG_PASSWORD => 'password';
+
+use constant STEERING_USER_1 => 'steering1';
+use constant STEERING_PASSWORD_1 => 'password';
+
+use constant STEERING_USER_2 => 'steering2';
+use constant STEERING_PASSWORD_2 => 'password';
+
 sub load_all_fixtures {
 	my $self    = shift;
 	my $fixture = shift;
@@ -140,12 +149,25 @@ sub teardown {
 # Tearing down the Cachegroup table requires deleting them in a specific order, because
 # of the 'parent_cachegroup_id' and nested references.
 sub teardown_cachegroup {
-	my $self        = shift;
-	my $schema      = shift;
-	my $cachegroups = $schema->resultset("Cachegroup")->search( undef, { order_by => { -desc => 'parent_cachegroup_id' } } );
-	while ( my $row = $cachegroups->next ) {
-		$row->delete();
-	}
+	my $self   = shift;
+	my $schema = shift;
+
+	my $cachegroups;
+	do {
+		$cachegroups = $schema->resultset("Cachegroup");
+		while ( my $row = $cachegroups->next ) {
+			if ( $schema->resultset("Cachegroup")->count({parent_cachegroup_id => $row->id}) > 0 ) {
+				next;
+			}
+
+			if ( $schema->resultset("Cachegroup")->count({secondary_parent_cachegroup_id => $row->id}) > 0 ) {
+				next;
+			}
+
+			$row->delete();
+		}
+
+	} while ( $cachegroups->count() > 0 );
 }
 
 1;

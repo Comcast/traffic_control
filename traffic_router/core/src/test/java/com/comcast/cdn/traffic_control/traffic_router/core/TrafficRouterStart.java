@@ -16,79 +16,43 @@
 
 package com.comcast.cdn.traffic_control.traffic_router.core;
 
-import org.apache.log4j.PropertyConfigurator;
-import org.apache.wicket.util.time.Duration;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.bio.SocketConnector;
-import org.eclipse.jetty.webapp.WebAppContext;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.PatternLayout;
 
 public class TrafficRouterStart {
-//	private static final Logger LOGGER = Logger.getLogger(TrafficRouterStart.class);
 
 	public static void main(String[] args) throws Exception {
-		PropertyConfigurator.configure("src/test/resources/log4j.properties");
+		String prefix = System.getProperty("user.dir");
 
-		int timeout = (int) Duration.ONE_HOUR.getMilliseconds();
-
-		Server server = new Server();
-		SocketConnector connector = new SocketConnector();
-
-		// Set some timeout options to make debugging easier.
-		connector.setMaxIdleTime(timeout);
-		connector.setSoLingerTime(-1);
-		connector.setPort(8081);
-		server.addConnector(connector);
-
-		// check if a keystore for a SSL certificate is available, and
-		// if so, start a SSL connector on port 8443. By default, the
-		// quickstart comes with a Apache Wicket Quickstart Certificate
-		// that expires about half way september 2021. Do not use this
-		// certificate anywhere important as the passwords are available
-		// in the source.
-
-		//        Resource keystore = Resource.newClassPathResource("/keystore");
-		//        if (keystore != null && keystore.exists()) {
-		//            connector.setConfidentialPort(8443);
-		//
-		//            SslContextFactory factory = new SslContextFactory();
-		//            factory.setKeyStoreResource(keystore);
-		//            factory.setKeyStorePassword("wicket");
-		//            factory.setTrustStoreResource(keystore);
-		//            factory.setKeyManagerPassword("wicket");
-		//            SslSocketConnector sslConnector = new SslSocketConnector(factory);
-		//            sslConnector.setMaxIdleTime(timeout);
-		//            sslConnector.setPort(8443);
-		//            sslConnector.setAcceptors(4);
-		//            server.addConnector(sslConnector);
-		//
-		//            System.out.println("SSL access to the quickstart has been enabled on port 8443");
-		//            System.out.println("You can access the application using SSL on https://localhost:8443");
-		//            System.out.println();
-		//        }
-
-		WebAppContext bb = new WebAppContext();
-		bb.setServer(server);
-		bb.setContextPath("/");
-		bb.setWar("src/main/webapp");
-
-		// START JMX SERVER
-		// MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
-		// MBeanContainer mBeanContainer = new MBeanContainer(mBeanServer);
-		// server.getContainer().addEventListener(mBeanContainer);
-		// mBeanContainer.start();
-
-		server.setHandler(bb);
-
-		try {
-			System.out.println(">>> STARTING EMBEDDED JETTY SERVER, PRESS ANY KEY TO STOP");
-			server.start();
-			System.in.read();
-			System.out.println(">>> STOPPING EMBEDDED JETTY SERVER");
-			server.stop();
-			server.join();
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.exit(1);
+		if (!prefix.endsWith("/core")) {
+			prefix += "/core";
 		}
+
+		System.setProperty("dns.zones.dir", prefix + "/src/test/var/auto-zones");
+		System.setProperty("deploy.dir", prefix + "/src/test");
+
+		System.setProperty("dns.tcp.port", "1053");
+		System.setProperty("dns.udp.port", "1053");
+
+		LogManager.getLogger("org.springframework").setLevel(Level.WARN);
+
+		ConsoleAppender consoleAppender = new ConsoleAppender(new PatternLayout("%d{ISO8601} [%-5p] %c{4}: %m%n"));
+		LogManager.getRootLogger().addAppender(consoleAppender);
+		LogManager.getRootLogger().setLevel(Level.INFO);
+
+		System.out.println("[" + System.currentTimeMillis() + "] >>>>>>>>>>>>>>>> Embedded Tomcat loading Traffic Router");
+		CatalinaTrafficRouter catalinaTrafficRouter = new CatalinaTrafficRouter(prefix + "/src/main/opt/tomcat/conf/server.xml", prefix + "/src/main/webapp");
+		System.out.println("[" + System.currentTimeMillis() + "] >>>>>>>>>>>>>>>> Starting Traffic Router");
+		catalinaTrafficRouter.start();
+		System.out.println("[" + System.currentTimeMillis() + "] >>>>>>>>>>>>>>>> Traffic Router started, press q and <ENTER> to stop");
+
+		while ('q' != System.in.read()) {
+			System.out.println("[" + System.currentTimeMillis() + "] >>>>>>>>>>>>>>> press q and <ENTER> to stop");
+		}
+
+		System.out.println("[" + System.currentTimeMillis() + "] >>>>>>>>>>>>>>>> Stopping Traffic Router");
+		catalinaTrafficRouter.stop();
 	}
 }

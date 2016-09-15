@@ -20,34 +20,35 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import org.apache.log4j.Logger;
+import org.springframework.stereotype.Component;
 
 /**
- * Implements the HashFunction interface for use with the Consistent Hash Algorithm using Java's
+ * For use with the Consistent Hash Algorithm using Java's
  * hashCode() method on a string value.
  */
-public class MD5HashFunction implements HashFunction {
-    private static final Logger LOGGER = Logger.getLogger(MD5HashFunction.class);
+@Component
+public class MD5HashFunction {
 
-    private MessageDigest md5;
+    public double hash(final String value) {
+        final byte[] valueBytes = value != null ? value.getBytes() : "".getBytes();
+        return new BigInteger(1, md5Digest().digest(valueBytes)).doubleValue();
+    }
 
-    public MD5HashFunction() {
+    @SuppressWarnings("PMD.AvoidThrowingRawExceptionTypes")
+    MessageDigest md5Digest() {
+        // https://docs.oracle.com/javase/8/docs/api/java/security/MessageDigest.html
+
+        // Every implementation of the Java platform is required to support the following standard MessageDigest algorithms:
+        //
+        // MD5
+        // SHA-1
+        // SHA-256
+
         try {
-            md5 = MessageDigest.getInstance("MD5");
-        } catch (final NoSuchAlgorithmException e) {
-            LOGGER.error(e.getMessage(), e);
+            return MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            // This should NEVER happen
+            throw new RuntimeException("Failed to get MD5 message digest, something's very wrong!", e);
         }
     }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.comcast.cdn.traffic_control.traffic_router.core.hash.HashFunction#hash(java.lang.String)
-     */
-    @Override
-    public double hash(final String value) {
-        final BigInteger bi = new BigInteger(1, md5.digest(value.getBytes()));
-        return bi.doubleValue();
-    }
-
 }

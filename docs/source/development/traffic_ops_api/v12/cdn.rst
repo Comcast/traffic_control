@@ -1,28 +1,267 @@
-.. 
+..
 .. Copyright 2015 Comcast Cable Communications Management, LLC
-.. 
+..
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
 .. You may obtain a copy of the License at
-.. 
+..
 ..     http://www.apache.org/licenses/LICENSE-2.0
-.. 
+..
 .. Unless required by applicable law or agreed to in writing, software
 .. distributed under the License is distributed on an "AS IS" BASIS,
 .. WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 .. See the License for the specific language governing permissions and
 .. limitations under the License.
-.. 
+..
 
 .. _to-api-v12-cdn:
 
-CDN 
+CDN
 ===
 
 .. _to-api-v12-cdn-route:
 
-/api/1.2/cdns/health
-++++++++++++++++++++
+/api/1.2/cdns
++++++++++++++
+
+**GET /api/1.2/cdns.json**
+
+  Authentication Required: Yes
+
+  Role(s) Required: None
+
+  **Response Properties**
+
+  +------------------+--------+-------------------------------------------------+
+  |    Parameter     |  Type  |                   Description                   |
+  +==================+========+=================================================+
+  | ``name``         | string | CDN name.                                       |
+  +------------------+--------+-------------------------------------------------+
+  | ``id``           |  int   | CDN id.                                         |
+  +------------------+--------+-------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+     "response": [
+           {
+              "name": "over-the-top",
+              "id": 1
+           }
+        ]
+    }
+
+|
+
+**GET /api/1.2/cdns/name/:name.json**
+
+  Authentication Required: Yes
+
+  Role(s) Required: None
+
+  **Response Properties**
+
+  +------------------+--------+-------------------------------------------------+
+  |    Parameter     |  Type  |                   Description                   |
+  +==================+========+=================================================+
+  | ``name``         | string | CDN name.                                       |
+  +------------------+--------+-------------------------------------------------+
+  | ``id``           |  int   | CDN id.                                         |
+  +------------------+--------+-------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+     "response": [
+           {
+              "name": "over-the-top",
+              "id": 1
+           }
+        ]
+    }
+
+|
+
+**POST /api/1.2/cdns**
+
+  Allows user to create a CDN.
+
+  Authentication Required: Yes
+
+  Role(s) Required:  admin or oper
+
+  **Request Parameters**
+
+  +-------------------+--------+-------------------------------------------------+
+  |    Parameter      |  Type  |                   Description                   |
+  +===================+========+=================================================+
+  | ``name``          | string | CDN name.                                       |
+  +-------------------+--------+-------------------------------------------------+
+  | ``dnssecEnabled`` |  int   | Whether dnssec is enabled.                      |
+  |                   |        | - 0: disabled                                   |
+  |                   |        | - 1: enabled                                    |
+  +-------------------+--------+-------------------------------------------------+
+
+  **Request Example** ::
+
+    {
+        "name": "cdn_test",
+        "dnssecEnabled": 0
+    }
+
+  **Response Properties**
+
+  +--------------------+--------+-------------------------------------------------+
+  |    Parameter       |  Type  |                   Description                   |
+  +====================+========+=================================================+
+  | ``response``       |  hash  | The details of the creation, if success.        |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>name``          | string | CDN name.                                       |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>id``            |  int   | CDN id.                                         |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>dnssecEnabled`` | string | Whether dnssec is enabled.                      |
+  +--------------------+--------+-------------------------------------------------+
+  | ``alerts``         | array  | A collection of alert messages.                 |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>level``         | string | Success, info, warning or error.                |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>text``          | string | Alert message.                                  |
+  +--------------------+--------+-------------------------------------------------+
+
+
+  **Response Example** ::
+
+    {
+        "response":{
+            "name": "cdn_test",
+            "id": 3
+            "dnssecEnabled": 0
+        },
+        "alerts":[
+            {
+                "level": "success",
+                "text": "cdn was created."
+            }
+        ]
+    }
+
+|
+
+**PUT /api/1.2/cdns/{:id}**
+
+  Allows user to edit a CDN.
+
+  Authentication Required: Yes
+
+  Role(s) Required:  admin or oper
+
+  **Request Route Parameters**
+
+  +-------------------+----------+------------------------------------------------+
+  | Name              |   Type   |                 Description                    |
+  +===================+==========+================================================+
+  | ``id``            | int      | CDN id.                                        |
+  +-------------------+----------+------------------------------------------------+
+
+  **Request Properties**
+
+  +-------------------+--------+-------------------------------------------------+
+  |    Parameter      |  Type  |                   Description                   |
+  +===================+========+=================================================+
+  | ``name``          | string | CDN name.                                       |
+  +-------------------+--------+-------------------------------------------------+
+  | ``dnssecEnabled`` | int    | Whether dnssec is enabled.                      |
+  |                   |        | - 0: disabled                                   |
+  |                   |        | - 1: enabled                                    |
+  +-------------------+--------+-------------------------------------------------+
+
+
+  **Request Example** ::
+
+    {
+        "name": "cdn_test2",
+        "dnssecEnabled": 0
+    }
+
+  **Response Properties**
+
+  +--------------------+--------+-------------------------------------------------+
+  |    Parameter       |  Type  |                   Description                   |
+  +====================+========+=================================================+
+  | ``response``       |  hash  | The details of the update, if success.          |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>name``          | string | CDN name.                                       |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>id``            |  int   | CDN id.                                         |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>dnssecEnabled`` | string | Whether dnssec is enabled.                      |
+  +--------------------+--------+-------------------------------------------------+
+  | ``alerts``         | array  | A collection of alert messages.                 |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>level``         | string | Success, info, warning or error.                |
+  +--------------------+--------+-------------------------------------------------+
+  | ``>text``          | string | Alert message.                                  |
+  +--------------------+--------+-------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+        "response":{
+            "name": "cdn_test2",
+            "id": 3
+            "dnssecEnabled": 0
+        },
+        "alerts":[
+            {
+                "level": "success",
+                "text": "cdn was updated."
+            }
+        ]
+    }
+
+|
+
+**DELETE /api/1.2/cdns/{:id}**
+
+  Allows user to delete a CDN.
+
+  Authentication Required: Yes
+
+  Role(s) Required:  admin or oper
+
+  **Request Route Parameters**
+
+  +-----------------+----------+------------------------------------------------+
+  | Name            | Required | Description                                    |
+  +=================+==========+================================================+
+  | ``id``          | yes      | CDN id.                                        |
+  +-----------------+----------+------------------------------------------------+
+
+  **Response Properties**
+
+  +-----------------+----------+------------------------------------------------+
+  |  Parameter      |  Type    |           Description                          |
+  +=================+==========+================================================+
+  |  ``alerts``     |  array   |  A collection of alert messages.               |
+  +-----------------+----------+------------------------------------------------+
+  |  ``>level``     |  string  |  success, info, warning or error.              |
+  +-----------------+----------+------------------------------------------------+
+  |  ``>text``      |  string  |  Alert message.                                |
+  +-----------------+----------+------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+          "alerts": [
+                    {
+                            "level": "success",
+                            "text": "cdn was deleted."
+                    }
+            ],
+    }
+
+|
 
 Health
 ++++++
@@ -31,8 +270,12 @@ Health
 
 **GET /api/1.2/cdns/health.json**
 
+  Retrieves the health of all locations (cache groups) for all CDNs.
+
   Authentication Required: Yes
-  
+
+  Role(s) Required: None
+
   **Response Properties**
 
   +------------------+--------+-------------------------------------------------+
@@ -73,7 +316,6 @@ Health
      },
     }
 
-
 |
 
 **GET /api/1.2/cdns/:name/health.json**
@@ -81,7 +323,9 @@ Health
   Retrieves the health of all locations (cache groups) for a given CDN.
 
   Authentication Required: Yes
-  
+
+  Role(s) Required: None
+
   **Request Route Parameters**
 
   +-----------------+----------+---------------------------------------------------+
@@ -108,7 +352,7 @@ Health
   | ``>offline``     | int    | The number of offline caches for the cache      |
   |                  |        | group.                                          |
   +------------------+--------+-------------------------------------------------+
-  | * ``name``       | string | Cache group name.                               |
+  | ``>name``        | string | Cache group name.                               |
   +------------------+--------+-------------------------------------------------+
 
   **Response Example** ::
@@ -139,7 +383,9 @@ Health
   Retrieves the high-level CDN usage metrics.
 
   Authentication Required: Yes
-  
+
+  Role(s) Required: None
+
   **Response Properties**
 
   +----------------------+--------+------------------------------------------------+
@@ -152,21 +398,25 @@ Health
   |``maxGbps``           | int    |                                                |
   +----------------------+--------+------------------------------------------------+
 
-
   **Response Example** ::
 
     {
-     "response": {
-        "currentGbps": 149.368167,
-        "tps": 36805,
-        "maxGbps": 3961
-     },
+         "response": {
+            "currentGbps": 149.368167,
+            "tps": 36805,
+            "maxGbps": 3961
+         }
     }
 
+|
 
 **GET /api/1.2/cdns/capacity.json**
 
   Retrieves the aggregate capacity percentages of all locations (cache groups) for a given CDN.
+
+  Authentication Required: Yes
+
+  Role(s) Required: None
 
   **Response Properties**
 
@@ -185,12 +435,12 @@ Health
   **Response Example** ::
 
     {
-     "response": {
-        "availablePercent": 89.0939840205533,
-        "unavailablePercent": 0,
-        "utilizedPercent": 10.9060020300395,
-        "maintenancePercent": 0.0000139494071146245
-     },
+         "response": {
+            "availablePercent": 89.0939840205533,
+            "unavailablePercent": 0,
+            "utilizedPercent": 10.9060020300395,
+            "maintenancePercent": 0.0000139494071146245
+         }
     }
 
 |
@@ -202,9 +452,11 @@ Routing
 
 **GET /api/1.2/cdns/routing.json**
 
-  Authentication Required: Yes
-  
   Retrieves the aggregate routing percentages of all locations (cache groups) for a given CDN.
+
+  Authentication Required: Yes
+
+  Role(s) Required: None
 
   **Response Properties**
 
@@ -227,14 +479,14 @@ Routing
   **Response Example** ::
 
    {
-     "response": {
-        "staticRoute": 0,
-        "miss": 0,
-        "geo": 37.8855391018869,
-        "err": 0,
-        "cz": 62.1144608981131,
-        "dsr": 0
-     },
+         "response": {
+            "staticRoute": 0,
+            "miss": 0,
+            "geo": 37.8855391018869,
+            "err": 0,
+            "cz": 62.1144608981131,
+            "dsr": 0
+         }
     }
 
 |
@@ -244,12 +496,13 @@ Routing
 Metrics
 +++++++
 
-
 **GET /api/1.2/cdns/metric_types/:metric/start_date/:start/end_date/:end.json**
 
-  Authentication Required: Yes
-  
   Retrieves edge metrics of one or all locations (cache groups).
+
+  Authentication Required: Yes
+
+  Role(s) Required: None
 
   **Request Route Parameters**
 
@@ -297,7 +550,6 @@ Metrics
 
   **Response Example** ::
 
-
     {
      "response": [
         {
@@ -336,7 +588,9 @@ Domains
 **GET /api/1.2/cdns/domains.json**
 
   Authentication Required: Yes
-  
+
+  Role(s) Required: None
+
   **Response Properties**
 
   +----------------------+--------+------------------------------------------------+
@@ -361,14 +615,14 @@ Domains
            "profileId": "5",
            "parameterId": "404",
            "profileName": "CR_FOO",
-           "profileDescription": "Comcast Content Router for foo.domain.net",
+           "profileDescription": "Content Router for foo.domain.net",
            "domainName": "foo.domain.net"
         },
         {
            "profileId": "8",
            "parameterId": "405",
            "profileName": "CR_BAR",
-           "profileDescription": "Comcast Content Router for bar.domain.net",
+           "profileDescription": "Content Router for bar.domain.net",
            "domainName": "bar.domain.net"
         }
      ],
@@ -380,12 +634,13 @@ Domains
 
 Topology
 ++++++++
+
 **GET /api/1.2/cdns/:cdn_name/configs.json**
 
   Retrieves CDN config information.
 
   Authentication Required: Yes
-  
+
   **Request Route Parameters**
 
   +--------------+----------+-----------------------+
@@ -410,9 +665,7 @@ Topology
 
   **Response Example** ::
 
-    TBD    
-
-
+    TBD
 
 |
 
@@ -421,13 +674,15 @@ Topology
   Retrieves CDN monitoring information.
 
   Authentication Required: Yes
-  
+
+  Role(s) Required: None
+
   **Request Route Parameters**
 
   +----------+----------+-------------+
   |   Name   | Required | Description |
   +==========+==========+=============+
-  | ``name`` | yes      |             |
+  | ``name`` | yes      |  CDN name   |
   +----------+----------+-------------+
 
   **Response Properties**
@@ -550,8 +805,6 @@ Topology
 
     TBD
 
-  
-
 |
 
 **GET /api/1.2/cdns/:name/configs/routing.json**
@@ -559,7 +812,9 @@ Topology
   Retrieves CDN routing information.
 
   Authentication Required: Yes
-  
+
+  Role(s) Required: None
+
   **Request Route Parameters**
 
   +----------+----------+-------------+
@@ -757,13 +1012,14 @@ Topology
   | ``>apiPort``                        | int     |                                   |
   +-------------------------------------+---------+-----------------------------------+
 
-
 **Response Example**
-
 ::
+
   TBD
 
- 
+|
+
+
 .. _to-api-v12-cdn-dnsseckeys:
 
 DNSSEC Keys
@@ -772,12 +1028,10 @@ DNSSEC Keys
 **GET /api/1.2/cdns/name/:name/dnsseckeys.json**
 
   Gets a list of dnsseckeys for a CDN and all associated Delivery Services.
-  Before returning response to user, check to make sure keys aren't expired.  If they are expired, generate new ones.
-  Before returning response to user, make sure DNSSEC keys for all delivery services exist.  If they don't exist, create them.
 
   Authentication Required: Yes
 
-  Role Required: Admin
+  Role(s) Required: Admin
 
   **Request Route Parameters**
 
@@ -814,10 +1068,8 @@ DNSSEC Keys
   +-------------------------------+--------+---------------------------------------------------------------+
   | ``ksk>>dsRecord>>digestType`` | string | Cryptographic hash algorithm used to create the Digest value. |
   +-------------------------------+--------+---------------------------------------------------------------+
-  | ``ksk>>dsRecord>>digest       | string | A cryptographic hash value of the referenced DNSKEY-record.   |
+  | ``ksk>>dsRecord>>digest``     | string | A cryptographic hash value of the referenced DNSKEY-record.   |
   +-------------------------------+--------+---------------------------------------------------------------+
-  
-
 
   **Response Example** ::
 
@@ -876,7 +1128,7 @@ DNSSEC Keys
 
   Authentication Required: Yes
 
-  Role Required: Admin
+  Role(s) Required: Admin
 
   **Request Route Parameters**
 
@@ -894,27 +1146,22 @@ DNSSEC Keys
   | ``response`` | string | success response |
   +--------------+--------+------------------+
 
-
-
   **Response Example**
-
-
   ::
 
-    {  
+    {
       "response": "Successfully deleted dnssec keys for <cdn>"
     }
 
-
 |
-  
+
 **POST /api/1.2/deliveryservices/dnsseckeys/generate**
 
   Generates ZSK and KSK keypairs for a CDN and all associated Delivery Services.
 
   Authentication Required: Yes
 
-  Role Required:  Admin
+  Role(s) Required:  Admin
 
   **Request Properties**
 
@@ -934,7 +1181,6 @@ DNSSEC Keys
 
   **Request Example** ::
 
-
     {
       "key": "cdn1",
       "name" "ott.kabletown.com",
@@ -953,11 +1199,68 @@ DNSSEC Keys
   | ``version``  | string | API version     |
   +--------------+--------+-----------------+
 
-
   **Response Example** ::
 
 
-    {  
+    {
       "response": "Successfully created dnssec keys for cdn1"
     }
+
+.. _to-api-v12-cdn-sslkeys:
+
+SSL Keys
++++++++++++
+
+**GET /api/1.2/cdns/name/:name/sslkeys.json**
+
+  Returns ssl certificates for all Delivery Services that are a part of the CDN.
+
+  Authentication Required: Yes
+
+  Role(s) Required: Admin
+
+  **Request Route Parameters**
+
+  +----------+----------+-------------+
+  |   Name   | Required | Description |
+  +==========+==========+=============+
+  | ``name`` | yes      |             |
+  +----------+----------+-------------+
+
+  **Response Properties**
+
+  +-------------------------------+--------+---------------------------------------------------------------+
+  |           Parameter           |  Type  |                          Description                          |
+  +===============================+========+===============================================================+
+  | ``deliveryservice``           | string | identifier for deliveryservice xml_id                         |
+  +-------------------------------+--------+---------------------------------------------------------------+
+  | ``certificate``               | array  | collection of certificate                                     |
+  +-------------------------------+--------+---------------------------------------------------------------+
+  | ``>>key``                     | string | base64 encoded private key for ssl certificate                |
+  +-------------------------------+--------+---------------------------------------------------------------+
+  | ``>>crt``                     | string | base64 encoded ssl certificate                                |
+  +-------------------------------+--------+---------------------------------------------------------------+
+
+
+  **Response Example** ::
+
+    {
+      "response": [
+        {
+          "deliveryservice": "ds1",
+          "certificate": {
+            "crt": "base64encodedcrt1",
+            "key": "base64encodedkey1"
+          }
+        },
+        {
+          "deliveryservice": "ds2",
+          "certificate": {
+            "crt": "base64encodedcrt2",
+            "key": "base64encodedkey2"
+          }
+        }
+      ]
+    }
+|
 

@@ -22,25 +22,49 @@ my %definition_for = (
 	mid_northeast => {
 		new   => 'Cachegroup',
 		using => {
-			id         => 1,
-			name       => 'mid-northeast-group',
-			short_name => 'ne',
-			type       => 2,
-			latitude   => 120,
-			longitude  => 120,
+			id                   => 1,
+			name                 => 'mid-northeast-group',
+			short_name           => 'ne',
+			type                 => 2,
+			latitude             => 120,
+			longitude            => 120,
 			parent_cachegroup_id => undef,
 		},
 	},
 	mid_northwest => {
 		new   => 'Cachegroup',
 		using => {
-			id         => 2,
-			name       => 'mid-northwest-group',
-			short_name => 'nw',
-			type       => 2,
-			latitude   => 100,
-			longitude  => 100,
+			id                   => 2,
+			name                 => 'mid-northwest-group',
+			short_name           => 'nw',
+			type                 => 2,
+			latitude             => 100,
+			longitude            => 100,
+			parent_cachegroup_id => 1,
+		},
+	},
+	mid_cg3 => {
+		new   => 'Cachegroup',
+		using => {
+			id                   => 8,
+			name                 => 'mid_cg3',
+			short_name           => 'mid_cg3',
+			type                 => 6,
+			latitude             => 100,
+			longitude            => 100,
 			parent_cachegroup_id => undef,
+		},
+	},
+	edge_cg4 => {
+		new   => 'Cachegroup',
+		using => {
+			id                   => 9,
+			name                 => 'edge_cg4',
+			short_name           => 'edge_cg4',
+			type                 => 5,
+			latitude             => 100,
+			longitude            => 100,
+			parent_cachegroup_id => 8,
 		},
 	},
 );
@@ -51,7 +75,9 @@ sub get_definition {
 }
 
 sub all_fixture_names {
-	return keys %definition_for;
+
+	# sort by db id to guarantee insertion order
+	return sort { $definition_for{$a}{using}{id} <=> $definition_for{$b}{using}{id} } keys %definition_for;
 }
 
 __PACKAGE__->meta->make_immutable;

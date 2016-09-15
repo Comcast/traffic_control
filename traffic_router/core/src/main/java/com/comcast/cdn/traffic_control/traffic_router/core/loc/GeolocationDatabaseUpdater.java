@@ -19,36 +19,30 @@ package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.log4j.Logger;
-
 public class GeolocationDatabaseUpdater extends AbstractServiceUpdater {
-	private static final Logger LOGGER = Logger.getLogger(GeolocationDatabaseUpdater.class);
+	private MaxmindGeolocationService maxmindGeolocationService;
 
-	public GeolocationDatabaseUpdater() {
+	@Override
+	public boolean verifyDatabase(final File dbFile) throws IOException {
+		return maxmindGeolocationService.verifyDatabase(dbFile);
 	}
 
-	private GeolocationService geoLocation;
-	public void setGeoLocation(final GeolocationService geoLocation) {
-		this.geoLocation = geoLocation;
-	}
-
-	public void verifyDatabase(final File dbFile) throws IOException {
-		geoLocation.verifyDatabase(dbFile);
-	}
 	public boolean loadDatabase() throws IOException {
-		LOGGER.info("Reloading location database.");
-		geoLocation.reloadDatabase();
-		LOGGER.info("Successfully reloaded location database.");
+		maxmindGeolocationService.setDatabaseFile(databasesDirectory.resolve(databaseName).toFile());
+		maxmindGeolocationService.reloadDatabase();
 		return true;
 	}
 
 	@Override
 	public boolean isLoaded() {
-		if (geoLocation != null) {
-			return geoLocation.isInitialized();
+		if (maxmindGeolocationService != null) {
+			return maxmindGeolocationService.isInitialized();
 		}
 
 		return loaded;
 	}
 
+	public void setMaxmindGeolocationService(final MaxmindGeolocationService maxmindGeolocationService) {
+		this.maxmindGeolocationService = maxmindGeolocationService;
+	}
 }

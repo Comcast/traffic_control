@@ -127,7 +127,14 @@ body#log a#nav-l
     width:100%;
 }
 
-.field-with-error {color: red;}
+.field-with-error {
+    color: red;
+}
+
+div.form-row {
+    margin-bottom: 1em;
+}
+
 div.block{
   overflow:hidden;
   background-color:#222222;
@@ -143,6 +150,13 @@ div.block label{
 div.block .input{
   margin-left:4px;
   float:left;
+}
+div.block .textarea{
+  margin-left:4px;
+  margin-bottom:4px;
+  float:left;
+  width:483px;
+  height:100px;
 }
 .main { margin-top:10px;}
 .popup { padding-left: 10px; height: 650px; width: 900px; margin-top:10px;}

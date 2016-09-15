@@ -1,3 +1,19 @@
+/*
+ * Copyright 2015 Comcast Cable Communications Management, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.util.CidrAddress;
@@ -20,27 +36,27 @@ public class FederationMappingBuilder {
         final String cname = jsonObject.getString("cname");
         final int ttl = jsonObject.getInt("ttl");
 
-        ComparableTreeSet<CidrAddress> network = null;
+        final ComparableTreeSet<CidrAddress> network = new ComparableTreeSet<CidrAddress>();
         if (jsonObject.has("resolve4")) {
             final JSONArray networkArray = jsonObject.getJSONArray("resolve4");
 
             try {
-                network = buildAddresses(networkArray);
+                network.addAll(buildAddresses(networkArray));
             }
             catch (JSONException e) {
-                LOGGER.warn("Failed getting ipv4 address array");
+                LOGGER.warn("Failed getting ipv4 address array likely due to bad json data: " + e.getMessage());
             }
         }
 
 
-        ComparableTreeSet<CidrAddress> network6 = null;
+        final ComparableTreeSet<CidrAddress> network6 = new ComparableTreeSet<CidrAddress>();
         if (jsonObject.has("resolve6")) {
             final JSONArray network6Array = jsonObject.getJSONArray("resolve6");
             try {
-                network6 = buildAddresses(network6Array);
+                network6.addAll(buildAddresses(network6Array));
             }
             catch (JSONException e) {
-                LOGGER.warn("Failed getting ipv6 address array");
+                LOGGER.warn("Failed getting ipv6 address array likely due to bad json data: " + e.getMessage());
             }
         }
 

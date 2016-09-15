@@ -93,13 +93,16 @@ sub create {
 		my $tm_user = $self->db->resultset('TmUser')->search( { username => $self->current_user()->{username} } )->single();
 		my $tm_user_id = $tm_user->id;
 
-		# select deliveryservice from deliveryservice_tmuser where deliveryservice=$ds_id
-		my $dbh = $self->db->resultset('DeliveryserviceTmuser')->search( { deliveryservice => $ds_id, tm_user_id => $tm_user_id }, { id => 1 } );
-		my $count = $dbh->count();
+		if ( defined($ds_id) ) {
 
-		if ( $count == 0 ) {
-			$self->forbidden();
-			return;
+			# select deliveryservice from deliveryservice_tmuser where deliveryservice=$ds_id
+			my $dbh = $self->db->resultset('DeliveryserviceTmuser')->search( { deliveryservice => $ds_id, tm_user_id => $tm_user_id }, { id => 1 } );
+			my $count = $dbh->count();
+
+			if ( $count == 0 ) {
+			    $self->forbidden("Forbidden. Delivery service not assigned to user.");
+				return;
+			}
 		}
 	}
 
@@ -112,11 +115,11 @@ sub create {
 		if ($new_id) {
 			my $saved_job = $self->db->resultset("Job")->find( { id => $new_id } );
 			my $asset_url = $saved_job->asset_url;
-			&log( $self, "Created new purge job for asset_url " . $asset_url, "APICHANGE" );
-			return $self->success_message( "Successfully created purge job for: " . $asset_url . "(" . $saved_job->parameters . ")" );
+			&log( $self, "Invalidate content request submitted for " . $asset_url, "APICHANGE" );
+			return $self->success_message( "Invalidate content request submitted for: " . $asset_url . " (" . $saved_job->parameters . ")" );
 		}
 		else {
-			return $self->alert( { "Error creating PURGE job" . $ds_id } );
+			return $self->alert( { "Error creating invalidate content request" . $ds_id } );
 		}
 	}
 	else {
@@ -135,7 +138,7 @@ sub is_valid {
 		checks => [
 
 			# All of these are required
-			[qw/regex startTime ttl/] => is_required("is required"),
+			[qw/regex startTime ttl dsId/] => is_required("is required"),
 
 			ttl => sub {
 				my $value  = shift;
@@ -202,12 +205,17 @@ sub is_valid_date_format {
 sub is_ttl_in_range {
 	my $self  = shift;
 	my $value = shift;
+	my $min_hours = 1;
+	my $max_days =
+		$self->db->resultset('Parameter')->search( { name => "maxRevalDurationDays" }, { config_file => "regex_revalidate.config" } )->get_column('value')->first;
+	my $max_hours = $max_days * 24;
+
 	if ( !defined $value or $value eq '' ) {
 		return undef;
 	}
 
-	if ( ( $value ne '' ) && ( $value !~ qr/\b(4[89]|[5-9][0-9]|[1-5][0-9]{2}|6[0-6][0-9]|67[0-2])\b/ ) ) {
-		return "should be between 48 and 672";
+	if ( ( $value ne '' ) && ( $value < $min_hours || $value > $max_hours ) ) {
+		return "should be between " . $min_hours . " and " . $max_hours;
 	}
 
 	return undef;

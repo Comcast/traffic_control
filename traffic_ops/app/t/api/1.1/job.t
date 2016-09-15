@@ -25,9 +25,12 @@ use warnings;
 use Schema;
 use Test::TestHelper;
 use Fixtures::DeliveryserviceTmuser;
+use Fixtures::DeliveryserviceServer;
 use Fixtures::JobAgent;
 use Fixtures::JobStatus;
 use Fixtures::Job;
+use Fixtures::Parameter;
+use Fixtures::Server;
 use POSIX qw(strftime);
 
 BEGIN { $ENV{MOJO_MODE} = "test" }
@@ -88,10 +91,10 @@ ok $t->post_ok(
 	json => {
 		dsId      => 1,
 		regex     => '/foo1/.*',
-		ttl       => 40,
+		ttl       => 0,
 		startTime => $now,
 	}
-	)->status_is(400)->json_is( '/alerts', [ { level => "error", text => "ttl should be between 48 and 672" } ] )
+	)->status_is(400)->json_is( '/alerts', [ { level => "error", text => "ttl should be between 1 and 72" } ] )
 	->or( sub { diag $t->tx->res->content->asset->{content}; } ),
 	'Will not create a purge job without the ttl in the proper low range?';
 
@@ -103,7 +106,7 @@ ok $t->post_ok(
 		ttl       => 1000,
 		startTime => $now,
 	}
-	)->status_is(400)->json_is( '/alerts', [ { level => "error", text => "ttl should be between 48 and 672" } ] )
+	)->status_is(400)->json_is( '/alerts', [ { level => "error", text => "ttl should be between 1 and 72" } ] )
 	->or( sub { diag $t->tx->res->content->asset->{content}; } ),
 	'Will not create a purge job without the ttl in the proper high range?';
 
@@ -188,6 +191,16 @@ ok $t->get_ok('/api/1.1/user/current/jobs.json?keyword=PURGE')->status_is(200)->
 ok $t->get_ok('/api/1.1/user/current/jobs.json?keyword=PURGE&dsId=1')->status_is(200)->json_has('test-ds1.edge/foo1/')->json_has('TTL:48h')
 	->or( sub { diag $t->tx->res->content->asset->{content}; } ),
 	'Does the correct job return with keyword=PURGE? and dsId=1';
+
+ok $t->post_ok(
+	'/api/1.1/user/current/jobs',
+	json => {
+		regex     => '/foo1/.*',
+		ttl       => 48,
+		startTime => $now,
+	}
+	)->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ),
+	'Will not create a purge job without the dsId?';
 
 ok $t->post_ok('/api/1.1/user/logout')->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 

@@ -106,7 +106,7 @@ __PACKAGE__->table("deliveryservice");
 
   data_type: 'integer'
   is_foreign_key: 1
-  is_nullable: 1
+  is_nullable: 0
 
 =head2 ccr_dns_ttl
 
@@ -264,6 +264,45 @@ __PACKAGE__->table("deliveryservice");
   is_nullable: 1
   size: 255
 
+=head2 tr_request_headers
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 1024
+
+=head2 regional_geo_blocking
+
+  data_type: 'tinyint'
+  is_nullable: 0
+
+=head2 geo_provider
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 1
+
+=head2 multi_site_origin_algorithm
+
+  data_type: 'tinyint'
+  is_nullable: 1
+
+=head2 geo_limit_countries
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 750
+
+=head2 logs_enabled
+
+  data_type: 'tinyint'
+  is_nullable: 0
+
+=head2 geolimit_redirect_url
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 255
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -296,7 +335,7 @@ __PACKAGE__->add_columns(
   "profile",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "cdn_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "ccr_dns_ttl",
   { data_type => "integer", is_nullable => 1 },
   "global_max_mbps",
@@ -356,6 +395,20 @@ __PACKAGE__->add_columns(
   { data_type => "integer", default_value => 1, is_nullable => 1 },
   "dns_bypass_cname",
   { data_type => "varchar", is_nullable => 1, size => 255 },
+  "tr_request_headers",
+  { data_type => "varchar", is_nullable => 1, size => 1024 },
+  "regional_geo_blocking",
+  { data_type => "tinyint", is_nullable => 0 },
+  "geo_provider",
+  { data_type => "tinyint", default_value => 0, is_nullable => 1 },
+  "multi_site_origin_algorithm",
+  { data_type => "tinyint", is_nullable => 1 },
+  "geo_limit_countries",
+  { data_type => "varchar", is_nullable => 1, size => 750 },
+  "logs_enabled",
+  { data_type => "tinyint", is_nullable => 0 },
+  "geolimit_redirect_url",
+  { data_type => "varchar", is_nullable => 1, size => 255 },
 );
 
 =head1 PRIMARY KEY
@@ -412,12 +465,7 @@ __PACKAGE__->belongs_to(
   "cdn",
   "Schema::Result::Cdn",
   { id => "cdn_id" },
-  {
-    is_deferrable => 1,
-    join_type     => "LEFT",
-    on_delete     => "SET NULL",
-    on_update     => "RESTRICT",
-  },
+  { is_deferrable => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
 );
 
 =head2 deliveryservice_regexes
@@ -525,6 +573,36 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 steering_target_deliveryservices
+
+Type: has_many
+
+Related object: L<Schema::Result::SteeringTarget>
+
+=cut
+
+__PACKAGE__->has_many(
+  "steering_target_deliveryservices",
+  "Schema::Result::SteeringTarget",
+  { "foreign.deliveryservice" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 steering_target_deliveryservices_2s
+
+Type: has_many
+
+Related object: L<Schema::Result::SteeringTarget>
+
+=cut
+
+__PACKAGE__->has_many(
+  "steering_target_deliveryservices_2s",
+  "Schema::Result::SteeringTarget",
+  { "foreign.deliveryservice" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 type
 
 Type: belongs_to
@@ -541,11 +619,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2015-10-07 13:43:30
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:G/zQ8LHEg0T1IUmTromIuQ
-
-# Created by DBIx::Class::Schema::Loader v0.07043 @ 2015-10-05 11:50:01
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:AUTdFMjQ60ItRfFMfKsB1A
+# Created by DBIx::Class::Schema::Loader v0.07045 @ 2016-08-01 08:58:13
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:k1aJ71tsV0AWeFF/OpHFUA
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

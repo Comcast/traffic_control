@@ -15,6 +15,24 @@ Traffic Control is an Open Source implementation of a Content Delivery Network.
 * [Check out the wiki](https://github.com/Comcast/traffic_control/wiki) for less formal documentation, design docs and roadmap discussions 
 
 ##### News
+* 31-August 2016: Traffic Control 1.6.1 is released.
+	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.6.1 for the full change list.
+* 29-July 2016: Traffic Control 1.6.0 is released.
+	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.6.0 for the full change list.
+* 25-May 2016: Traffic Control 1.5.1 is released.
+	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.5.1 for the full change list.
+* 16-May 2016: Traffic Control 1.5.0 is released.
+	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.5.0 for the full change list.
+* 24-March 2016: Traffic Control 1.4.3 is released. 
+	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.4.3 for the full change list.
+* 22-March 2016: Traffic Control 1.4.2 is released. 
+	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.4.2 for the full change list.
+* 21-March 2016: Traffic Control 1.4.1 is released. 
+	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.4.1 for the full change list.
+* 14-March 2016: Traffic Control 1.4.0 is released. 
+	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.4.0 for the full change list.
+* 09-November 2015: Traffic Control 1.2.1 is released. This is primarily a bugfix release to 1.2.0.
+	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.2.1 for the full change list.
 * 15-October 2015: Traffic Control 1.2.0 is released. Breaking change of CDN_Name.
 	See https://github.com/Comcast/traffic_control/releases/tag/RELEASE-1.2.0 for the full change list.
 * 28-September 2015: Traffic Control 1.1.6 is released.  Mostly bug fixes, better support for DNSSEC.

@@ -48,6 +48,7 @@ use Env qw(PERL5LIB);
 use Utils::Helper::TrafficOpsRoutesLoader;
 use File::Path qw(make_path);
 use IO::Compress::Gzip 'gzip';
+use IO::Socket::SSL;
 
 use Utils::Helper::Version;
 
@@ -61,12 +62,8 @@ local $/;    #Enable 'slurp' mode
 
 has schema => sub { return Schema->connect_to_database };
 has watch  => sub { [qw(lib templates)] };
-has inactivity_timeout => sub {
-	$ENV{MOJO_INACTIVITY_TIMEOUT} // $config->{60};    # or undef for default
-};
 
 if ( !defined $ENV{MOJO_CONFIG} ) {
-
 	$ENV{MOJO_CONFIG} = find_conf_path('cdn.conf');
 	print( "Loading config from " . $ENV{MOJO_CONFIG} . "\n" );
 }
@@ -183,6 +180,9 @@ sub startup {
 	my $rh = new Utils::Helper::TrafficOpsRoutesLoader($r);
 	$rh->load();
 
+	##help relieve issues with riak
+	IO::Socket::SSL::set_default_session_cache( IO::Socket::SSL::Session_Cache->new(4096) );
+
 }
 
 sub setup_logging {
@@ -219,6 +219,11 @@ sub setup_mojo_plugins {
 	$self->helper( db => sub { $self->schema } );
 	$config = $self->plugin('Config');
 
+	if ( !defined $ENV{MOJO_INACTIVITY_TIMEOUT} ) {
+		$ENV{MOJO_INACTIVITY_TIMEOUT} = $config->{inactivity_timeout} // 60;
+		print( "Setting mojo inactivity timeout to " . $ENV{MOJO_INACTIVITY_TIMEOUT} . "\n" );
+	}
+
 	$self->plugin(
 		'authentication', {
 			autoload_user => 1,
@@ -228,11 +233,9 @@ sub setup_mojo_plugins {
 				my $user_data = $self->db->resultset('TmUser')->search( { username => $username } )->single;
 				my $role      = "read-only";
 				my $priv      = 10;
-				my $local_user;
 				if ( defined($user_data) ) {
-					$role       = $user_data->role->name;
-					$priv       = $user_data->role->priv_level;
-					$local_user = $user_data->local_user;
+					$role = $user_data->role->name;
+					$priv = $user_data->role->priv_level;
 				}
 
 				if ( $role eq 'disallowed' ) {
@@ -240,10 +243,9 @@ sub setup_mojo_plugins {
 				}
 
 				return {
-					'username'   => $username,
-					'role'       => $role,
-					'priv'       => $priv,
-					'local_user' => $local_user,
+					'username' => $username,
+					'role'     => $role,
+					'priv'     => $priv,
 				};
 			},
 			validate_user => sub {
@@ -325,7 +327,14 @@ sub setup_mojo_plugins {
 		}
 	}
 
-	$self->plugin( AccessLog => { log => "$logging_root_dir/access.log" } );
+	$self->plugin(
+		AccessLog => {
+			log    => "$logging_root_dir/access.log",
+			format => '%h %l %u %t "%r" %>s %b %D "%{User-Agent}i"'
+		}
+	);
+
+	$self->plugin( 'ParamExpand', max_array => 256 );
 
 	#FormFields
 	$self->plugin('FormFields');

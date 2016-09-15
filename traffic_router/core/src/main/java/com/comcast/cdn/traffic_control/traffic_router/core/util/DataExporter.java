@@ -26,17 +26,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.google.common.cache.CacheStats;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.Cache;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheLocation;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheRegister;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.InetRecord;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.Resolver;
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.Geolocation;
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationException;
+import com.comcast.cdn.traffic_control.traffic_router.geolocation.Geolocation;
+import com.comcast.cdn.traffic_control.traffic_router.geolocation.GeolocationException;
 import com.comcast.cdn.traffic_control.traffic_router.core.loc.NetworkNode;
 import com.comcast.cdn.traffic_control.traffic_router.core.loc.NetworkNodeException;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouter;
@@ -47,12 +47,13 @@ import com.comcast.cdn.traffic_control.traffic_router.core.status.model.CacheMod
 
 public class DataExporter {
 	private static final Logger LOGGER = Logger.getLogger(DataExporter.class);
+	private static final String NOT_FOUND_MESSAGE = "not found";
 
-	@Autowired
 	private TrafficRouterManager trafficRouterManager;
 
-	@Autowired
 	private StatTracker statTracker;
+
+	private FederationExporter federationExporter;
 
 	public void setTrafficRouterManager(final TrafficRouterManager trafficRouterManager) {
 		this.trafficRouterManager = trafficRouterManager;
@@ -70,12 +71,10 @@ public class DataExporter {
 		final Map<String, String> globals = new HashMap<String, String>();
 		System.getProperties().keys();
 
-		final InputStream stream = getClass().getResourceAsStream("/version.prop");
 		final Properties props = new Properties();
 
-		try {
+		try (final InputStream stream = getClass().getResourceAsStream("/version.prop")){
 			props.load(stream);
-			stream.close();
 		} catch (IOException e) {
 			LOGGER.warn(e,e);
 		}
@@ -87,8 +86,7 @@ public class DataExporter {
 		return globals;
 	}
 
-	public Map<String, Object> getCachesByIp(final String ip) {
-		LOGGER.warn("/ip/"+ip);
+	public Map<String, Object> getCachesByIp(final String ip, final String geolocationProvider) {
 
 		final Map<String, Object> map = new HashMap<String, Object>();
 		map.put("requestIp", ip);
@@ -98,20 +96,33 @@ public class DataExporter {
 		if (cl != null) {
 			map.put("locationByCoverageZone", cl.getProperties());
 		} else {
-			map.put("locationByCoverageZone", "not found");
+			map.put("locationByCoverageZone", NOT_FOUND_MESSAGE);
 		}
 
 		try {
-			final Geolocation gl = trafficRouterManager.getTrafficRouter().getLocation(ip);
+			final Geolocation gl = trafficRouterManager.getTrafficRouter().getLocation(ip, geolocationProvider, "");
 
 			if (gl != null) {
 				map.put("locationByGeo", gl.getProperties());
 			} else {
-				map.put("locationByGeo", "not found");
+				map.put("locationByGeo", NOT_FOUND_MESSAGE);
 			}
 		} catch (GeolocationException e) {
 			LOGGER.warn(e,e);
 			map.put("locationByGeo", e.toString());
+		}
+
+		try {
+			final CidrAddress cidrAddress = CidrAddress.fromString(ip);
+			final List<Object> federationsList = federationExporter.getMatchingFederations(cidrAddress);
+
+			if (federationsList.isEmpty()) {
+				map.put("locationByFederation", "not found");
+			} else {
+				map.put("locationByFederation", federationsList);
+			}
+		} catch (NetworkNodeException e) {
+			map.put("locationByFederation", NOT_FOUND_MESSAGE);
 		}
 
 		return map;
@@ -140,7 +151,7 @@ public class DataExporter {
 			final TrafficRouter trafficRouter = trafficRouterManager.getTrafficRouter();
 			final Collection<CacheLocation> caches = trafficRouter.getCacheRegister().getCacheLocations();
 
-			for (CacheLocation cl2 : caches) {
+			for (final CacheLocation cl2 : caches) {
 				if (cl2.getId().equals(locId)) {
 					return cl2;
 				}
@@ -226,5 +237,34 @@ public class DataExporter {
 		}
 
 		return maxAge;
+	}
+
+	public Map<String, Object> getStaticZoneCacheStats() {
+		return createCacheStatsMap(trafficRouterManager.getTrafficRouter().getZoneManager().getStaticCacheStats());
+	}
+
+	public Map<String, Object> getDynamicZoneCacheStats() {
+		return createCacheStatsMap(trafficRouterManager.getTrafficRouter().getZoneManager().getDynamicCacheStats());
+	}
+
+	private Map<String, Object> createCacheStatsMap(final CacheStats cacheStats) {
+		final Map<String, Object> cacheStatsMap = new HashMap<String, Object>();
+		cacheStatsMap.put("requestCount", cacheStats.requestCount());
+		cacheStatsMap.put("hitCount", cacheStats.hitCount());
+		cacheStatsMap.put("missCount", cacheStats.missCount());
+		cacheStatsMap.put("hitRate", cacheStats.hitRate());
+		cacheStatsMap.put("missRate", cacheStats.missRate());
+		cacheStatsMap.put("evictionCount", cacheStats.evictionCount());
+		cacheStatsMap.put("loadCount", cacheStats.loadCount());
+		cacheStatsMap.put("loadSuccessCount", cacheStats.loadSuccessCount());
+		cacheStatsMap.put("loadExceptionCount", cacheStats.loadExceptionCount());
+		cacheStatsMap.put("loadExceptionRate", cacheStats.loadExceptionRate());
+		cacheStatsMap.put("totalLoadTime", cacheStats.totalLoadTime());
+		cacheStatsMap.put("averageLoadPenalty", cacheStats.averageLoadPenalty());
+		return cacheStatsMap;
+	}
+
+	public void setFederationExporter(final FederationExporter federationExporter) {
+		this.federationExporter = federationExporter;
 	}
 }

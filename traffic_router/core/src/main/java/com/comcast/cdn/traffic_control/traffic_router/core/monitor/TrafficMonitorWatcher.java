@@ -16,33 +16,31 @@
 
 package com.comcast.cdn.traffic_control.traffic_router.core.monitor;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
-
-
-
-
-
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.TrafficRouterException;
 import com.comcast.cdn.traffic_control.traffic_router.core.config.ConfigHandler;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouterManager;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.AbstractUpdatable;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.PeriodicResourceUpdater;
-import com.comcast.cdn.traffic_control.traffic_router.core.util.ResourceUrl;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ApplicationContextEvent;
+import org.springframework.context.event.ContextClosedEvent;
 
 @SuppressWarnings("PMD.TooManyFields")
-public class TrafficMonitorWatcher  {
+public class TrafficMonitorWatcher implements ApplicationListener<ApplicationContextEvent> {
 	private static final Logger LOGGER = Logger.getLogger(TrafficMonitorWatcher.class);
 
 	private String stateUrl;
@@ -70,6 +68,8 @@ public class TrafficMonitorWatcher  {
 
 	private PeriodicResourceUpdater crUpdater;
 	private PeriodicResourceUpdater stateUpdater;
+	private Path propertiesDirectory;
+	private Path databasesDirectory;
 
 	public AbstractUpdatable stateHandler = new AbstractUpdatable() {
 		public String toString() {return "status listener";}
@@ -79,7 +79,6 @@ public class TrafficMonitorWatcher  {
 				return trafficRouterManager.setState(new JSONObject(jsonStr));
 			} catch (JSONException e) {
 				LOGGER.warn("problem with json: ",e);
-				LOGGER.debug("problem with json: "+jsonStr);
 			} catch (UnknownHostException e) {
 				LOGGER.warn(e,e);
 			}
@@ -108,8 +107,6 @@ public class TrafficMonitorWatcher  {
 
 	@SuppressWarnings("PMD.CyclomaticComplexity")
 	public void init() {
-		LOGGER.info("Start");
-
 		final AbstractUpdatable crHandler = new AbstractUpdatable() {
 			@Override
 			public boolean update(final String configStr) {
@@ -118,9 +115,6 @@ public class TrafficMonitorWatcher  {
 						return configHandler.processConfig(configStr);
 					} catch (JSONException e) {
 						LOGGER.warn(e, e);
-						LOGGER.warn("JSON document length: " + configStr.length());
-					} catch (TrafficRouterException e) {
-						LOGGER.fatal(e, e);
 					}
 				} catch (IOException e) {
 					LOGGER.warn("error on config update", e);
@@ -147,28 +141,20 @@ public class TrafficMonitorWatcher  {
 			}
 		};
 
-		crUpdater = new PeriodicResourceUpdater(crHandler, new MyResourceUrl(configUrl), configFile, configRefreshPeriod, true);
+		processConfig();
+
+		crUpdater = new PeriodicResourceUpdater(crHandler, new TrafficMonitorResourceUrl(this, configUrl), databasesDirectory.resolve(configFile).toString(), configRefreshPeriod, true);
 		crUpdater.init();
 
-		stateUpdater = new PeriodicResourceUpdater(stateHandler, new MyResourceUrl(stateUrl), statusFile, statusRefreshPeriod, true);
+		stateUpdater = new PeriodicResourceUpdater(stateHandler, new TrafficMonitorResourceUrl(this, stateUrl), databasesDirectory.resolve(statusFile).toString(), statusRefreshPeriod, true);
 		stateUpdater.init();
 	}
-	class MyResourceUrl implements ResourceUrl{
-		private final String urlTemplate;
-		private int i = 0;
-		public MyResourceUrl(final String urlTemplate) {
-			this.urlTemplate = urlTemplate;
-		}
-		@Override
-		public String nextUrl() {
-			final String[] hosts = getHosts();
-			if(hosts == null) {
-				return urlTemplate;
-			}
-			i %= hosts.length;
-			final String host = hosts[i];
-			i++;
-			return urlTemplate.replace("[host]", host);
+
+	@Override
+	public void onApplicationEvent(final ApplicationContextEvent event) {
+		if (event instanceof ContextClosedEvent) {
+			crUpdater.destroy();
+			stateUpdater.destroy();
 		}
 	}
 
@@ -239,13 +225,11 @@ public class TrafficMonitorWatcher  {
 		synchronized(hostSync) {
 			if (hosts == null || hosts.length == 0) {
 				hosts = newHosts;
-				LOGGER.warn("traffic_monitor.bootstrap.hosts: " + Arrays.toString(hosts));
+				LOGGER.info("traffic_monitor.bootstrap.hosts: " + Arrays.toString(hosts));
 			} else if (!Arrays.asList(hosts).containsAll(Arrays.asList(newHosts))
 					|| !Arrays.asList(newHosts).containsAll(Arrays.asList(hosts))) {
 				hosts = newHosts;
-				LOGGER.warn("traffic_monitor.bootstrap.hosts changed to: " + Arrays.toString(hosts));
-			} else {
-				LOGGER.debug("traffic_monitor.bootstrap.hosts unchanged: " + Arrays.toString(hosts));
+				LOGGER.info("traffic_monitor.bootstrap.hosts changed to: " + Arrays.toString(hosts));
 			}
 		}
 	}
@@ -256,8 +240,8 @@ public class TrafficMonitorWatcher  {
 		return hosts;
 	}
 
-	@SuppressWarnings("PMD.CyclomaticComplexity")
-	public void processConfig() {
+	@SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
+	private void processConfig() {
 		final long now = System.currentTimeMillis();
 
 		if (now < (lastHostAttempt+reloadPeriod)) {
@@ -267,22 +251,63 @@ public class TrafficMonitorWatcher  {
 		lastHostAttempt = now;
 
 		try {
-			final URL resourceUrl = new URL(monitorProperties);
-			final URLConnection c = resourceUrl.openConnection();
-			final Properties props = new Properties();
-			props.load(c.getInputStream());
+			File trafficMonitorConfigFile;
 
-			final boolean localConfig = Boolean.parseBoolean(props.getProperty("traffic_monitor.bootstrap.local", "false"));
+			if (monitorProperties.matches("^\\w+:.*")) {
+				trafficMonitorConfigFile = new File(new URI(monitorProperties));
+			} else {
+				trafficMonitorConfigFile = new File(monitorProperties);
+			}
+
+			final Properties props = new Properties();
+
+			if (trafficMonitorConfigFile.exists()) {
+				LOGGER.info("Loading properties from " + trafficMonitorConfigFile.getAbsolutePath());
+				try (FileInputStream configStream = new FileInputStream(trafficMonitorConfigFile)) {
+					props.load(configStream);
+				}
+			} else {
+				LOGGER.warn("Cannot load traffic monitor properties file " + trafficMonitorConfigFile.getAbsolutePath() + " file not found!");
+			}
+
+			boolean localConfig = Boolean.parseBoolean(props.getProperty("traffic_monitor.bootstrap.local", "false"));
+
+			String localEnvString = System.getenv("TRAFFIC_MONITOR_BOOTSTRAP_LOCAL");
+
+			if (localEnvString != null) {
+				localEnvString = localEnvString.toLowerCase();
+			}
+
+			if ("true".equals(localEnvString) || "false".equals(localEnvString)) {
+				localConfig = Boolean.parseBoolean(localEnvString);
+			}
 
 			if (localConfig != isLocalConfig()) {
-				LOGGER.warn("traffic_monitor.bootstrap.local changed to: " + localConfig);
+				LOGGER.info("traffic_monitor.bootstrap.local changed to: " + localConfig);
 				setLocalConfig(localConfig);
 			}
 
 			if (localConfig || !isBootstrapped()) {
-				final String hostList = props.getProperty("traffic_monitor.bootstrap.hosts");
-				final String[] newHosts = hostList.split(";");
-				setHosts(newHosts);
+				String hostList = System.getenv("TRAFFIC_MONITOR_HOSTS");
+
+				if (hostList != null && !hostList.isEmpty()) {
+					LOGGER.warn("hostlist initialized to '" + hostList + "' from env var 'TRAFFIC_MONITOR_HOSTS");
+				}
+
+				if (hostList == null || hostList.isEmpty()) {
+					hostList = props.getProperty("traffic_monitor.bootstrap.hosts");
+				}
+
+				if (hostList == null || hostList.isEmpty()) {
+					if (!trafficMonitorConfigFile.exists()) {
+						LOGGER.fatal(trafficMonitorConfigFile.getAbsolutePath() + " does not exist and the environment variable 'TRAFFIC_MONITOR_HOSTS' was not found");
+					} else {
+						LOGGER.error("Cannot determine Traffic Monitor hosts from property 'traffic_monitor.bootstrap.hosts' in config file " + trafficMonitorConfigFile.getAbsolutePath());
+					}
+				} else {
+					setHosts(hostList.contains(";") ? hostList.split(";") : new String[]{hostList});
+				}
+
 			} else if (!isLocalConfig() && isBootstrapped()) {
 				synchronized(monitorSync) {
 					if (!onlineMonitors.isEmpty()) {
@@ -298,29 +323,16 @@ public class TrafficMonitorWatcher  {
 
 				if (newReloadPeriod != reloadPeriod) {
 					reloadPeriod = newReloadPeriod;
-					LOGGER.warn("traffic_monitor.properties.reload.period changed to: "+reloadPeriod);
-				}
-				else {
-					LOGGER.debug("traffic_monitor.properties.reload.period: "+reloadPeriod);
+					LOGGER.info("traffic_monitor.properties.reload.period changed to: " + reloadPeriod);
 				}
 			}
 		} catch (Exception e) {
 			LOGGER.warn(e,e);
-			LOGGER.debug(e,e);
 		}
 
 		if (hosts==null) {
 			hosts = monitorHosts.split(";");
 		}
-	}
-
-	public static void main(final String[] args) {
-		final TrafficMonitorWatcher rw = new TrafficMonitorWatcher();
-		rw.setMonitorProperties("file:src/test/resources/traffic_monitor.properties");
-		rw.setStateUrl("http://[host]/publish/CrStates");
-		rw.setConfigUrl("http://[host]/publish/CrConfig?json");
-		rw.getHosts();
-//		rw.init();
 	}
 
 	public static boolean isBootstrapped() {
@@ -345,10 +357,29 @@ public class TrafficMonitorWatcher  {
 
 	public static void setOnlineMonitors(final List<String> onlineMonitors) {
 		synchronized(monitorSync) {
-			LOGGER.debug("Setting online Monitors to: " + onlineMonitors);
+			if (isLocalConfig()) {
+				return;
+			}
+
 			TrafficMonitorWatcher.onlineMonitors = onlineMonitors;
 			setBootstrapped(true);
 			setHosts(onlineMonitors.toArray(new String[onlineMonitors.size()]));
 		}
+	}
+
+	public Path getPropertiesDirectory() {
+		return propertiesDirectory;
+	}
+
+	public void setPropertiesDirectory(final Path propertiesDirectory) {
+		this.propertiesDirectory = propertiesDirectory;
+	}
+
+	public Path getDatabasesDirectory() {
+		return databasesDirectory;
+	}
+
+	public void setDatabasesDirectory(final Path databasesDirectory) {
+		this.databasesDirectory = databasesDirectory;
 	}
 }

@@ -104,22 +104,15 @@ public class Fetcher {
 		http.setRequestMethod(method);
 		http.setAllowUserInteraction(true);
 
-		for (String key : requestProps.keySet()) {
+		for (final String key : requestProps.keySet()) {
 			http.addRequestProperty(key, requestProps.get(key));
 		}
 
 		if (method.equals(POST_STR) && data != null) {
 			http.setDoOutput(true); // Triggers POST.
 
-			OutputStream output = null;
-
-			try {
-				output = http.getOutputStream();
+			try (final OutputStream output = http.getOutputStream()) {
 				output.write(data.getBytes(UTF8_STR));
-			} finally {
-				if (output != null) {
-					output.close(); // will throw IOException if there's an issue
-				}
 			}
 		}
 
@@ -140,24 +133,56 @@ public class Fetcher {
 		final OutputStream out = null;
 		try {
 			final HttpURLConnection connection = getConnection(url, data, method, lastFetchTime);
-			connection.getInputStream();
 
 			if (connection.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
 				return null;
 			}
 
-			final StringBuilder sb = new StringBuilder();
-			final BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-
-			String input;
-
-			while ((input = in.readLine()) != null) {
-				sb.append(input);
+			if (connection.getResponseCode() > 399) {
+				LOGGER.warn("Failed Http Request to " + url + " Status " + connection.getResponseCode());
+				return null;
 			}
 
-			in.close();
+			final StringBuilder sb = new StringBuilder();
+
+			try (final BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+				String input;
+
+				while ((input = in.readLine()) != null) {
+					sb.append(input);
+				}
+			}
 
 			return sb.toString();
+		} finally {
+			IOUtils.closeQuietly(out);
+		}
+	}
+
+	public int getIfModifiedSince(final String url, final long lastFetchTime, final StringBuilder stringBuilder) throws IOException {
+		final OutputStream out = null;
+		try {
+			final HttpURLConnection connection = getConnection(url, null, "GET", lastFetchTime);
+			final int status = connection.getResponseCode();
+
+			if (status == HttpURLConnection.HTTP_NOT_MODIFIED) {
+				return status;
+			}
+
+			if (connection.getResponseCode() > 399) {
+				LOGGER.warn("Failed Http Request to " + url + " Status " + connection.getResponseCode());
+				return status;
+			}
+
+			try (final BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+				String input;
+
+				while ((input = in.readLine()) != null) {
+					stringBuilder.append(input);
+				}
+			}
+
+			return status;
 		} finally {
 			IOUtils.closeQuietly(out);
 		}

@@ -31,12 +31,16 @@ Delivery Service
 
   Authentication Required: Yes
 
+  Role(s) Required: None
+
   **Response Properties**
 
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
   |        Parameter         |  Type  |                                                             Description                                                              |                                                                                                     |
   +==========================+========+======================================================================================================================================+=====================================================================================================+
-  | ``active``               |  bool  | true if active, false if inactive (inact).                                                                                           |                                                                                                     |
+  | ``xmlId``                | string | Unique string that describes this deliveryservice.                                                                                   |                                                                                                     |
+  +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+  | ``active``               |  bool  | true if active, false if inactive.                                                                                                   |                                                                                                     |
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
   | ``cacheurl``             | string | Cache URL rule to apply to this delivery service.                                                                                    |                                                                                                     |
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
@@ -136,7 +140,7 @@ Delivery Service
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
   | ``type``                 | string | The type of this deliveryservice (one of :ref:to-api-v11-types use_in_table='deliveryservice').                                      |                                                                                                     |
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
-  | ``xmlId``                | string | Unique string that describes this deliveryservice.                                                                                   |                                                                                                     |
+  | ``exampleURLs``          | string | Entry points into the CDN for this deliveryservice.                                                                                  |                                                                                                     |
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
 
   **Response Example** ::
@@ -178,14 +182,15 @@ Delivery Service
           "missLat": "41.881944",
           "missLong": "-87.627778",
           "orgServerFqdn": "http://cdl.origin.kabletown.net",
-          "profileDescription": "Comcast Content Router for cdn2.comcast.net",
+          "profileDescription": "Content Router for cdn2.comcast.net",
           "profileName": "EDGE_CDN2",
           "qstringIgnore": "0",
           "remapText": null,
           "regexRemap": null,
           "signed": true,
           "type": "HTTP",
-          "xmlId": "cdl-c2"
+          "xmlId": "cdl-c2",
+          "exampleURLs": []
         },
         { .. },
         { .. }
@@ -201,12 +206,16 @@ Delivery Service
 
   Authentication Required: Yes
 
+  Role(s) Required: None
+
   **Response Properties**
 
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+
   |        Parameter         |  Type  |                                                             Description                                                              |
   +==========================+========+======================================================================================================================================+
-  | ``active``               |  bool  | true if active, false if inactive (inact).                                                                                           |
+  | ``xmlId``                | string | Unique string that describes this deliveryservice.                                                                                   |
+  +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+
+  | ``active``               |  bool  | true if active, false if inactive.                                                                                                   |
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+
   | ``cacheurl``             | string | Cache URL rule to apply to this delivery service.                                                                                    |
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+
@@ -304,7 +313,7 @@ Delivery Service
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+
   | ``type``                 | string | The type of this deliveryservice (one of :ref:to-api-v11-types use_in_table='deliveryservice').                                      |
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+
-  | ``xmlId``                | string | Unique string that describes this deliveryservice.                                                                                   |
+  | ``exampleURLs``          | string | Entry points in to the CDN for this deliveryservice.                                                                                 |
   +--------------------------+--------+--------------------------------------------------------------------------------------------------------------------------------------+
 
   **Response Example** ::
@@ -347,31 +356,126 @@ Delivery Service
           "missLat": "41.881944",
           "missLong": "-87.627778",
           "orgServerFqdn": "http://cdl.origin.kabletown.net",
-          "profileDescription": "Comcast Content Router for cdn2.comcast.net",
+          "profileDescription": "Content Router for cdn2.comcast.net",
           "profileName": "EDGE_CDN2",
           "qstringIgnore": "0",
           "remapText": null,
           "regexRemap": null,
           "signed": true,
           "type": "HTTP",
-          "xmlId": "cdl-c2"
+          "xmlId": "cdl-c2",
+          "exampleURLs": []
         }
       ],
     }
 
-.. _to-api-v11-ds-health:
+|
 
+.. _to-api-v11-ds-health:
 
 Health
 ++++++
-.. **GET /api/1.1/deliveryservices/:id/state.json**
-.. **GET /api/1.1/deliveryservices/:id/health.json**
+
+**GET /api/1.1/deliveryservices/:id/state.json**
+
+  Retrieves the failover state for a delivery service.
+
+  Authentication Required: Yes
+
+  Role(s) Required: None
+
+  **Response Properties**
+
+  +------------------+---------+-------------------------------------------------+
+  |    Parameter     |  Type   |                   Description                   |
+  +==================+=========+=================================================+
+  | ``failover``     |  hash   |                                                 |
+  +------------------+---------+-------------------------------------------------+
+  | ``>locations``   |  array  |                                                 |
+  +------------------+---------+-------------------------------------------------+
+  | ``>destination`` |  string |                                                 |
+  +------------------+---------+-------------------------------------------------+
+  | ``>configured``  | boolean |                                                 |
+  +------------------+---------+-------------------------------------------------+
+  | ``>enabled``     | boolean |                                                 |
+  +------------------+---------+-------------------------------------------------+
+  | ``enabled``      | boolean |                                                 |
+  +------------------+---------+-------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+        "response": {
+            "failover": {
+                "locations": [ ],
+                "destination": null,
+                "configured": false,
+                "enabled": false
+            },
+            "enabled": true
+        }
+    }
+
+|
+
+**GET /api/1.1/deliveryservices/:id/health.json**
+
+  Retrieves the health of all locations (cache groups) for a delivery service.
+
+  Authentication Required: Yes
+
+  Role(s) Required: None
+
+  **Response Properties**
+
+  +------------------+--------+-------------------------------------------------+
+  |    Parameter     |  Type  |                   Description                   |
+  +==================+========+=================================================+
+  | ``totalOnline``  | int    | Total number of online caches across all CDNs.  |
+  +------------------+--------+-------------------------------------------------+
+  | ``totalOffline`` | int    | Total number of offline caches across all CDNs. |
+  +------------------+--------+-------------------------------------------------+
+  | ``cachegroups``  | array  | A collection of cache groups.                   |
+  +------------------+--------+-------------------------------------------------+
+  | ``>online``      | int    | The number of online caches for the cache group |
+  +------------------+--------+-------------------------------------------------+
+  | ``>offline``     | int    | The number of offline caches for the cache      |
+  |                  |        | group.                                          |
+  +------------------+--------+-------------------------------------------------+
+  | ``>name``        | string | Cache group name.                               |
+  +------------------+--------+-------------------------------------------------+
+
+  **Response Example** ::
+
+    {
+     "response": {
+        "totalOnline": 148,
+        "totalOffline": 0,
+        "cachegroups": [
+           {
+              "online": 8,
+              "offline": 0,
+              "name": "us-co-denver"
+           },
+           {
+              "online": 7,
+              "offline": 0,
+              "name": "us-de-newcastle"
+           }
+        ]
+     }
+    }
+
+
+|
 
 **GET /api/1.1/deliveryservices/:id/capacity.json**
 
   Retrieves the capacity percentages of a delivery service.
 
   Authentication Required: Yes
+
+  Role(s) Required: None
 
   **Request Route Parameters**
 
@@ -419,6 +523,8 @@ Health
 
   Authentication Required: Yes
 
+  Role(s) Required: None
+
   **Request Route Parameters**
 
   +-----------------+----------+---------------------------------------------------+
@@ -459,17 +565,20 @@ Health
      },
     }
 
+|
 
 .. _to-api-v11-ds-metrics:
 
 Metrics
 +++++++
-**GET /api/1.1/deliveryservices/:id/edge/metric_types/:metric/start_date/:start/end_date/:end/\\
-interval/:interval/window_start/:window_start/window_end/:window_end.json**
 
-  Retrieves edge summary metrics of all cache groups for a delivery service.
+**GET /api/1.1/deliveryservices/:id/server_types/:type/metric_types/start_date/:start/end_date/:end.json**
+
+  Retrieves detailed and summary metrics for MIDs or EDGEs for a delivery service.
 
   Authentication Required: Yes
+
+  Role(s) Required: None
 
   **Request Route Parameters**
 
@@ -478,198 +587,23 @@ interval/:interval/window_start/:window_start/window_end/:window_end.json**
   +==================+==========+=============================================================================+
   | ``id``           | yes      | The delivery service id.                                                    |
   +------------------+----------+-----------------------------------------------------------------------------+
-  | ``metric``       | yes      | One of the following: "kbps", "tps_total", "tps_2xx", "tps_3xx", "tps_4xx", |
+  | ``server_types`` | yes      | EDGE or MID.                                                                |
+  +------------------+----------+-----------------------------------------------------------------------------+
+  | ``metric_types`` | yes      | One of the following: "kbps", "tps", "tps_2xx", "tps_3xx", "tps_4xx",       |
   |                  |          | "tps_5xx".                                                                  |
   +------------------+----------+-----------------------------------------------------------------------------+
-  | ``start``        | yes      | UNIX time, yesterday, now.                                                  |
+  | ``start_date``   | yes      | UNIX time                                                                   |
   +------------------+----------+-----------------------------------------------------------------------------+
-  | ``end``          | yes      | UNIX time, yesterday, now.                                                  |
-  +------------------+----------+-----------------------------------------------------------------------------+
-  | ``interval``     | yes      | > 10                                                                        |
-  +------------------+----------+-----------------------------------------------------------------------------+
-  | ``window_start`` | yes      | UNIX time, yesterday, now.                                                  |
-  +------------------+----------+-----------------------------------------------------------------------------+
-  | ``window_end``   | yes      | UNIX time, yesterday, now.                                                  |
+  | ``end_date``     | yes      | UNIX time                                                                   |
   +------------------+----------+-----------------------------------------------------------------------------+
 
   **Request Query Parameters**
 
-  +-------------+----------+-------------------------------------------+
-  |     Name    | Required |                Description                |
-  +=============+==========+===========================================+
-  | ``summary`` | no       | Flag used to return summary metrics only. |
-  +-------------+----------+-------------------------------------------+
-
-  Response Content Type: application/json
-
-
-  **Response Properties**
-
-  +-----------------+--------+-------------+
-  |    Parameter    |  Type  | Description |
-  +=================+========+=============+
-  | ``ninetyFifth`` | number |             |
-  +-----------------+--------+-------------+
-  | ``average``     | int    |             |
-  +-----------------+--------+-------------+
-  | ``min``         | number |             |
-  +-----------------+--------+-------------+
-  | ``max``         | number |             |
-  +-----------------+--------+-------------+
-  | ``total``       | number |             |
-  +-----------------+--------+-------------+
-
-  **Response Example** ::
-
-    {
-     "response": {
-        "ninetyFifth": 183982091.479,
-        "average": 97444798,
-        "min": 31193860.46233,
-        "max": 205772883.28367,
-        "total": 3643217414091.13
-     },
-    }
-
-
-|
-
-**GET /api/1.1/usage/deliveryservices/:ds/cachegroups/:name/metric_types/:metric/start_date/:start_date/\\
-end_date/:end_date/interval/:interval.json**
-
-  Retrieves edge metrics of one or all locations (cache groups) for a delivery service.
-
-  Authentication Required: Yes
-
-
-  **Request Route Parameters**
-
-  +----------------------+----------+-----------------------------------------------------------------------------+
-  |         Name         | Required |                                 Description                                 |
-  +======================+==========+=============================================================================+
-  | ``id``               | yes      | The delivery service id.                                                    |
-  +----------------------+----------+-----------------------------------------------------------------------------+
-  | ``cache_group_name`` | yes      | name, all.                                                                  |
-  +----------------------+----------+-----------------------------------------------------------------------------+
-  | ``usage_type``       | yes      | One of the following: "kbps", "tps_total", "tps_2xx", "tps_3xx", "tps_4xx", |
-  |                      |          | "tps_5xx".                                                                  |
-  +----------------------+----------+-----------------------------------------------------------------------------+
-  | ``start``            | yes      | UNIX time, yesterday, now.                                                  |
-  +----------------------+----------+-----------------------------------------------------------------------------+
-  | ``end``              | yes      | UNIX time, yesterday, now.                                                  |
-  +----------------------+----------+-----------------------------------------------------------------------------+
-  | ``interval``         | yes      | > 10                                                                        |
-  +----------------------+----------+-----------------------------------------------------------------------------+
-
-  **Response Properties**
-
-  +-------------------------+--------+-------------+
-  |        Parameter        |  Type  | Description |
-  +=========================+========+=============+
-  | ``deliveryServiceName`` | string |             |
-  +-------------------------+--------+-------------+
-  | ``statName``            | string |             |
-  +-------------------------+--------+-------------+
-  | ``deliveryServiceId``   | string |             |
-  +-------------------------+--------+-------------+
-  | ``interval``            | int    |             |
-  +-------------------------+--------+-------------+
-  | ``series``              | array  |             |
-  +-------------------------+--------+-------------+
-  | ``>>timeBase``          | int    |             |
-  +-------------------------+--------+-------------+
-  | ``>>samples``           | array  |             |
-  +-------------------------+--------+-------------+
-  | ``end``                 | string |             |
-  +-------------------------+--------+-------------+
-  | ``elapsed``             | number |             |
-  +-------------------------+--------+-------------+
-  | ``cdnName``             | string |             |
-  +-------------------------+--------+-------------+
-  | ``hostName``            | string |             |
-  +-------------------------+--------+-------------+
-  | ``summary``             | hash   |             |
-  +-------------------------+--------+-------------+
-  | >``ninetyFifth``        | number |             |
-  +-------------------------+--------+-------------+
-  | >``average``            | int    |             |
-  +-------------------------+--------+-------------+
-  | >``min``                | number |             |
-  +-------------------------+--------+-------------+
-  | >``max``                | number |             |
-  +-------------------------+--------+-------------+
-  | >``total``              | number |             |
-  +-------------------------+--------+-------------+
-  | ``cacheGroupName``      | string |             |
-  +-------------------------+--------+-------------+
-  | ``start``               | string |             |
-  +-------------------------+--------+-------------+
-
-  **Response Example** ::
-
-    TBD
-     
-
-|
-
-**GET /api/1.1/cdns/peakusage/:peak_usage_type/deliveryservice/:ds/cachegroup/:name/start_date/:start/\\
-end_date/:end/interval/:interval.json**
-
-
-  Authentication Required: Yes
-
-  **Response Properties**
-
-  +---------------------------------+--------+-------------+
-  |            Parameter            |  Type  | Description |
-  +=================================+========+=============+
-  | ``TotalGBytesServedSinceStart`` | number |             |
-  +---------------------------------+--------+-------------+
-  +---------------------------------+--------+-------------+
-  | ``>>item``                      | number |             |
-  +---------------------------------+--------+-------------+
-  | ``>>item``                      | number |             |
-  +---------------------------------+--------+-------------+
-  | ``>>item``                      | number |             |
-  +---------------------------------+--------+-------------+
-  | ``>>item``                      | number |             |
-  +---------------------------------+--------+-------------+
-  | ``>>item``                      | number |             |
-  +---------------------------------+--------+-------------+
-  | ``>>item``                      | number |             |
-  +---------------------------------+--------+-------------+
-
-  **Response Example**
-
-  ::
-    
-    TBD
- 
-
-|
-
-**GET /api/1.1/deliveryservices/:id/:server_type/metrics/:metric_type/:start/:end.json**
-
-  Retrieves detailed and summary metrics for MIDs or EDGEs for a delivery service.
-
-  Authentication Required: No
-
-  **Request Route Parameters**
-
-  +-----------------+----------+-----------------------------------------------------------------------------+
-  |       Name      | Required |                                 Description                                 |
-  +=================+==========+=============================================================================+
-  | ``id``          | yes      | The delivery service id.                                                    |
-  +-----------------+----------+-----------------------------------------------------------------------------+
-  | ``server_type`` | yes      | EDGE or MID.                                                                |
-  +-----------------+----------+-----------------------------------------------------------------------------+
-  | ``metric_type`` | yes      | One of the following: "kbps", "tps_total", "tps_2xx", "tps_3xx", "tps_4xx", |
-  |                 |          | "tps_5xx".                                                                  |
-  +-----------------+----------+-----------------------------------------------------------------------------+
-  | ``start``       | yes      | UNIX time, yesterday, now.                                                  |
-  +-----------------+----------+-----------------------------------------------------------------------------+
-  | ``end``         | yes      | UNIX time, yesterday, now.                                                  |
-  +-----------------+----------+-----------------------------------------------------------------------------+
+  +------------------+----------+-----------------------------------------------------------------------------+
+  |       Name       | Required |                                 Description                                 |
+  +==================+==========+=============================================================================+
+  | ``stats``        | no       | Flag used to return only summary metrics                                    |
+  +------------------+----------+-----------------------------------------------------------------------------+
 
   **Response Properties**
 
@@ -751,6 +685,8 @@ Server
 
   Authentication Required: Yes
 
+  Role(s) Required: Yes
+
   **Request Query Parameters**
 
   +-----------+----------+----------------------------------------+
@@ -773,7 +709,6 @@ Server
   |``deliveryService``   | string |                                                |
   +----------------------+--------+------------------------------------------------+
 
-
   **Response Example** ::
 
     {
@@ -794,7 +729,7 @@ Server
      "limit": 2
     }
 
-
+|
 
 .. _to-api-v11-ds-sslkeys:
 
@@ -805,7 +740,7 @@ SSL Keys
 
   Authentication Required: Yes
 
-  Role Required: Admin
+  Role(s) Required: Admin
 
   **Request Route Parameters**
 
@@ -814,7 +749,6 @@ SSL Keys
   +===========+==========+========================================+
   | ``xmlId`` | yes      | xml_id of the desired delivery service |
   +-----------+----------+----------------------------------------+
-
 
   **Request Query Parameters**
 
@@ -849,7 +783,6 @@ SSL Keys
   +------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | ``version``      | string | The version of the certificate record in Riak                                                                                           |
   +------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------+
-
 
   **Response Example** ::
 
@@ -886,7 +819,6 @@ SSL Keys
   | ``hostname`` | yes      | pristine hostname of the desired delivery service |
   +--------------+----------+---------------------------------------------------+
 
-
   **Request Query Parameters**
 
   +-------------+----------+--------------------------------+
@@ -920,7 +852,6 @@ SSL Keys
   +------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | ``version``      | string | The version of the certificate record in Riak                                                                                           |
   +------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------+
-
 
   **Response Example** ::
 
@@ -979,7 +910,6 @@ SSL Keys
       "response": "Successfully deleted ssl keys for <xml_id>"
     }
 
-
 |
   
 **POST /api/1.1/deliveryservices/sslkeys/generate**
@@ -987,12 +917,10 @@ SSL Keys
   Generates SSL crt, csr, and private key for a delivery service
 
   Authentication Required: Yes
-  Role Required:  Admin
 
-  Response Content Type: application/json
+  Role(s) Required: Admin
 
   **Request Properties**
-
 
   +--------------+---------+-------------------------------------------------+
   |  Parameter   |   Type  |                   Description                   |
@@ -1014,9 +942,7 @@ SSL Keys
   | ``unit``     | boolean |                                                 |
   +--------------+---------+-------------------------------------------------+
 
-
   **Request Example** ::
-
 
     {
       "key": "ds-01",
@@ -1034,6 +960,8 @@ SSL Keys
       "state": "Colorado"
     }
 
+|
+
   **Response Properties**
 
   +--------------+--------+-----------------+
@@ -1043,7 +971,6 @@ SSL Keys
   +--------------+--------+-----------------+
   | ``version``  | string | API version     |
   +--------------+--------+-----------------+
-
 
   **Response Example** ::
 
@@ -1055,10 +982,11 @@ SSL Keys
   
 **POST /api/1.1/deliveryservices/sslkeys/add**
 
-  Allows user to add SSL crt, csr, and private key for a delivery service
+  Allows user to add SSL crt, csr, and private key for a delivery service.
 
   Authentication Required: Yes
-  Role Required:  Admin
+
+  Role(s) Required:  Admin
 
   **Request Properties**
 
@@ -1076,9 +1004,7 @@ SSL Keys
   | ``key``     | string |                                     |
   +-------------+--------+-------------------------------------+
 
-
   **Request Example** ::
-
 
     {
       "key": "ds-01",
@@ -1090,6 +1016,8 @@ SSL Keys
       }
     }
 
+|
+
   **Response Properties**
 
   +--------------+--------+-----------------+
@@ -1100,9 +1028,148 @@ SSL Keys
   | ``version``  | string | API version     |
   +--------------+--------+-----------------+
 
-
   **Response Example** ::
 
     {  
       "response": "Successfully added ssl keys for ds-01"
     }
+
+
+|
+
+**POST /api/1.1/deliveryservices/request**
+
+  Allows a user to send delivery service request details to a specified email address.
+
+  Authentication Required: Yes
+
+  Role(s) Required: None
+
+  **Request Properties**
+
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  |  Parameter                             |  Type  | Required |           Description                                                                       |
+  +========================================+========+==========+=============================================================================================+
+  | ``emailTo``                            | string | yes      | The email to which the delivery service request will be sent.                               |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``details``                            | hash   | yes      | Parameters for the delivery service request.                                                |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>customer``                          | string | yes      | Name of the customer to associated with the delivery service.                               |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>deliveryProtocol``                  | string | yes      | Eg. http or http/https                                                                      |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>routingType``                       | string | yes      | Eg. DNS or HTTP Redirect                                                                    |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>serviceDesc``                       | string | yes      | A description of the delivery service.                                                      |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>peakBPSEstimate``                   | string | yes      | Used to manage cache efficiency and plan for capacity.                                      |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>peakTPSEstimate``                   | string | yes      | Used to manage cache efficiency and plan for capacity.                                      |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>maxLibrarySizeEstimate``            | string | yes      | Used to manage cache efficiency and plan for capacity.                                      |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>originURL``                         | string | yes      | The URL path to the origin server.                                                          |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>hasOriginDynamicRemap``             | bool   | yes      | This is a feature which allows services to use multiple origin URLs for the same service.   |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>originTestFile``                    | string | yes      | A URL path to a test file available on the origin server.                                   |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>hasOriginACLWhitelist``             | bool   | yes      | Is access to your origin restricted using an access control list (ACL or whitelist) of Ips? |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>originHeaders``                     | string | no       | Header values that must be passed to requests to your origin.                               |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>otherOriginSecurity``               | string | no       | Other origin security measures that need to be considered for access.                       |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>queryStringHandling``               | string | yes      | How to handle query strings that come with the request.                                     |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>rangeRequestHandling``              | string | yes      | How to handle range requests.                                                               |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>hasSignedURLs``                     | bool   | yes      | Are Urls signed?                                                                            |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>hasNegativeCachingCustomization``   | bool   | yes      | Any customization required for negative caching?                                            |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>negativeCachingCustomizationNote``  | string | yes      | Negative caching customization instructions.                                                |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>serviceAliases``                    | array  | no       | Service aliases which will be used for this service.                                        |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>rateLimitingGBPS``                  | int    | no       | Rate Limiting - Bandwidth (Gigabits per second)                                             |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>rateLimitingTPS``                   | int    | no       | Rate Limiting - Transactions/Second                                                         |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>overflowService``                   | string | no       | An overflow point (URL or IP address) used if rate limits are met.                          |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>headerRewriteEdge``                 | string | no       | Headers can be added or altered at each layer of the CDN.                                   |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>headerRewriteMid``                  | string | no       | Headers can be added or altered at each layer of the CDN.                                   |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>headerRewriteRedirectRouter``       | string | no       | Headers can be added or altered at each layer of the CDN.                                   |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+  | ``>notes``                             | string | no       | Additional instructions to provide the delivery service provisioning team.                  |
+  +----------------------------------------+--------+----------+---------------------------------------------------------------------------------------------+
+
+  **Request Example** ::
+
+    {
+       "emailTo": "foo@bar.com",
+       "details": {
+          "customer": "XYZ Corporation",
+          "contentType": "video-on-demand",
+          "deliveryProtocol": "http",
+          "routingType": "dns",
+          "serviceDesc": "service description goes here",
+          "peakBPSEstimate": "less-than-5-Gbps",
+          "peakTPSEstimate": "less-than-1000-TPS",
+          "maxLibrarySizeEstimate": "less-than-200-GB",
+          "originURL": "http://myorigin.com",
+          "hasOriginDynamicRemap": false,
+          "originTestFile": "http://myorigin.com/crossdomain.xml",
+          "hasOriginACLWhitelist": true,
+          "originHeaders": "",
+          "otherOriginSecurity": "",
+          "queryStringHandling": "ignore-in-cache-key-and-pass-up",
+          "rangeRequestHandling": "range-requests-not-used",
+          "hasSignedURLs": true,
+          "hasNegativeCachingCustomization": true,
+          "negativeCachingCustomizationNote": "negative caching instructions",
+          "serviceAliases": [
+             "http://alias1.com",
+             "http://alias2.com"
+          ],
+          "rateLimitingGBPS": 50,
+          "rateLimitingTPS": 5000,
+          "overflowService": "http://overflowcdn.com",
+          "headerRewriteEdge": "",
+          "headerRewriteMid": "",
+          "headerRewriteRedirectRouter": "",
+          "notes": ""
+       }
+    }
+
+|
+
+  **Response Properties**
+
+  +-------------+--------+----------------------------------+
+  |  Parameter  |  Type  |           Description            |
+  +=============+========+==================================+
+  | ``alerts``  | array  | A collection of alert messages.  |
+  +-------------+--------+----------------------------------+
+  | ``>level``  | string | Success, info, warning or error. |
+  +-------------+--------+----------------------------------+
+  | ``>text``   | string | Alert message.                   |
+  +-------------+--------+----------------------------------+
+  | ``version`` | string |                                  |
+  +-------------+--------+----------------------------------+
+
+  **Response Example** ::
+
+    {
+      "alerts": [
+            {
+                "level": "success",
+                "text": "Delivery Service request sent to foo@bar.com."
+            }
+        ]
+    }
+
+|

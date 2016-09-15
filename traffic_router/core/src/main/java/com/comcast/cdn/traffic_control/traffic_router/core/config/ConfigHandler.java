@@ -18,20 +18,29 @@ package com.comcast.cdn.traffic_control.traffic_router.core.config;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.Iterator;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.*;
+import com.comcast.cdn.traffic_control.traffic_router.core.ds.SteeringWatcher;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.FederationsWatcher;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.GeolocationDatabaseUpdater;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.NetworkNode;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.NetworkUpdater;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.RegionalGeoUpdater;
+
+import com.comcast.cdn.traffic_control.traffic_router.core.secure.CertificatesPoller;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.TrafficRouterException;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.Cache;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheLocation;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheRegister;
@@ -43,12 +52,16 @@ import com.comcast.cdn.traffic_control.traffic_router.core.monitor.TrafficMonito
 import com.comcast.cdn.traffic_control.traffic_router.core.router.TrafficRouterManager;
 import com.comcast.cdn.traffic_control.traffic_router.core.util.TrafficOpsUtils;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker;
+import com.comcast.cdn.traffic_control.traffic_router.geolocation.Geolocation;
+import com.comcast.cdn.traffic_control.traffic_router.core.request.HTTPRequest;
+
 
 public class ConfigHandler {
 	private static final Logger LOGGER = Logger.getLogger(ConfigHandler.class);
 
 	private static long lastSnapshotTimestamp = 0;
 	private static Object configSync = new Object();
+	private static String deliveryServicesKey = "deliveryServices";
 
 	private TrafficRouterManager trafficRouterManager;
 	private GeolocationDatabaseUpdater geolocationDatabaseUpdater;
@@ -59,6 +72,10 @@ public class ConfigHandler {
 
 	private NetworkUpdater networkUpdater;
 	private FederationsWatcher federationsWatcher;
+	private RegionalGeoUpdater regionalGeoUpdater;
+	private SteeringWatcher steeringWatcher;
+	private CertificateChecker certificateChecker;
+	private CertificatesPoller certificatesPoller;
 
 	public String getConfigDir() {
 		return configDir;
@@ -75,7 +92,11 @@ public class ConfigHandler {
 		return networkUpdater;
 	}
 
-	public boolean processConfig(final String jsonStr) throws JSONException, IOException, TrafficRouterException  {
+	public RegionalGeoUpdater getRegionalGeoUpdater() {
+		return regionalGeoUpdater;
+	}
+
+	public boolean processConfig(final String jsonStr) throws JSONException, IOException  {
 		if (jsonStr == null) {
 			trafficRouterManager.setCacheRegister(null);
 			return false;
@@ -92,27 +113,43 @@ public class ConfigHandler {
 			if (sts <= getLastSnapshotTimestamp()) {
 				LOGGER.warn("Incoming TrConfig snapshot timestamp (" + sts + ") is older or equal to the loaded timestamp (" + getLastSnapshotTimestamp() + "); unable to process");
 				return false;
-			} else {
-				LOGGER.debug("Incoming TrConfig snapshot timestamp (" + sts + ") is newer than the loaded timestamp (" + getLastSnapshotTimestamp() + "); processing new TrConfig");
 			}
 
 			try {
 				parseGeolocationConfig(config);
 				parseCoverageZoneNetworkConfig(config);
+				parseRegionalGeoConfig(jo);
 
 				final CacheRegister cacheRegister = new CacheRegister();
+				final JSONObject deliveryServicesJson = jo.getJSONObject("deliveryServices");
 				cacheRegister.setTrafficRouters(jo.getJSONObject("contentRouters"));
 				cacheRegister.setConfig(config);
 				cacheRegister.setStats(stats);
 				parseTrafficOpsConfig(config, stats);
-				parseDeliveryServiceConfig(jo.getJSONObject("deliveryServices"), cacheRegister);
+
+				parseCertificatesConfig(config);
+				certificatesPoller.restart();
+				parseDeliveryServiceConfig(jo.getJSONObject(deliveryServicesKey), cacheRegister);
+
+				LOGGER.warn("Waiting for all https delivery services to have valid certificates");
+				while (!certificateChecker.certificatesAreValid(deliveryServicesJson)) {
+					try {
+						Thread.sleep(1000L);
+					} catch (InterruptedException e) {
+						LOGGER.warn("Interrupted while sleeping between checks of https certificates");
+					}
+				}
+
 				parseLocationConfig(jo.getJSONObject("edgeLocations"), cacheRegister);
 				parseCacheConfig(jo.getJSONObject("contentServers"), cacheRegister);
 				parseMonitorConfig(jo.getJSONObject("monitors"));
-				NetworkNode.getInstance().clearCacheCache();
+				NetworkNode.getInstance().clearCacheLocations();
 				federationsWatcher.configure(config);
-
+				steeringWatcher.configure(config);
+				steeringWatcher.setCacheRegister(cacheRegister);
 				trafficRouterManager.setCacheRegister(cacheRegister);
+				trafficRouterManager.getTrafficRouter().setRequestHeaders(parseRequestHeaders(config.optJSONArray("requestHeaders")));
+				trafficRouterManager.getTrafficRouter().configurationChanged();
 				setLastSnapshotTimestamp(sts);
 			} catch (ParseException e) {
 				LOGGER.error(e, e);
@@ -142,6 +179,10 @@ public class ConfigHandler {
 	}
 	public void setNetworkUpdater(final NetworkUpdater nu) {
 		this.networkUpdater = nu;
+	}
+
+	public void setRegionalGeoUpdater(final RegionalGeoUpdater regionalGeoUpdater) {
+		this.regionalGeoUpdater = regionalGeoUpdater;
 	}
 
 	/**
@@ -174,7 +215,7 @@ public class ConfigHandler {
 	 * @throws JSONException 
 	 */
 	@SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.AvoidDeeplyNestedIfStmts"})
-	private void parseCacheConfig(final JSONObject contentServers, final CacheRegister cacheRegister) throws JSONException {
+	private void parseCacheConfig(final JSONObject contentServers, final CacheRegister cacheRegister) throws JSONException, ParseException {
 		final Map<String,Cache> map = new HashMap<String,Cache>();
 		final Map<String, List<String>> statMap = new HashMap<String, List<String>>();
 		for (final String node : JSONObject.getNames(contentServers)) {
@@ -198,10 +239,10 @@ public class ConfigHandler {
 					LOGGER.warn(e+" : "+ip);
 				}
 
-				if(jo.has("deliveryServices")) {
+				if(jo.has(deliveryServicesKey)) {
 					final List<DeliveryServiceReference> references = new ArrayList<Cache.DeliveryServiceReference>();
-					final JSONObject dsJos = jo.optJSONObject("deliveryServices");
-					for(String ds : JSONObject.getNames(dsJos)) {
+					final JSONObject dsJos = jo.optJSONObject(deliveryServicesKey);
+					for (final String ds : JSONObject.getNames(dsJos)) {
 						/* technically this could be more than just a string or array,
 						 * but, as we only have had those two types, let's not worry about the future
 						 */
@@ -226,7 +267,7 @@ public class ConfigHandler {
 
 									final String tld = cacheRegister.getConfig().optString("domain_name").toLowerCase();
 
-									if (name.contains(tld)) {
+									if (name.endsWith(tld)) {
 										final String reName = name.replaceAll("^.*?\\.", "");
 
 										if (!dsNames.contains(reName)) {
@@ -269,40 +310,85 @@ public class ConfigHandler {
 	 * @throws JSONException 
 	 */
 	private void parseDeliveryServiceConfig(final JSONObject deliveryServices, final CacheRegister cacheRegister) throws JSONException {
-		final List<DeliveryServiceMatcher> dnsServiceMatchers = new ArrayList<DeliveryServiceMatcher>();
-		final List<DeliveryServiceMatcher> httpServiceMatchers = new ArrayList<DeliveryServiceMatcher>();
-		final Map<String,DeliveryService> dsMap = new HashMap<String,DeliveryService>();
-		for(String dsId : JSONObject.getNames(deliveryServices)) {
-			final JSONObject dsJo = deliveryServices.getJSONObject(dsId);
-			final JSONArray matchsets = dsJo.getJSONArray("matchsets");
-			final DeliveryService ds = new DeliveryService(dsId, dsJo);
+		final TreeSet<DeliveryServiceMatcher> dnsServiceMatchers = new TreeSet<>();
+		final TreeSet<DeliveryServiceMatcher> httpServiceMatchers = new TreeSet<>();
+		final Map<String,DeliveryService> deliveryServiceMap = new HashMap<>();
+
+		for (final String deliveryServiceId : JSONObject.getNames(deliveryServices)) {
+			final JSONObject deliveryServicesJson = deliveryServices.getJSONObject(deliveryServiceId);
+			final JSONArray matchsets = deliveryServicesJson.getJSONArray("matchsets");
+			final DeliveryService deliveryService = new DeliveryService(deliveryServiceId, deliveryServicesJson);
 			boolean isDns = false;
-			dsMap.put(dsId, ds);
+			deliveryServiceMap.put(deliveryServiceId, deliveryService);
+
 			for (int i = 0; i < matchsets.length(); i++) {
 				final JSONObject matchset = matchsets.getJSONObject(i);
 				final String protocol = matchset.getString("protocol");
-				if("DNS".equals(protocol)) {
+
+				final DeliveryServiceMatcher deliveryServiceMatcher = new DeliveryServiceMatcher(deliveryService);
+
+				if ("HTTP".equals(protocol)) {
+					httpServiceMatchers.add(deliveryServiceMatcher);
+				} else if ("DNS".equals(protocol)) {
+					dnsServiceMatchers.add(deliveryServiceMatcher);
 					isDns = true;
 				}
+
 				final JSONArray list = matchset.getJSONArray("matchlist");
-				final DeliveryServiceMatcher m = new DeliveryServiceMatcher(ds);
-				if("HTTP".equals(protocol)) {
-					httpServiceMatchers.add(m);
-				} else if("DNS".equals(protocol)) {
-					dnsServiceMatchers.add(m);
-				}
 				for (int j = 0; j < list.length(); j++) {
 					final JSONObject matcherJo = list.getJSONObject(j);
 					final Type type = Type.valueOf(matcherJo.getString("match-type"));
 					final String target = matcherJo.optString("target");
-					m.addMatch(type, matcherJo.getString("regex"), target);
+					deliveryServiceMatcher.addMatch(type, matcherJo.getString("regex"), target);
 				}
 			}
-			ds.setDns(isDns);
+
+			deliveryService.setDns(isDns);
 		}
-		cacheRegister.setDeliveryServiceMap(dsMap);
+
+		cacheRegister.setDeliveryServiceMap(deliveryServiceMap);
 		cacheRegister.setDnsDeliveryServiceMatchers(dnsServiceMatchers);
 		cacheRegister.setHttpDeliveryServiceMatchers(httpServiceMatchers);
+		initGeoFailedRedirect(deliveryServiceMap, cacheRegister);
+	}
+
+	private void initGeoFailedRedirect(final Map<String, DeliveryService> dsMap, final CacheRegister cacheRegister) {
+		final Iterator<String> itr = dsMap.keySet().iterator();
+		while (itr.hasNext()) {
+			final DeliveryService ds = dsMap.get(itr.next());
+			//check if it's relative path or not
+			final String rurl = ds.getGeoRedirectUrl();
+			if (rurl == null) { continue; }
+
+			try {
+				final int idx = rurl.indexOf("://");
+
+				if (idx < 0) {
+					//this is a relative url, belongs to this ds
+					ds.setGeoRedirectUrlType("DS_URL");
+					continue;
+				}
+				//this is a url with protocol, must check further
+				//first, parse the url, if url invalid it will throw Exception
+				final URL url = new URL(rurl);
+
+				//make a fake HTTPRequest for the redirect url
+				final HTTPRequest req = new HTTPRequest(url);
+
+				ds.setGeoRedirectFile(url.getFile());
+				//try select the ds by the redirect fake HTTPRequest
+				final DeliveryService rds = cacheRegister.getDeliveryService(req, true);
+				if (rds == null || rds.getId() != ds.getId()) {
+					//the redirect url not belongs to this ds
+					ds.setGeoRedirectUrlType("NOT_DS_URL");
+					continue;
+				}
+
+				ds.setGeoRedirectUrlType("DS_URL");
+			} catch (Exception e) {
+				LOGGER.error("fatal error, failed to init NGB redirect with Exception: " + e.getMessage());
+			}
+		}
 	}
 
 	/**
@@ -324,7 +410,27 @@ public class ConfigHandler {
 			config.getString(pollingUrlKey),
 			config.optLong("geolocation.polling.interval")
 		);
+
+		if (config.has("neustar.polling.url")) {
+			System.setProperty("neustar.polling.url", config.getString("neustar.polling.url"));
+		}
+
+		if (config.has("neustar.polling.interval")) {
+			System.setProperty("neustar.polling.interval", config.getString("neustar.polling.interval"));
+		}
 	}
+
+	private void parseCertificatesConfig(final JSONObject config) {
+		final String pollingInterval = "certificates.polling.interval";
+		if (config.has(pollingInterval)) {
+			try {
+				System.setProperty(pollingInterval, config.getString(pollingInterval));
+			} catch (Exception e) {
+				LOGGER.warn("Failed to set system property " + pollingInterval + " from configuration object: " + e.getMessage());
+			}
+		}
+	}
+
 	/**
 	 * Parses the ConverageZoneNetwork database configuration and updates the database if the URL has
 	 * changed.
@@ -338,6 +444,31 @@ public class ConfigHandler {
 				config.getString("coveragezone.polling.url"),
 				config.optLong("coveragezone.polling.interval")
 			);
+	}
+
+	private void parseRegionalGeoConfig(final JSONObject jo) throws JSONException {
+		final JSONObject config = jo.getJSONObject("config");
+		final String url = config.optString("regional_geoblock.polling.url", null);
+
+		if (url == null) {
+			LOGGER.info("regional_geoblock.polling.url not configured; stopping service updater");
+			getRegionalGeoUpdater().stopServiceUpdater();
+			return;
+		}
+
+		if (jo.has(deliveryServicesKey)) {
+			final JSONObject dss = jo.getJSONObject(deliveryServicesKey);
+			for (final String ds : JSONObject.getNames(dss)) {
+				if (dss.getJSONObject(ds).has("regionalGeoBlocking") &&
+						dss.getJSONObject(ds).getString("regionalGeoBlocking").equals("true")) {
+					final long interval = config.optLong("regional_geoblock.polling.interval");
+					getRegionalGeoUpdater().setDataBaseURL(url, interval);
+					return;
+				}
+			}
+		}
+
+		getRegionalGeoUpdater().cancelServiceUpdater();
 	}
 
 	/**
@@ -355,8 +486,7 @@ public class ConfigHandler {
 		for (final String loc : JSONObject.getNames(locationsJo)) {
 			final JSONObject jo = locationsJo.getJSONObject(loc);
 			try {
-				locations.add(new CacheLocation(loc, jo.optString("zoneId"), 
-						new Geolocation(jo.getDouble("latitude"), jo.getDouble("longitude"))));
+				locations.add(new CacheLocation(loc, new Geolocation(jo.getDouble("latitude"), jo.getDouble("longitude"))));
 			} catch (JSONException e) {
 				LOGGER.warn(e,e);
 			}
@@ -427,5 +557,36 @@ public class ConfigHandler {
 
 	public void setTrafficOpsUtils(final TrafficOpsUtils trafficOpsUtils) {
 		this.trafficOpsUtils = trafficOpsUtils;
+	}
+
+	private Set<String> parseRequestHeaders(final JSONArray requestHeaders) {
+		final Set<String> headers = new HashSet<String>();
+
+		if (requestHeaders == null) {
+			return headers;
+		}
+
+		for (int i = 0; i < requestHeaders.length(); i++) {
+			try {
+				headers.add(requestHeaders.getString(i));
+			}
+			catch (JSONException e) {
+				LOGGER.warn("Failed parsing request header from config at position " + i, e);
+			}
+		}
+
+		return headers;
+	}
+
+	public void setSteeringWatcher(final SteeringWatcher steeringWatcher) {
+		this.steeringWatcher = steeringWatcher;
+	}
+
+	public void setCertificateChecker(final CertificateChecker certificateChecker) {
+		this.certificateChecker = certificateChecker;
+	}
+
+	public void setCertificatesPoller(final CertificatesPoller certificatesPoller) {
+		this.certificatesPoller = certificatesPoller;
 	}
 }

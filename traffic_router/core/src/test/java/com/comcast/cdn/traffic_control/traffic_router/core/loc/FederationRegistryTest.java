@@ -1,3 +1,19 @@
+/*
+ * Copyright 2015 Comcast Cable Communications Management, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.comcast.cdn.traffic_control.traffic_router.core.loc;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.InetRecord;
@@ -36,7 +52,7 @@ public class FederationRegistryTest {
         List<FederationMapping> federationMappings = new ArrayList<FederationMapping>();
         federationMappings.add(federationMapping);
 
-        Federation federation = new Federation("ccp-omg-01", federationMappings);
+        Federation federation = new Federation("kable-town-01", federationMappings);
 
         federations = new ArrayList<Federation>();
         federations.add(federation);
@@ -48,10 +64,10 @@ public class FederationRegistryTest {
         FederationRegistry federationRegistry = new FederationRegistry();
         federationRegistry.setFederations(federations);
 
-        List<InetRecord> inetRecords = federationRegistry.findInetRecords("ccp-omg-01", CidrAddress.fromString("192.168.10.11/24"));
+        List<InetRecord> inetRecords = federationRegistry.findInetRecords("kable-town-01", CidrAddress.fromString("192.168.10.11/24"));
         assertThat(inetRecords, containsInAnyOrder(new InetRecord("cname1", 1234)));
 
-        inetRecords = federationRegistry.findInetRecords("ccp-omg-01", CidrAddress.fromString("192.168.10.11/16"));
+        inetRecords = federationRegistry.findInetRecords("kable-town-01", CidrAddress.fromString("192.168.10.11/16"));
         assertThat(inetRecords, containsInAnyOrder(new InetRecord("cname1", 1234)));
     }
 }

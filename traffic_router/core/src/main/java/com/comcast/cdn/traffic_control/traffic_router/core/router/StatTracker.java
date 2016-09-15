@@ -20,16 +20,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.loc.Geolocation;
-import org.apache.log4j.Logger;
+import com.comcast.cdn.traffic_control.traffic_router.geolocation.Geolocation;
+import com.comcast.cdn.traffic_control.traffic_router.core.loc.RegionalGeoResult;
 
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheRegister;
 import com.comcast.cdn.traffic_control.traffic_router.core.ds.DeliveryService;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Track.ResultType;
 import com.comcast.cdn.traffic_control.traffic_router.core.router.StatTracker.Track.RouteType;
 
+@SuppressWarnings("PMD.ExcessivePublicCount")
 public class StatTracker {
-	private static final Logger LOGGER = Logger.getLogger(StatTracker.class);
 	private String dnsRoutingName;
 	private String httpRoutingName;
 
@@ -68,30 +68,64 @@ public class StatTracker {
 		public void setStaticRouteCount(final int staticRouteCount) {
 			this.staticRouteCount = staticRouteCount;
 		}
+
+		public int getFedCount() {
+			return fedCount;
+		}
+
+		public void setFedCount(final int fedCount) {
+			this.fedCount = fedCount;
+		}
+
+		public int getRegionalDeniedCount() {
+			return regionalDeniedCount;
+		}
+		public void setRegionalDeniedCount(final int regionalDeniedCount) {
+			this.regionalDeniedCount = regionalDeniedCount;
+		}
+		public int getRegionalAlternateCount() {
+			return regionalAlternateCount;
+		}
+		public void setRegionalAlternateCount(final int regionalAlternateCount) {
+			this.regionalAlternateCount = regionalAlternateCount;
+		}
+
 		public int czCount;
 		public int geoCount;
 		public int missCount;
 		public int dsrCount;
 		public int errCount;
 		public int staticRouteCount;
+		public int fedCount;
+		public int regionalDeniedCount;
+		public int regionalAlternateCount;
 	}
-	public static class Track {
 
+	public static class Track {
 		public static enum RouteType {
 			DNS,HTTP
 		}
+
 		public static enum ResultType {
-			ERROR, CZ, GEO, MISS, STATIC_ROUTE, DS_REDIRECT, DS_MISS, INIT, FED
+			ERROR, CZ, GEO, MISS, STATIC_ROUTE, DS_REDIRECT, DS_MISS, INIT, FED, RGDENY, RGALT, GEO_REDIRECT
 		}
+
 		public enum ResultDetails {
-			NO_DETAILS, DS_NOT_FOUND, DS_NO_BYPASS, DS_BYPASS, DS_CZ_ONLY, DS_CLIENT_GEO_UNSUPPORTED, GEO_NO_CACHE_FOUND
+			NO_DETAILS, DS_NOT_FOUND, DS_NO_BYPASS, DS_BYPASS, DS_CZ_ONLY, DS_CLIENT_GEO_UNSUPPORTED, GEO_NO_CACHE_FOUND,
+			REGIONAL_GEO_NO_RULE, REGIONAL_GEO_ALTERNATE_WITHOUT_CACHE, REGIONAL_GEO_ALTERNATE_WITH_CACHE
 		}
+
 		long time;
 		RouteType routeType;
 		String fqdn;
 		ResultType result = ResultType.ERROR;
 		ResultDetails resultDetails = ResultDetails.NO_DETAILS;
 		Geolocation resultLocation;
+		
+		Geolocation clientGeolocation; // the GEO info always retrieved from GEO DB, not from Cache Location
+		boolean isClientGeolocationQueried;
+
+		RegionalGeoResult regionalGeoResult;
 
 		public Track() {
 			start();
@@ -122,6 +156,29 @@ public class StatTracker {
 
 		public Geolocation getResultLocation() {
 			return resultLocation;
+		}
+
+		public void setClientGeolocation(final Geolocation clientGeolocation) {
+			this.clientGeolocation = clientGeolocation;
+		}
+
+		public Geolocation getClientGeolocation() {
+			return clientGeolocation;
+		}
+
+		public void setClientGeolocationQueried(final boolean isClientGeolocationQueried) {
+			this.isClientGeolocationQueried = isClientGeolocationQueried;
+		}
+
+		public boolean isClientGeolocationQueried() {
+			return isClientGeolocationQueried;
+		}
+
+		public void setRegionalGeoResult(final RegionalGeoResult regionalGeoResult) {
+			this.regionalGeoResult = regionalGeoResult;
+		}
+		public RegionalGeoResult getRegionalGeoResult() {
+			return regionalGeoResult;
 		}
 
 		public final void start() {
@@ -207,6 +264,8 @@ public class StatTracker {
 			incTally(t, tallies);
 		}
 	}
+
+	@SuppressWarnings("PMD.CyclomaticComplexity")
 	private static void incTally(final Track t, final Tallies tallies) {
 		switch(t.result) {
 		case ERROR:
@@ -227,10 +286,20 @@ public class StatTracker {
 		case STATIC_ROUTE:
 			tallies.staticRouteCount++;
 			break;
+		case FED:
+			tallies.fedCount++;
+			break;
+		case RGDENY:
+			tallies.regionalDeniedCount++;
+			break;
+		case RGALT:
+			tallies.regionalAlternateCount++;
+			break;
 		default:
 			break;
 		}
 	}
+
 	public void init() {
 		appStartTime = System.currentTimeMillis();
 	}
@@ -241,8 +310,6 @@ public class StatTracker {
 			final DeliveryService ds = cacheRegister.getDeliveryService(dsId);
 
 			if (ds != null) {
-				LOGGER.info("Initializing statistics for " + ds);
-
 				for (int i = 0; i < dsNames.size(); i++) {
 					final Track t = getTrack();
 					final StringBuffer dsName = new StringBuffer(dsNames.get(i));
