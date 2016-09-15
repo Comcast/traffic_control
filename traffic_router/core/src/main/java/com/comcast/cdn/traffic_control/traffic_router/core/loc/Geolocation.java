@@ -21,8 +21,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-
-import com.google.common.base.Preconditions;
+import com.maxmind.geoip2.model.CityResponse;
 
 public class Geolocation {
 	private static final double MEAN_EARTH_RADIUS = 6371.0f;
@@ -49,6 +48,48 @@ public class Geolocation {
 	public Geolocation(final double latitude, final double longitude) {
 		this.latitude = latitude;
 		this.longitude = longitude;
+	}
+
+	public Geolocation(final CityResponse response) {
+		// we will check getLocation from caller because these fields are final
+		this.latitude = response.getLocation().getLatitude();
+		this.longitude = response.getLocation().getLongitude();
+
+		if (response.getPostal() != null) {
+			this.postalCode = response.getPostal().getCode();
+		}
+
+		if (response.getCity() != null) {
+			this.city = response.getCity().getName();
+		}
+
+		if (response.getCountry() != null) {
+			this.countryCode = response.getCountry().getIsoCode();
+			this.countryName = response.getCountry().getName();
+		}
+	}
+
+	/**
+	 * Construct a new instance with the given properties.
+	 * 
+	 * @param latitude The latitude.
+	 * @param longitude The longitude.
+	 * @param countryCode The country code.
+	 * @param countryName The country name.
+	 * @param city The city name.
+	 * @param postalCode The postal code.
+	 */
+	public Geolocation(final double latitude,
+			final double longitude,
+			final String countryCode,
+			final String countryName,
+			final String city,
+			final String postalCode) {
+		this(latitude, longitude);
+		this.countryCode = countryCode;
+		this.countryName = countryName;
+		this.city = city;
+		this.postalCode = postalCode;
 	}
 
 	public Map<String,String> getProperties() {
@@ -129,65 +170,4 @@ public class Geolocation {
 		return "Geolocation [latitude=" + latitude + ", longitude=" + longitude + "]";
 	}
 
-	/** Create a new {@link Builder} instance. */
-	public static Builder builder() {
-		return new Builder();
-	}
-
-	/**
-	 * A builder class for {@link Geolocation}. A builder instance can be acquired by calling
-	 * {@link Geolocation#builder()}.
-	 */
-	public static class Builder {
-		private Double latitude;
-		private Double longitude;
-		private String postalCode;
-		private String city;
-		private String countryCode;
-		private String countryName;
-
-		private Builder() {
-		}
-
-		public Builder latitude(double latitude) {
-			this.latitude = latitude;
-			return this;
-		}
-
-		public Builder longitude(double longitude) {
-			this.longitude = longitude;
-			return this;
-		}
-
-		public Builder postalCode(String postalCode) {
-			this.postalCode = postalCode;
-			return this;
-		}
-
-		public Builder city(String city) {
-			this.city = city;
-			return this;
-		}
-
-		public Builder countryCode(String countryCode) {
-			this.countryCode = countryCode;
-			return this;
-		}
-
-		public Builder countryName(String countryName) {
-			this.countryName = countryName;
-			return this;
-		}
-
-		public Geolocation build() {
-			Preconditions.checkNotNull(latitude, "Latitude must not be null");
-			Preconditions.checkNotNull(longitude, "Longitude must not be null");
-			final Geolocation geo = new Geolocation(latitude, longitude);
-			geo.city = city;
-			geo.countryCode = countryCode;
-			geo.countryName = countryName;
-			geo.postalCode = postalCode;
-			return geo;
-		}
-	}
 }

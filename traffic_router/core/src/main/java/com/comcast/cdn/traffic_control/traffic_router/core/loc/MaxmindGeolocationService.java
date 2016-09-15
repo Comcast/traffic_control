@@ -47,14 +47,7 @@ public class MaxmindGeolocationService implements GeolocationService {
 				final CityResponse response = databaseReader.city(address);
 
 				if (isResponseValid(response)) {
-					return Geolocation.builder()
-							.latitude(response.getLocation().getLatitude())
-							.longitude(response.getLocation().getLongitude())
-							.city(response.getCity() == null ? null : response.getCity().getName())
-							.countryCode(response.getCountry() == null ? null : response.getCountry().getIsoCode())
-							.countryName(response.getCountry() == null ? null : response.getCountry().getName())
-							.postalCode(response.getPostal() == null ? null : response.getPostal().getCode())
-							.build();
+					return new Geolocation(response);
 				}
 			}
 		} catch (AddressNotFoundException ex) {

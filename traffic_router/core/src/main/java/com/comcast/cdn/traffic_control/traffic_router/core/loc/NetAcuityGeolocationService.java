@@ -125,13 +125,12 @@ public class NetAcuityGeolocationService implements GeolocationService {
             map = accessor.query(ip);
         }
 
-        return Geolocation.builder()
-                .latitude(Double.parseDouble(map.get("edge-latitude")))
-                .longitude(Double.parseDouble(map.get("edge-longitude")))
-                .city(map.get("edge-city"))
-                .countryCode(map.get("edge-country-code"))
-                .countryName(map.get("edge-country"))
-                .postalCode(map.get("edge-postal-code"))
-                .build();
+        return new Geolocation(
+                Double.parseDouble(map.get("edge-latitude")),
+                Double.parseDouble(map.get("edge-longitude")),
+                map.get("edge-city"),
+                map.get("edge-country-code"),
+                map.get("edge-country"),
+                map.get("edge-postal-code"));
     }
 }

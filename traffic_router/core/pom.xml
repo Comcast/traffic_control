@@ -373,7 +373,7 @@
 		<dependency>
 		    <groupId>digitalenvoy</groupId>
 		    <artifactId>embeddedNetacuity</artifactId>
-		    <version>1.2.2.0</version>
+		    <version>1.2.3.2</version>
 		</dependency> 
 	</dependencies>
 
