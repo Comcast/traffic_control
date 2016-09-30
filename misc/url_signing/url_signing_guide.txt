@@ -92,7 +92,7 @@ Verbose (Optional)
 -Script Output Example: url: fqdn.com/directory1/directory2/filename.m3u8, Signed String: directory1/directory2?C=10.10.10.10&E=1474667639&A=1&K=0&P=0110&S=,  signing_signature: ?C=10.10.10.10&E=1474667639&A=1&K=0&P=0110&S=, digest: abefac66bc14694189db7ad788be6dde7a145a0a
 
 
-Signing in the URL path (Optional)
+Signing In-Path (inside URL path) (Optional)
 -The standard URL signature is appended as a query string at the end of the URL; however, the CDN customer has the option to insert the signature into the URL path.  Including a signature in the query string can be problematic for some applications depending upon how the CDN handles query strings and can also cause issues when using relative URLs in video delivery. This is when in-path signing should be used.  The signing script will insert the signature just ahead of the filename and the signature will be base64 encoded.  The encoding prevents signature characters that may be illegal in the URL from causing issues.
 -Script Input Example:  --pathparams
 -Example outputs are shown below
