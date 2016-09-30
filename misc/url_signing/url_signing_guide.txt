@@ -1,0 +1,156 @@
+URL Signing - CDN Customer Implementation
+
+
+OVERVIEW
+URL Signing allows CDN customers to generate URLs with an encoded signature using HMAC MD5 or SHA1 encoding and a secret (key).  The URL Signature provides the ability to set an expiration time for the URL and can also prevents URL sharing among users.  Using this feature requires the CDN customer to implement a signing script and hand out the signed URLs.  The CDN is then configured to decodes the signed URLs at the CDN edge and confirm authentication. When the CDN authentication passes, the signature is stripped from the URL, and the request is handled inside the CDN and at the customer origin without the signature. We provide several signing script examples in our CDN Portal in different languages. 
+
+Signed URLs are one form of CDN request security, but this does not replace DRM.
+
+
+SCRIPT OPTIONS
+
+Using the PERL sign.pl Script
+-You will have to install PERL to use the PERL signing script sign.pl.  
+-In addition, you also need to install a PERL base64 encoding module before the signing script will work.
+-The PERL module is MIME::Base64::URLSafe
+-From the command line you can issue the following commands to install:
+	-sudo perl -MCPAN -e shell
+	-install MIME::Base64::URLSafe
+
+Using the GO sign Script
+-We provide both the compiled and uncompiled version of the GO sign script. The uncompiled version can be used to examine the code.  The compiled version can be executed without installing any additional languages on your machine.
+	-Compiled = sign
+	-Uncompiled = sign.go
+-To execute the script, download the compiled GO sign script to a directory on your machine.
+-From the command line, change to the directory in which you put your compiled script and enter ./sign along with your signature parameters as outlined below.
+
+
+
+SIGNING SCRIPT PARAMETERS
+
+
+URL
+-The signing script takes the full origin URL, without any query string
+-Script Input Example: --url ‘http://fqdn.com/directory1/direcotry2/filename.m3u8’ 
+-Script Output Example (Query String Signature): 'http://fqdn.com/directory1/directory2/filename.m3u8?C=10.10.10.10&E=1464885538&A=1&K=0&P=0110&S=cfb79feb5ad271ce84c7292dc5dd1c649f632b23' 
+
+
+Expiration
+-The Expiration time (seconds since epoch) of the signature.  This is input into the signing script as a duration in seconds and script converts to epoch time in the output.
+-Script Input Example: --duration 3600 
+-Script Output Example: E=<expiration time in secs since unix epoch>
+
+
+Algorithm
+-The Algorithm used to create the signature. You can choose: 
+- 1 = HMAC_SHA1
+- 2 = HMAC_MD5
+-Script Input Example: --algorithm 1 
+-Script Output Example:  A=1 <algorithm number>
+
+
+Key Index
+- This is the index of the key in the configuration file that is used to sign the URL.  Sixteen keys are generated with indexes from 0 to 15. The set of keys is a shared secret between the CDN customer and the CDN owner and kept hidden from all other parties. There is one set of keys per CDN service domain (fqdn).
+-Script Input Example: --keyindex 1
+-Script Output Example: K=1 
+
+
+Key
+-Keys are configured by the CDN Owner and shared with the CDN customer for configuration in the signing script as outlined above.
+-Script Input Example: --key 111111111111111111111 (string of alphanumeric characters)
+-Script Output Example: used in encoding the signature and not directly a part of script output
+
+
+URL Parts
+-URL parts define the segments of the URL to consider in encoding the signature, always excluding the scheme (http://).  URL parts consist of a string of 0’s and 1’s specifying each part of the URL. 0 means exclude, and 1 means include. If there are more parts to the path than numbers in the parts parameter, the last one is repeated for those.  In the signing process, the leading and trailing  “/”s are dropped.  Please note that FQDN used in the signing process should be the origin FQDN and not the CDN edge FQDN.  This is another element of the security since the end user does not know the origin FQDN from the CDN edge URL, which makes it more difficult to replicate the signature.
+-Examples: Assume our URL is as follows: http://fqdn.com/directory1/directory2/filename
+        1: use origin FQDN and all of URl path or fqdn.com/directory1/directory2/filename
+        0110: use part1 and part 2 of path only or directory1/directory2
+        01: use everything except the origin FQDN or directory1/directory2/filename
+-Note: When in-path signing (—-pathparams) is used, the filename is never considered in the signature.  This method was developed specifically for signing relative path video manifests and transport segments so that the filename could be changed out without affecting the signature.
+-Using the —-verbose feature when signing allows you to see the portions of the origin URL used in the signing process
+-Script Input Example: --useparts 0110
+-Script Output Example: P=00011110
+
+
+Client IP (Optional)
+-The client IP address for which this signature is valid.  This is optional as a part of the signing process.  If you want to prevent URL sharing this must be used to make each signature unique to a particular user.  Supports both IPv4 and IPv6 addresses.  Please note that if a user switches IP addresses for instance when changing from wifi to cellular, they will need to go through the signing process again for the new IP address. Client IP is optional and need not be included in the signing process.
+-Script Input Example: --client 10.10.10.10
+-Script Output Example: C=10.10.10.10
+
+
+Signature
+-The signature is a hash over the URL parts + the signature query string up to and including "S=".
+-If in-path signing is used, then the hash does not include the signing query string.
+-The signature is part of the output of the signing script
+-Script Output Example:S=cfb79feb5ad271ce84c7292dc5dd1c649f632b23 
+
+
+Verbose (Optional)
+-The verbose feature in the signing script will output not only the signed url but will also output the URL, signed string, signature, and digest
+-Script Input Example: --verbose
+-Script Output Example: url: fqdn.com/directory1/directory2/filename.m3u8, Signed String: directory1/directory2?C=10.10.10.10&E=1474667639&A=1&K=0&P=0110&S=,  signing_signature: ?C=10.10.10.10&E=1474667639&A=1&K=0&P=0110&S=, digest: abefac66bc14694189db7ad788be6dde7a145a0a
+
+
+Signing In-Path (inside URL path) (Optional)
+-The standard URL signature is appended as a query string at the end of the URL; however, the CDN customer has the option to insert the signature into the URL path.  Including a signature in the query string can be problematic for some applications depending upon how the CDN handles query strings and can also cause issues when using relative URLs in video delivery. This is when in-path signing should be used.  The signing script will insert the signature just ahead of the filename and the signature will be base64 encoded.  The encoding prevents signature characters that may be illegal in the URL from causing issues.
+-Script Input Example:  --pathparams
+-Example outputs are shown below
+
+
+Signature Anchor for In-Path Signing (Optional)
+-When using in-path signing the signature will typically be placed in between the end of the directory path and the filename as illustrated in the examples below.  When using in-path signing for relative path video files it sometimes becomes helpful to only sign a portion of the directory path and keep the signature in a location in the middle of the URL so that relative URL paths can be appended to the signed master URL.  The signature anchor feature allows the signature to appear anywhere in the URL between the FQDN and the filename.  This allows the parser to always identify the location.  Without this feature, the signature must appear between the end of the directory path and filename to be valid. 
+- As a part of the secret or key file there will be a signature anchor code specified.  This must be added after “--siganchor”.  
+-Example signature anchor code in key file: “urlsig”
+-Script Input Example: --siganchor urlsig
+
+
+
+SCRIPT EXECUTION EXAMPLES (PERL VERSION)
+
+
+Query String Signature Standard
+Bash$ perl sign.pl --algorithm 1 --duration 3600 --useparts 0110 --keyindex 0 --key 11111111111111111111111111111111 --url http://fqdn.com/directory1/directory2/filename.m3u8  --client 10.10.10.10
+curl -s -o /dev/null -v --max-redirs 0 'http://fqdn.com/directory1/directory2/filename.m3u8?C=10.10.10.10&E=1464885538&A=1&K=0&P=0110&S=cfb79feb5ad271ce84c7292dc5dd1c649f632b23' 
+
+
+In-Path Signature
+Bash$ perl sign.pl --algorithm 1 --duration 3600 --useparts 0110 --keyindex 0 --key 11111111111111111111111111111111 --url http://fqdn.com/directory1/directory2/filename.m3u8  --client 10.10.10.10 --pathparams
+curl -s -o /dev/null -v --max-redirs 0 'http://fqdn.com/directory1/directory2/O0M9MTAuMTAuMTAuMTA7RT0xNDY0ODg1NTk4O0E9MTtLPTA7UD0wMTEwO1M9NjQ5NmU5MTk5M2EyMTg0OTZjZDJlY2M0MTE4ZWM4ZTM4N2JlY2FkOA/filename.m3u8' 
+*Note that in-path signatures are base64 encoded and can be checked using an online decoder for content.  The above signature translates to the following: ;C=10.10.10.10;E=1464885598;A=1;K=0;P=0110;S=6496e91993a218496cd2ecc4118ec8e387becad8
+
+
+In-Path Signature w/ Signature Anchor
+Bash$ perl sign.pl --algorithm 1 --duration 3600 --useparts 0110 --keyindex 0 --key 11111111111111111111111111111111 --url http://fqdn.com/directory1/directory2/filename.m3u8  --client 10.10.10.10 --pathparams --siganchor urlsig
+curl -s -o /dev/null -v --max-redirs 0 'http://fqdn.com/directory1/directory2;urlsig=O0M9MTAuMTAuMTAuMTA7RT0xNDY0ODg1NzE1O0E9MTtLPTA7UD0wMTEwO1M9NmRlNThhYzhmZTc4YWY4ZTAwODFiMGE5MGJjNmNmMmVmYmU1YzAxZQ/filename.m3u8' 
+
+
+In-Path Signature w/ Signature Anchor and Signature Move
+With the signature anchor, the location of the signature does not have to be directly before the filename.  So if you want to append a relative URL to the end of a pre-signed master URL, this is still valid. The example below shows a third and fourth level directory along with a new variant manifest filename appended after the in-path URL signature.  Since the signature only considers part 0110 which is the directory level 1 and 2 of the path, the signature is still valid even though the URL has changed.
+'http://fqdn.com/directory1/directory2;urlsig=O0M9MTAuMTAuMTAuMTA7RT0xNDY0ODg1NzE1O0E9MTtLPTA7UD0wMTEwO1M9NmRlNThhYzhmZTc4YWY4ZTAwODFiMGE5MGJjNmNmMmVmYmU1YzAxZQ/directory3/directory4/variant_manifest.m3u8' 
+
+
+
+MISCELLANEOUS NOTES
+
+
+Failure Response Configuration
+The standard failure response is a 403 http return code.  Other responses can be configured such as a 302 redirect.  This detail is provided in the CDN configuration file with the shared secrets.
+
+
+URL Signing Bypass
+-The CDN has a method for bypassing the signing process for a particular file or path within a signed service. Even if a key was passed in the URL, if the signing bypass pattern is matched, the authentication would be skipped
+-For all streaming services we recommend a bypass for both the crossdomain.xml and clientaccesspolicy.xml files since they are often called outside the player signing process
+-Another example is to bypass a "thumbnail" directory for a service.  This is done through the CDN configuration using a regex match:   excl_regex = /thumbnail/.*
+
+
+Testing
+-Curl a test URL against the CDN without a signature, and you should receive a 403 or whatever was configured for authorization failure on the CDN
+-Run the perl script locally on your machine, you will need a key, key index value, your machine IP (if that option is used).
+-Use the curl provided by the script, you should get a 200 response if everything worked correctly.
+-You should also test any URL Signing Bypasses that has been requested. These curls should yield a 200 response without signature
+-Even if the signature check at the CDN edge passes errors can still arise from the origin if the file is not available (404) or if the origin does not allow access (403). The CDN will typically pass a “VIA” header showing the edge and mid tier server used if the signature passes at the edge which makes it easier to tell if an error is arising at the origin.
+ 
+
+
+
