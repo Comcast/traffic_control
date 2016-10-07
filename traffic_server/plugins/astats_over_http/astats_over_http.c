@@ -538,7 +538,7 @@ void TSPluginInit(int argc, const char *argv[]) {
 	info.support_email = "justin@fp-x.com";
 	astatsLoad = time(NULL);
 
-	if (TSPluginRegister(&info) != TS_SUCCESS) {
+	if (TSPluginRegister(TS_SDK_VERSION_3_0, &info) != TS_SUCCESS) {
         TSError("Plugin registration failed. \n");
 	}
 
@@ -582,9 +582,9 @@ static bool is_ip_allowed(const config_t* config, const struct sockaddr* addr) {
 	if(!addr) {
 		return true;
 	}
-	const char *ip = addr->sa_data+2;
 
 	if (addr->sa_family == AF_INET && config->allowIps) {
+		const char *ip = (const char*)&((struct sockaddr_in*)addr)->sin_addr;
 		for(i=0; i < config->ipCount; i++) {
 			ipmask = config->allowIps+ (i*5);
 			if(is_ip_match(ip, ipmask, ipmask[4])) {
@@ -595,10 +595,11 @@ static bool is_ip_allowed(const config_t* config, const struct sockaddr* addr) {
 		TSDebug(PLUGIN_TAG, "clientip is %s--> DENY", inet_ntop(AF_INET,ip,ip_port_text_buffer,INET6_ADDRSTRLEN));
 		return false;
 	} else if (addr->sa_family == AF_INET6 && config->allowIps6) {
+		const char *ip = (const char*)&((struct sockaddr_in6*)addr)->sin6_addr;
 		for(i=0; i < config->ip6Count; i++) {
-			ipmask = config->allowIps6+ (i*9);
-			if(is_ip_match(ip, ipmask, ipmask[8])) {
-				TSDebug(PLUGIN_TAG, "clientip6 is %s--> ALLOW", inet_ntop( AF_INET6,ip,ip_port_text_buffer,INET6_ADDRSTRLEN));
+			ipmask = config->allowIps6 + (i*17);
+			if(is_ip_match(ip, ipmask, ipmask[16])) {
+				TSDebug(PLUGIN_TAG, "clientip6 is %s, %d--> ALLOW", inet_ntop( AF_INET6,ip,ip_port_text_buffer,INET6_ADDRSTRLEN),i);
 				return true;
 			}
 		}
@@ -662,9 +663,9 @@ static void parseIps6(config_t* config, char* ipStr) {
 
         if(!ipStr) {
             config->ip6Count = 1;
-            ip = config->allowIps6 = TSmalloc(5);
-            inet_pton(AF_INET, DEFAULT_IP6, ip);
-            ip[8] = 64;
+            ip = config->allowIps6 = TSmalloc(17);
+            inet_pton(AF_INET6, DEFAULT_IP6, ip);
+            ip[16] = 64;
             return;
         }
 
@@ -676,15 +677,15 @@ static void parseIps6(config_t* config, char* ipStr) {
 	if(!config->ip6Count) {
 		return;
 	}
-	config->allowIps6 = TSmalloc(9*config->ip6Count); // 4 bytes for ip + 1 for bit mask
-	strcpy(buffer, ipStr);
+	config->allowIps6 = TSmalloc(17*config->ip6Count); // 16 bytes for ip, + 1 for bit mask
+	strncpy(buffer, ipStr, STR_BUFFER_SIZE);
 	p = buffer;
 	i = 0;
 	while((tok1 = strtok_r(p, ", \n", &p))) {
 		TSDebug(PLUGIN_TAG, "%d) parsing: %s", i+1,tok1);
 		tok2 = strtok_r(tok1, "/", &tok1);
-		ip = config->allowIps6+(9*i);
-		if(!inet_pton(AF_INET, tok2, ip)) {
+		ip = config->allowIps6+(17*i);
+		if(!inet_pton(AF_INET6, tok2, ip)) {
 			TSDebug(PLUGIN_TAG, "%d) skipping: %s", i+1,tok1);
 			continue;
 		}
@@ -694,9 +695,9 @@ static void parseIps6(config_t* config, char* ipStr) {
 		} else {
 			mask = atoi(tok2);
 		}
-		ip[8] = mask;
+		ip[16] = mask;
 		TSDebug(PLUGIN_TAG, "%d) adding netmask: %s/%d", i+1,
-				inet_ntop(AF_INET6,ip,ip_port_text_buffer,INET6_ADDRSTRLEN),ip[8]);
+				inet_ntop(AF_INET6,ip,ip_port_text_buffer,INET6_ADDRSTRLEN),ip[16]);
 		i++;
 	}
 }
@@ -744,7 +745,7 @@ static config_t* new_config(TSFile fh) {
 	if(!config->ipCount) {
             parseIps(config, NULL);
 	}
-	if(config->ip6Count) {
+	if (!config->ip6Count) {
             parseIps6(config, NULL);
 	}
 	TSDebug(PLUGIN_TAG, "config path=%s", config->stats_path);
