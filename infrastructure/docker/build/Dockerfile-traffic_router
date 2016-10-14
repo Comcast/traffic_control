@@ -18,7 +18,7 @@ RUN	yum -y install \
 		which
 
 WORKDIR /opt
-RUN curl -L -b "oraclelicense=a" http://download.oracle.com/otn-pub/java/jdk/8u101-b13/jdk-8u101-linux-x64.tar.gz
+RUN curl -L -b "oraclelicense=a" http://download.oracle.com/otn-pub/java/jdk/8u101-b13/jdk-8u101-linux-x64.tar.gz | tar xzf -
 RUN ln -s jdk* java
 
 RUN alternatives --install /usr/bin/java java /opt/java/bin/java 2 && \
