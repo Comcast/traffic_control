@@ -58,8 +58,12 @@ function buildRpmTrafficRouter () {
 
 	cd "$TR_DIR" || { echo "Could not cd to $TR_DIR: $?"; exit 1; }
 	export GIT_REV_COUNT=$(getRevCount)
-	mvn -P rpm-build -Dmaven.test.skip=true -DminimumTPS=1 clean package ||  \
-		{ echo "RPM BUILD FAILED: $?"; exit 1; }
+
+    echo $MONITOR_HOSTS > core/src/test/conf/traffic_monitor.properties
+    echo traffic_ops.username=$OPS_USER > core/src/test/conf/traffic_ops.properties
+    echo traffic_ops.password=$OPS_PASSWORD >> core/src/test/conf/traffic_ops.properties
+
+	./gradlew || { echo "RPM BUILD FAILED: $?"; exit1; }
 
 	local rpm=$(find -name \*.rpm)
 	if [[ -z $rpm ]]; then
