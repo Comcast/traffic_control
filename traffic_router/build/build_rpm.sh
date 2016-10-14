@@ -63,7 +63,7 @@ function buildRpmTrafficRouter () {
     echo traffic_ops.username=$OPS_USER > core/src/test/conf/traffic_ops.properties
     echo traffic_ops.password=$OPS_PASSWORD >> core/src/test/conf/traffic_ops.properties
 
-	./gradlew -x test || { echo "RPM BUILD FAILED: $?"; exit1; }
+	./gradlew -i -x test || { echo "RPM BUILD FAILED: $?"; exit1; }
 
 	local rpm=$(find -name \*.rpm)
 	if [[ -z $rpm ]]; then
