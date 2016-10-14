@@ -120,11 +120,11 @@ function initBuildArea() {
 
 	tr_dest=$(createSourceDir traffic_router)
 
-	export MVN_CMD="mvn versions:set -DnewVersion=$TRAFFIC_CONTROL_VERSION"
-	echo $MVN_CMD
-	$MVN_CMD
-	cp -r "$TR_DIR"/{build,connector,core} "$tr_dest"/. || { echo "Could not copy to $tr_dest: $?"; exit 1; }
-	cp  "$TR_DIR"/pom.xml "$tr_dest" || { echo "Could not copy to $tr_dest: $?"; exit 1; }
+#	export MVN_CMD="mvn versions:set -DnewVersion=$TRAFFIC_CONTROL_VERSION"
+#	echo $MVN_CMD
+#	$MVN_CMD
+	cp -r "$TR_DIR"/{build,connector,core,shared} "$tr_dest"/. || { echo "Could not copy to $tr_dest: $?"; exit 1; }
+#	cp  "$TR_DIR"/pom.xml "$tr_dest" || { echo "Could not copy to $tr_dest: $?"; exit 1; }
 
 	# tar/gzip the source
 	tar -czf "$tr_dest".tgz -C "$RPMBUILD/SOURCES" $(basename $tr_dest) || { echo "Could not create tar archive $tr_dest: $?"; exit 1; }
