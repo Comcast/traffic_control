@@ -58,8 +58,12 @@ function buildRpmTrafficRouter () {
 
 	cd "$TR_DIR" || { echo "Could not cd to $TR_DIR: $?"; exit 1; }
 	export GIT_REV_COUNT=$(getRevCount)
-	mvn -P rpm-build -Dmaven.test.skip=true -DminimumTPS=1 clean package ||  \
-		{ echo "RPM BUILD FAILED: $?"; exit 1; }
+
+    echo $MONITOR_HOSTS > core/src/test/conf/traffic_monitor.properties
+    echo traffic_ops.username=$OPS_USER > core/src/test/conf/traffic_ops.properties
+    echo traffic_ops.password=$OPS_PASSWORD >> core/src/test/conf/traffic_ops.properties
+
+	./gradlew -i -x test || { echo "RPM BUILD FAILED: $?"; exit1; }
 
 	local rpm=$(find -name \*.rpm)
 	if [[ -z $rpm ]]; then
@@ -116,11 +120,11 @@ function initBuildArea() {
 
 	tr_dest=$(createSourceDir traffic_router)
 
-	export MVN_CMD="mvn versions:set -DnewVersion=$TRAFFIC_CONTROL_VERSION"
-	echo $MVN_CMD
-	$MVN_CMD
-	cp -r "$TR_DIR"/{build,connector,core} "$tr_dest"/. || { echo "Could not copy to $tr_dest: $?"; exit 1; }
-	cp  "$TR_DIR"/pom.xml "$tr_dest" || { echo "Could not copy to $tr_dest: $?"; exit 1; }
+#	export MVN_CMD="mvn versions:set -DnewVersion=$TRAFFIC_CONTROL_VERSION"
+#	echo $MVN_CMD
+#	$MVN_CMD
+	cp -r "$TR_DIR"/{build,connector,core,shared} "$tr_dest"/. || { echo "Could not copy to $tr_dest: $?"; exit 1; }
+#	cp  "$TR_DIR"/pom.xml "$tr_dest" || { echo "Could not copy to $tr_dest: $?"; exit 1; }
 
 	# tar/gzip the source
 	tar -czf "$tr_dest".tgz -C "$RPMBUILD/SOURCES" $(basename $tr_dest) || { echo "Could not create tar archive $tr_dest: $?"; exit 1; }

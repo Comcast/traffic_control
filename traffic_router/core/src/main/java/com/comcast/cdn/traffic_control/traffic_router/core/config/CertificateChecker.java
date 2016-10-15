@@ -97,6 +97,7 @@ public class CertificateChecker {
 		return hasValidCertificates;
 	}
 
+	@SuppressWarnings("PMD.SimplifiedTernary")
 	private boolean supportsHttps(final JSONObject deliveryServiceJson, final JSONObject protocolJson) {
 		if (!"HTTP".equals(getDeliveryServiceType(deliveryServiceJson))) {
 			return false;

@@ -1,0 +1,12 @@
+rootProject.name = 'traffic_router'
+include ':traffic_router_shared'
+include ':traffic_router_config'
+include ':traffic_router_connector'
+include ':traffic_router_geolocation'
+include ':traffic_router_core'
+
+project(':traffic_router_shared').projectDir = "$rootDir/shared" as File
+project(':traffic_router_config').projectDir = "$rootDir/configuration" as File
+project(':traffic_router_connector').projectDir = "$rootDir/connector" as File
+project(':traffic_router_geolocation').projectDir = "$rootDir/geolocation" as File
+project(':traffic_router_core').projectDir = "$rootDir/core" as File

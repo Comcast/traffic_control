@@ -1,0 +1,110 @@
+
+plugins {
+  id "nebula.rpm" version "4.0.0"
+  id 'org.ajoberstar.grgit' version '1.5.1'
+}
+
+defaultTasks 'clean', 'build', 'trafficRouterRpm'
+
+allprojects  {
+  buildDir = 'target'
+  apply plugin: 'java'
+  group = 'com.comcast.cdn.traffic_control.traffic_router'
+  version = '1.8.0'
+}
+
+
+subprojects {
+  apply plugin: 'java'
+  apply plugin: 'pmd'
+
+  sourceCompatibility = 1.8
+  targetCompatibility = 1.8
+
+  repositories {
+    mavenLocal()
+    
+    maven { url "https://repository.cloudera.com/content/repositories/releases" }
+    maven { url "http://repo.maven.apache.org/maven2" }
+  }
+
+  dependencies {
+    testCompile group: 'org.javassist', name: 'javassist', version: '3.20.0-GA'
+    testCompile 'junit:junit:4.12'
+    testCompile ('org.powermock:powermock-module-junit4:1.6.4') {
+      exclude group: 'org.javassist'
+    }
+    testCompile ('org.powermock:powermock-api-mockito:1.6.4') {
+      exclude group: 'org.javassist'
+    }
+    testCompile group: 'org.hamcrest', name: 'hamcrest-all', version:'1.3'
+  }
+
+  pmd {
+    sourceSets = [sourceSets.main]
+  }
+}
+
+
+task trafficRouterRpm(type: Rpm) {
+  arch 'x86_64'
+  packageGroup 'Applications/Internet'
+  user 'root'
+  release grgit.log().size() + "." + grgit.head().id.substring(0,8)
+
+  requires('jdk1.8.0_101')
+  requires('wget')
+  requires('tar')
+
+  into '/opt/traffic_router'
+
+  directory('/opt/traffic_router')
+  directory('/opt/traffic_router/db')
+  directory('/opt/traffic_router/lib')
+  directory('/opt/traffic_router/conf')
+  directory('/opt/traffic_router/var')
+  directory('/opt/traffic_router/var/log')
+  directory('/var/run/tomcat')
+
+  from('core/src/main/etc/init.d') {
+    into '/etc/init.d'
+  }
+
+  from('core/src/main/opt/tomcat/conf') {
+    into '/opt/tomcat/conf'
+  }
+
+  from('core/src/main/conf') {
+    fileType CONFIG | NOREPLACE
+    into '/opt/traffic_router/conf'
+    filter { String line ->
+      line.replace('${deploy.dir}', '/opt/traffic_router')
+    }
+  }
+
+  from('connector/target') {
+    into '/opt/traffic_router/lib'
+    include '*jar'
+    rename '(.+)-[0-9].+(jar)', '$1.$2'
+  }
+
+  from('keystore/target') {
+    into '/opt/traffic_router/lib'
+    include '*jar'
+    rename '(.+)-[0-9].+(jar)', '$1.$2'
+  }
+
+  from('core/target/ROOT/WEB-INF/lib/juli-6.0.33.jar') {
+    into '/opt/traffic_router/lib'
+    rename 'juli-6.0.33.jar', 'juli.jar'
+  }
+
+  from('core/target/ROOT.war') {
+    into '/opt/traffic_router/webapps'
+    rename 'ROOT.war', 'traffic_router_core.war'
+  }
+
+  preInstall file('core/src/main/scripts/preinstall.sh')
+  postInstall file('core/src/main/scripts/postinstall.sh')
+  preUninstall file('core/src/main/scripts/preremove.sh')
+}

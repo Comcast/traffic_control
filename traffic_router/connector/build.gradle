@@ -1,0 +1,11 @@
+description = ''
+
+dependencies {
+  compile project(':traffic_router_shared')
+  compileOnly 'org.apache.tomcat:coyote:6.0.33'
+  testCompile 'org.apache.tomcat:coyote:6.0.33'
+}
+pmd {
+  ruleSetFiles = files('build/pmd/ruleset.xml')
+}
+

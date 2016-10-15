@@ -1,0 +1,75 @@
+apply plugin: 'war'
+
+description = ''
+dependencies {
+    compile project(':traffic_router_geolocation')
+    compile project(':traffic_router_config')
+    compile project(':traffic_router_shared')
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.3.2'
+    compile group: 'commons-io', name: 'commons-io', version: '2.0.1'
+    compile group: 'commons-pool', name: 'commons-pool', version: '1.5.6'
+    compile group: 'log4j', name: 'log4j', version: '1.2.17'
+    compile group: 'commons-codec', name: 'commons-codec', version: '1.6'
+    compile group: 'org.json', name: 'json', version: '20090211'
+    compile group: 'dnsjava', name: 'dnsjava', version: '2.1.7'
+    compile group: 'jdnssec', name: 'jdnssec-tools', version: '0.12'
+    compile group: 'com.google.guava', name: 'guava', version: '18.0'
+    compile group: 'org.springframework', name: 'spring-webmvc', version: '4.2.5.RELEASE'
+    compile group: 'org.springframework', name: 'spring-context', version: '4.2.5.RELEASE'
+    compile group: 'org.apache.wicket', name: 'wicket-core', version: '6.0.0'
+    compile group: 'com.googlecode.java-ipv6', name: 'java-ipv6', version: '0.9'
+    compile group: 'com.ning', name: 'async-http-client', version: '1.7.24'
+    compile(group: 'com.maxmind.geoip2', name: 'geoip2', version: '2.1.0') {
+        exclude(module: 'google-http-client')
+    }
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.4.3'
+
+    testCompile project(':traffic_router_connector')
+    testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
+    testCompile group: 'org.powermock', name: 'powermock-api-mockito', version: '1.6.2'
+    testCompile group: 'org.powermock', name: 'powermock-module-junit4', version: '1.6.2'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile group: 'org.jmock', name: 'jmock-junit4', version: '2.5.1'
+    testCompile group: 'org.jmock', name: 'jmock-legacy', version: '2.5.1'
+    testCompile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.1'
+    testCompile group: 'org.apache.tomcat', name: 'catalina', version: '6.0.33'
+    testCompile group: 'org.apache.tomcat', name: 'coyote', version: '6.0.33'
+    testCompile group: 'org.springframework', name: 'spring-test', version: '4.2.5.RELEASE'
+    providedCompile group: 'javax.servlet', name: 'servlet-api', version: '2.5'
+}
+
+test {
+    include '**/core/**/*Test.class'
+    include '**/ExternalTestSuite.class'
+    exclude '**/core/external/*Test.class'
+// These Tests sometimes fail when running gradle under Docker
+//    exclude '**/StatelessTrafficRouterTest.class'
+//    exclude '**/ZoneManagerTest.class'
+
+    forkEvery = 1
+
+    List<String> longRunningTests = [
+            'itConsumesValidJson',
+            'z_itemsMigrateFromSmallerToLargerBucket',
+            'itUsesWeightedDistributionForRequestPath',
+            'itRejectsCrConfigWithMissingCert']
+    beforeTest { descriptor ->
+        if (longRunningTests.contains(descriptor.name)) {
+            logger.lifecycle("Running Long test " + descriptor.className.substring(descriptor.className.lastIndexOf('.') + 1) + " - " + descriptor.name)
+        }
+    }
+
+    afterTest { descriptor ->
+        if (longRunningTests.contains(descriptor.name)) {
+            logger.lifecycle("Completed long test " + descriptor.className.substring(descriptor.className.lastIndexOf('.') + 1) + " - " + descriptor.name)
+        }
+    }
+
+    testLogging {
+        exceptionFormat = 'full'
+    }
+}
+
+pmd {
+  ruleSetFiles = files('build/pmd/ruleset.xml')
+}
