@@ -418,6 +418,11 @@
 			<version>${project.parent.version}</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+		    <groupId>digitalenvoy</groupId>
+		    <artifactId>embeddedNetacuity</artifactId>
+		    <version>1.2.3.2</version>
+		</dependency> 
 	</dependencies>
 
 	<profiles>

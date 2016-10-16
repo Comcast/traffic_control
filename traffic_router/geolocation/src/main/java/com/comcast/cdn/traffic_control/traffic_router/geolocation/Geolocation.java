@@ -47,6 +47,29 @@ public class Geolocation {
 	}
 
 
+	/**
+	 * Construct a new instance with the given properties.
+	 * 
+	 * @param latitude The latitude.
+	 * @param longitude The longitude.
+	 * @param countryCode The country code.
+	 * @param countryName The country name.
+	 * @param city The city name.
+	 * @param postalCode The postal code.
+	 */
+	public Geolocation(final double latitude,
+			final double longitude,
+			final String countryCode,
+			final String countryName,
+			final String city,
+			final String postalCode) {
+		this(latitude, longitude);
+		this.countryCode = countryCode;
+		this.countryName = countryName;
+		this.city = city;
+		this.postalCode = postalCode;
+	}
+
 	public Map<String,String> getProperties() {
 		final Map<String,String> map = new HashMap<String,String>();
 		map.put("latitude", Double.toString(latitude));
