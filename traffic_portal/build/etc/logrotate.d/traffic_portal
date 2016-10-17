@@ -1,8 +1,0 @@
-/var/log/traffic_portal/traffic_portal.log {
-    daily
-    copytruncate
-    missingok
-    compress
-    maxage 30
-    dateext
-}
